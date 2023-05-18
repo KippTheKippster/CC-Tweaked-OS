@@ -46,9 +46,9 @@ dropdown:addToList("Exit")
 function dropdown:optionPressed(i)
     local text = dropdown:getOptionText(i)
     if text == "Shell" then
-        local w, h = term.getSize()
-        multiProgram.launchProgram("rom/programs/shell.lua", 5, 5, w - 5, h - 5, "shell")
-        --multiProgram.launchProgram("rom/programs/fun/advanced/paint.lua", 5, 5, 30, 10, "multiPaint")
+        local pv = programWindow:new{}
+        engine:addChild(pv)
+        pv:launchProgram("rom/programs/shell.lua", "shell")
     elseif text == "Exit" then
         multiProgram.exit()
     end
@@ -60,33 +60,62 @@ clock.h = 1
 local frameStyle = engine:newStyle()
 frameStyle.backgroundColor = colors.cyan
 
-local a = engine:addControl()
-a.draggable = true
-a.text = "% Window    x"
-a.x = 10
-a.y = 3
+local window = engine:getObjects()["control"]:new{}
+window.draggable = true
+window.text = "% Window"
 --a.style = frameStyle
+
+function window:ready()
+end
 
 local bodyStyle = engine:newStyle()
 bodyStyle.backgroundColor = colors.lightGray
 
-
-local programViewport = engine:getObjects()["control"]:new{}
+programViewport = engine:getObjects()["control"]:new{}
 programViewport.rendering = false
-local i = 0
-function programViewport:update()
-    if i == 3 then
-        programViewport.program = multiProgram.launchProgram("rom/programs/shell.lua", 5, 5, 16, 16, "shell")
+programViewport.style = engine:newStyle()
+programViewport.style.backgroundColor = colors.gray
+programViewport.mouseIgnore = true
+programViewport.program = nil
+
+
+function programViewport:launchProgram(path, ...)
+    self.program = multiProgram.launchProgram(path, self.globalX, self.globalY, self.w, self.h, ...)
+    self:redraw()   
+end
+
+function programViewport:draw()
+    self:base().draw(self)
+    self:updateWindow()
+end
+
+function programViewport:updateWindow()
+    if self.program == nil then return end
+    self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h)
+    self.program.queueRedraw()
+end
+
+programWindow = window:new{}
+function programWindow:ready()
+    self:base():ready()
+
+    local pv = programViewport:new{}
+    self.programViewport = pv
+    self:addChild(pv)
+    pv.y = 1
+    pv.h = pv.h - 1
+
+    local b = self:addButton()
+    b.w = 1
+    b.pressed = function(o)
+        multiProgram.endProcess(o.parent.programViewport.program)
+        --print(o.parent.programViewport)
     end
 end
-programViewport:add()
 
-
---[[
-function programViewport:globalPositionChanged()
-    --self.program.window.reposition(self.globalX, self.globalY, self.w, self.h)
+function programWindow:launchProgram(path, ...)
+    self.programViewport:launchProgram(path, ...)
 end
-]]--
 
 function clock:update()
     self.text = textutils.formatTime(os.time('local'), true)

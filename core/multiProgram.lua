@@ -4,6 +4,8 @@ local tProcesses = {}
 local focusIndex = 1
 local parentTerm = term.current()
 local collision = require(path .. "collision")
+local renderQueue = {}
+local redraw = false
 
 function launchProgram(path, x, y, w, h, ...)
     local env = { shell = shell, multishell = multishell }
@@ -22,7 +24,8 @@ function launchProcess(fun, x, y, w, h, ...)
     end)
     p.window = window.create(parentTerm, x, y, w, h, true)
     tProcesses[#tProcesses + 1] = p
-    setFocus(#tProcesses)
+    p.queueRedraw = function() redraw = true end
+    setFocusIndex(#tProcesses)
     return p
 end
 
@@ -31,7 +34,7 @@ function resumeProcess(p, event, ...)
     term.redirect(p.window)
     local ok, result = coroutine.resume(p.co, event, ...)
     --print(tostring(ok) .. " : " .. event .. " : " .. tostring(result) .. " : " .. tostring(coroutine.status(p.co) .. " : " .. tostring(coroutine.running ())))
-    p.window.redraw() 
+    p.queueRedraw()
 end
 
 function resumeProcesses(event, ...)
@@ -47,9 +50,9 @@ function clearProcess(i, force)
         table.remove(tProcesses, i)
         if nCurrentProcess == nil then
             if i > 1 then
-                setFocus(i - 1)
+                setFocusIndex(i - 1)
             elseif #tProcesses > 0 then
-                setFocus(1)
+                setFocusIndex(1)
             end
         end
     end
@@ -66,6 +69,13 @@ function clearProcesses(force)
     end
 end
 
+function endProcess(p)
+    debug.sethook(p.co, function()error("almost dead")end, "l")
+    coroutine.resume(p.co)
+    print(coroutine.status(p.co))
+    error("asd")
+end
+
 function getWindow(x, y)
     for i = 1, #tProcesses do
         local p = tProcesses[#tProcesses - i + 1]
@@ -80,8 +90,26 @@ function getWindow(x, y)
     return nil
 end 
 
-function setFocus(n)
+function redrawWindows()
+    for i = 1, #tProcesses do
+        tProcesses[i].window.redraw()
+    end
+end
+
+function getIndex(p)
+    for i = 1, #tProcesses do
+        if tProcesses[i] == p then
+            return i
+        end
+    end
+end
+
+function setFocusIndex(n)
     focusIndex = n
+end
+
+function getFocusIndex()
+    return focusIndex
 end
 
 local running = true
@@ -92,18 +120,23 @@ function start()
         local data = table.pack(os.pullEvent())
         local event = data[1]
 
-        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up"then
+        if event == "mouse_click" then
             local button, x, y = data[2], data[3], data[4]
             local p = getWindow(x, y)
-            if p ~= nil then
-                local offsetX, offsetY =  p.window.getPosition()
-                resumeProcess(p, event, button, x - offsetX + 1, y - offsetY + 1)
+            if p ~= nil then    
+                setFocusIndex(getIndex(p))
             end
+        end
+
+        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up"then
+            local p = tProcesses[getFocusIndex()]
+            local button, x, y = data[2], data[3], data[4]
+            local offsetX, offsetY =  p.window.getPosition()
+            resumeProcess(p, event, button, x - offsetX + 1, y - offsetY + 1)
         else --if event == "timer" then
             resumeProcesses(event, table.unpack(data, 2, #data))
         end
-
-        clearProcesses()
+        redrawWindows()
     end
     --parentTerm.clear()
     --term.setCursorPos(1, 1)
@@ -126,5 +159,5 @@ return {
     launchProgram = launchProgram, 
     launchProcess = launchProcess, 
     start = start,
-    setFocus = setFocus
-}
+    endProcess = endProcess
+}   

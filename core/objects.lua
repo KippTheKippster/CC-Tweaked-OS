@@ -15,10 +15,8 @@ function object:new(o)
 
     setmetatable(o, mt)   
     o.__properties = self.__properties or {} 
-    --self.__index = self
-    --self.__newindex = self --IMPORTANT TO FIX GETSET
     return o 
-end 
+end
 
 function object:defineProperty(key, methods)
     if self.__properties[key] ~= nil then
@@ -38,8 +36,6 @@ function object:base()
 end
 
 function object__index(table, key)
-    --print("object_index: " .. key .. " " .. tostring(table))
-    
     local __properties = rawget(table, "__properties")
     if __properties ~= nil and __properties[key] ~= nil then
         if table.__properties[key].get == nil then
@@ -83,36 +79,6 @@ end
 function getObject()
     return object
 end
-
---[[
-term.setBackgroundColor(colors.black)
-term.setCursorPos(1,1)
-term.clear()
-
-o1 = object:new{}
-o1._x = 3
-o1:defineProperty('x', {
-    get = function(table) 
-        print("Getting x!")
-        return table._x 
-    end,
-    set = function(table, value) 
-        print("Setting x!")
-        table._x = value 
-    end 
-})
-
-print(o1.x)
-
-print("---------------")
-o2 = o1:new{}
-o2.x = 32
-print(o2.x)
-print(o1.x)
-
-o3 = o2:new{}
-print(o3.x)
-]]--
 
 return { 
     new_object = new_object, 
