@@ -1,7 +1,8 @@
 print("os starting...")
-engine = require(".core.engine")
-utils = require(".core.utils")
-multiProgram = require(".core.multiProgram")
+local engine = require(".core.engine")
+local utils = require(".core.utils")
+local multiProgram = require(".core.multiProgram")
+local parentTerm = term.current()
 
 local style = engine:getDefaultStyle()
 style.backgroundColor = colors.lightGray
@@ -44,8 +45,12 @@ dropdown:addToList("Exit")
 
 function dropdown:optionPressed(i)
     local text = dropdown:getOptionText(i)
-    if text == "Shell" then
+    if text == "New" then
+        local wi = windowControl:new{}
+        engine:addChild(wi)
+    elseif text == "Shell" then
         local pv = programWindow:new{}
+        pv.text = "  Shell"
         engine:addChild(pv)
         pv:launchProgram("rom/programs/shell.lua", "shell")
     elseif text == "Exit" then
@@ -68,13 +73,22 @@ windowControl.exitButton = nil
 windowControl.scaleButton = nil
 windowControl.minW = 10
 windowControl.minH = 4
+windowControl.oldW = 0
+windowControl.oldH = 0
 
 function windowControl:ready()
+    self.oldW = self.w
+    self.oldH = self.h
+
     self.exitButton = self:addButton()
     self.exitButton.text = "x"
     self.exitButton.x = self.w - 1
     self.exitButton.w = 1
     self.exitButton.h = 1
+
+    self.exitButton.pressed = function(o)
+        o.parent:remove()
+    end
 
     self.scaleButton = self:addControl()
     self.scaleButton.w = 1
@@ -92,7 +106,25 @@ function windowControl:ready()
         local deltaH = h - wi.h
         wi.x = wi.x + deltaW
         wi.y = wi.y + deltaH
+
+        wi.oldW = wi.w
+        wi.oldH = wi.h
     end
+
+    self.scaleButton.doublePressed = function(o)
+        local w, h = term.getSize()
+        local wi = o.parent
+        wi.x = 0
+        wi.y = 0
+        wi.w = w
+        wi.h = h
+    end
+end
+
+function windowControl:drag(x, y)
+    engine.getObjects()["control"].drag(self, x, y)
+    self.w = self.oldW
+    self.h = self.oldH
 end
 
 function windowControl:sizeChanged()
@@ -128,8 +160,8 @@ function programViewport:draw()
     --self.program.window.redraw()
 end
 
-function programViewport:transformChanged()
-    --self:updateWindow()
+function programViewport:sizeChanged()
+    self.resize = true
 end
 
 function programViewport:mouseEvent(event, data)
@@ -143,7 +175,10 @@ end
 
 function programViewport:updateWindow()
     if self.program == nil then return end
-    self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h, term.current())
+    term.redirect(self.program.window)
+    self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h, parentTerm) --, self.program.window)
+    multiProgram.resumeProcess(self.program, "term_resize")
+    term.redirect(parentTerm)
     --self.program.queueRedraw()
 end
 
@@ -159,6 +194,7 @@ function programWindow:ready()
 
     self.exitButton.pressed = function(o)
         multiProgram.endProcess(o.parent.programViewport.program)
+        o.parent:remove()
         --o.remove(o)
         --print(o.parent.programViewport)
     end

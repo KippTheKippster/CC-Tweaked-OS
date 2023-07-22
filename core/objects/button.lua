@@ -1,8 +1,7 @@
-local path = ".core."
-local control = require(path .. ".objects.control")
+return function(control, style, clickedStyle)
 local button = control:new{}
-button.normalStyle = require(path .. "styles.defaultStyle")
-button.clickedStyle = require(path .. "styles.clickedStyle")
+button.normalStyle = style
+button.clickedStyle = clickedStyle
 button.text = "Button"
 
 function button:click()
@@ -14,3 +13,4 @@ function button:up()
 end
 
 return button
+end

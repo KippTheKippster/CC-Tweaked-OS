@@ -1,8 +1,5 @@
-local path = ".core."
-local canvas = require(path .. ".objects.canvas")
+return function(canvas)
 local control = canvas:new{}
-
-utils.printTable(control.__properties)
 
 control._globalX = 0
 control._globalY = 0
@@ -12,7 +9,7 @@ control._w = 13
 control._h = 5
 control.offsetTextX = 0
 control.text = "Control"
-control._style = require(path .. "styles.defaultStyle")
+control._style = style
 control.centerText = false
 control.background = true
 control.focus = false
@@ -24,6 +21,7 @@ control.draggable = false
 control.children = {}
 control.parent = nil
 
+
 control:defineProperty('globalX', {
     get = function(table) return table._globalX end,
     set = function(table, value) 
@@ -31,6 +29,7 @@ control:defineProperty('globalX', {
         table._globalX = value 
         if same == false then
             table:updateGlobalPosition();
+            table:transformChanged();
             table:globalPositionChanged();
         end
     end 
@@ -43,6 +42,7 @@ control:defineProperty('globalY', {
         table._globalY = value 
         if same == false then
             table:updateGlobalPosition();
+            table:transformChanged();
             table:globalPositionChanged();
         end
     end 
@@ -66,6 +66,7 @@ control:defineProperty('x', {
         table._x = value 
         if same == false then
             table:udpatePosition()
+            table:transformChanged();
             table:positionChanged();
         end
     end 
@@ -79,6 +80,7 @@ control:defineProperty('y', {
         table._y = value 
         if same == false then
             table:udpatePosition()
+            table:transformChanged();
             table:positionChanged();
         end
     end 
@@ -97,6 +99,7 @@ control:defineProperty('w', {
         table._w = value 
         if same == false then
             table:redraw()
+            table:transformChanged();
             table:sizeChanged();
         end
     end 
@@ -109,6 +112,7 @@ control:defineProperty('h', {
         table._h = value 
         if same == false then
             table:redraw()
+            table:transformChanged();
             table:sizeChanged();
         end
     end 
@@ -143,6 +147,16 @@ function control:add()
     table.insert(controls, self)
     canvas.add(self) --super
     self:draw()
+end
+
+function control:remove()
+    for i = 1, #controls do
+		if controls[i] == self then
+            table.remove(controls, i)
+		end
+	end
+    canvas.remove(self)
+    self:syncChildrenFunction("remove")
 end
 
 function getControl(x, y, w, h, whitelist, p)
@@ -319,7 +333,7 @@ end
 function control:syncChildrenFunction(key)
     for i = 1, #self.children do
         local c = self.children[i]
-        c[key]()
+        c[key](c)
     end
 end
 
@@ -342,7 +356,9 @@ function control:focusChanged() end
 function control:positionChanged() end
 function control:globalPositionChanged() end
 function control:sizeChanged()  end
+function control:transformChanged()  end
 function control:styleChanged() end
 function control:visibilityChanged() end
 
 return control
+end

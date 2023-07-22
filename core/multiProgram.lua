@@ -71,9 +71,9 @@ function clearProcesses(force)
 end
 
 function endProcess(p)
-    debug.sethook(p.co, function()error("almost dead")end, "l")
+    debug.sethook(p.co, function() error("almost dead")end, "l")
     coroutine.resume(p.co)
-    print(coroutine.status(p.co))
+    --print(coroutine.status(p.co))
 end
 
 function getWindow(x, y)
@@ -116,8 +116,8 @@ local running = true
 function start()
     term.clear()
     while running do 
-        term.redirect(parentTerm)
-        local data = table.pack(os.pullEvent())
+        --term.redirect(parentTerm)
+        local data = table.pack(os.pullEventRaw())
         local event = data[1]
 
         if event == "mouse_click" then
@@ -159,6 +159,7 @@ end
 return {
     launchProgram = launchProgram, 
     launchProcess = launchProcess, 
+    resumeProcess = resumeProcess,
     start = start,
     endProcess = endProcess,
 }   

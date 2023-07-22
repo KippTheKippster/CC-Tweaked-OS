@@ -16,7 +16,12 @@ function active:remove()
             table.remove(actives, i)
 		end
 	end
-    self = nil
+    
+    --utils.printTable(getmetatable(self).base)
+    --print(getmetatable(self).base)
+
+    --rawset(self, nil)
+    --rawset(self, "self", nil)
 end
 
 function active:ready() end

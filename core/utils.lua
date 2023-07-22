@@ -50,7 +50,7 @@ function printTable(table, recursive, prefix)
 	if prefix == nil then prefix = "" end
 	print(prefix .. "{")
 	for k, v in pairs(table) do
-		print(prefix .. k .. " = " .. tostring(v))
+		print(prefix .. tostring(k) .. " = " .. tostring(v))
 		if recursive and type(v) == "table" then 
 			--print(prefix .. "{")
 			printTable(v, prefix .. "   ")

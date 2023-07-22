@@ -145,10 +145,6 @@ function processInput()
         local data = {os.pullEvent()}
         local event = data[1]
 
-        if string.find(event, "mouse") ~= nil then
-            mouseEvent(event, data)
-        end
-
         if event == 'key' then
             key(data[2])
         elseif event == 'key_up' then
@@ -179,6 +175,10 @@ function processInput()
                 data[3],
                 data[4]
             )
+        end
+
+        if string.find(event, "mouse") ~= nil then
+            mouseEvent(event, data)
         end
     end
 end
