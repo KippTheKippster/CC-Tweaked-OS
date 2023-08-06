@@ -5,9 +5,47 @@ mouse.doublePressed = false
 mouse.dragX = 0
 mouse.dragY = 0
 
+local i1 = 0
+
+function childrenInArea(children, x, y)
+    for i = 1, #children do
+        local index = #children - i + 1
+        if #children[index].children > 0 then
+            local inArea = childrenInArea(children[index].children, x, y)
+            if inArea ~= nil then
+                return inArea
+            end
+        end
+        local inArea = controlInArea(children[index], x, y)
+        if inArea ~= nil then
+            return inArea
+        end
+    end
+
+    return nil
+end
+
+function controlInArea(c, x, y) 
+    i1 = i1 + 1
+    if collision.inArea(
+        x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
+        ) 
+        and c.mouseIgnore == false
+        and c.visible == true
+    then
+        return c 
+    end
+
+    return nil
+end
+
 function mouse.getControl(x, y)
+    local inArea = childrenInArea(main.children, x, y)
+    return inArea
+    --[[
     for i = 1, #controls do
         local c = controls[#controls - i + 1] --Go in inverse order so the collision of the mouse matches with visuals (the button on top gets pressed)
+        print(main)
         if collision.inArea(
             x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
             ) 
@@ -19,6 +57,7 @@ function mouse.getControl(x, y)
     end
     
     return nil
+    ]]--
 end
 
 function mouse.click(button, x, y)
@@ -73,6 +112,7 @@ keys = {}
 keyListeners = {}
 charListeners = {}
 scrollListeners = {}
+mouseEventListeners = {}
 
 function isKey(key)
     if keys[key] == true then
@@ -129,6 +169,16 @@ function mouseDrag(button, x, y)
     mouse.drag(button, x, y)
 end 
 
+function mouseEvent(event, data)
+    for i = 1, #mouseEventListeners do 
+        mouseEventListeners[i]:mouseEvent(event, data)
+    end
+end
+
+function addMouseEventListener(o)
+    table.insert(mouseEventListeners, o)
+end
+
 function processInput()
     while true do 
         local data = {os.pullEvent()}
@@ -165,6 +215,10 @@ function processInput()
                 data[4]
             )
         end
+
+        if string.find(event, "mouse") ~= nil then
+            mouseEvent(event, data)
+        end
     end
 end
 
@@ -173,5 +227,6 @@ return {
     addKeyListener = addKeyListener,
     addCharListener = addCharListener,
     processInput = processInput,
-    addScrollListener = addScrollListener
+    addScrollListener = addScrollListener,
+    addMouseEventListener = addMouseEventListener
 }

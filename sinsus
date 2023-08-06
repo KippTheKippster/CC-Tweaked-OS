@@ -1,0 +1,27 @@
+term.clear()
+local time = 0
+offset_x = 0
+offset_y = 10
+amp = 4
+
+while(true) do
+    term.setBackgroundColor(colors.black)
+    term.clear()
+    time = time + 0.4
+    for i = 1, 52 do
+        local t = i / 4 + time
+        amp = math.cos(time) * 4
+        local x = i 
+        local y = math.sin(t) * amp
+        local x1 = i + 1
+        local y1 = math.sin(t + 1/128) * amp
+        
+        paintutils.drawLine(
+            x + offset_x,
+            y + offset_y,
+            x1 + offset_x,
+            y1 + offset_y,
+            colors.white)
+    end
+    sleep(0.1)
+end

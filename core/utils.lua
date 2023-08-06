@@ -50,7 +50,7 @@ function printTable(table, recursive, prefix)
 	if prefix == nil then prefix = "" end
 	print(prefix .. "{")
 	for k, v in pairs(table) do
-		print(prefix .. k .. " = " .. tostring(v))
+		print(prefix .. tostring(k) .. " = " .. tostring(v))
 		if recursive and type(v) == "table" then 
 			--print(prefix .. "{")
 			printTable(v, prefix .. "   ")
@@ -83,6 +83,36 @@ function capitaliseFirst(text)
 	return (text:gsub("^%l", string.upper))
 end
 
+local function push(table, object, dir)
+	for i = 1, #table do
+		if table[i] == object then
+			if i + dir < 1 or i + dir > #table then return i end
+			local o1 = table[i + dir]
+			table[i] = o1
+			table[i + dir] = object
+			return i + dir
+		end
+	end
+
+	return nil
+end
+
+function pushUp(table, object)
+	return push(table, object, -1)
+end
+
+function pushDown(table, object)
+	return push(table, object, 1)
+end
+
+function pushTop(table, object)
+	repeat until pushUp(table, object) == 1
+end
+
+function pushBottom(table, object)
+	repeat until pushDown(table, object) == #table
+end
+
 return{
 	contains = contains,
 	split = split,
@@ -91,5 +121,9 @@ return{
 	clamp = clamp,
 	getDir = getDir,
 	capitaliseFirst = capitaliseFirst,
-	move = move
+	move = move,
+	pushUp = pushUp,
+	pushDown = pushDown,
+	pushTop = pushTop,
+	pushBottom = pushBottom
 }

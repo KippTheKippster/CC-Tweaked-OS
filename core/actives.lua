@@ -5,9 +5,29 @@ active = objects.new_object()
 actives = {}
 active.name = 'active'
 
+--active:defineSignal("readyEvent")
+--active:connectSignal("readyEvent", active, "ready")
+
 function active:add()
-    table.insert(actives, self) 
-    self:ready()
+    table.insert(actives, self)
+    self:defineSignal("readyEvent") 
+    self:connectSignal("readyEvent", self, "ready")
+    self:emitSignal("readyEvent")
+    --self:ready()
+end
+
+function active:remove()
+    for i = 1, #actives do
+		if actives[i] == self then
+            table.remove(actives, i)
+		end
+	end
+    
+    --utils.printTable(getmetatable(self).base)
+    --print(getmetatable(self).base)
+
+    --rawset(self, nil)
+    --rawset(self, "self", nil)
 end
 
 function active:ready() end

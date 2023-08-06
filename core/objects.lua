@@ -1,41 +1,100 @@
 local path = ".core."
-
-utils = require(path .. "utils")
+local utils = require(".core.utils")
 
 object = {}
 
+--Creates a new object, copying properties and signals to the new object
 function object:new(o)
     local o = o or {}
     mt = 
     { 
         base = self, 
-        __index = object__index,
+        __index = object__index,    
         __newindex = object__newindex,
     }
 
     setmetatable(o, mt)   
     o.__properties = self.__properties or {} 
+    --o.__signals = self.__signals or {}
+    o.__signals = {}
     return o 
 end
 
+function object:remove()
+    for k in pairs (self) do
+        self [k] = nil
+    end
+end
+
+--Defines a new property
 function object:defineProperty(key, methods)
     if self.__properties[key] ~= nil then
         error("Attempting to define an already defined property: " .. key .. " " .. tostring(self), 2)
     end
 
     if key == nil then
-        error("Attemting to define propert with key nil " .. tostring(self), 2)
+        error("Attemting to define property with key nil " .. tostring(self), 2)
     end
     
     self.__properties[key] = methods
 end
 
+--Defines a new signal
+function object:defineSignal(key)
+    if self.__signals[key] ~= nil then
+        error("Attempting to define an already defined signal: " .. key .. " " .. tostring(self), 2)
+    end
+
+    if key == nil then
+        error("Attemting to define signal with key nil " .. tostring(self), 2)
+    end
+    
+    self.__signals[key] = 
+    {
+        objects = {}
+    }
+end
+
+--Connect a signal to method
+function object:connectSignal(key, o, method)
+    if self.__signals[key] == nil then
+        error("Attempting to connect a signal that does not exist: " .. key .. " " .. tostring(self), 2)
+    end
+    
+    local signal = self.__signals[key]
+    local objects = signal.objects
+    if objects[o] == nil then
+        objects[o] = {}
+    end
+    if objects[o][key] == nil then
+        objects[o][key] = {}
+    end
+    table.insert(objects[o][key], method)
+    --table.insert(signal.methods, 
+end
+
+function object:emitSignal(key)
+    local signal = self.__signals[key]
+    if signal == nil then
+        error("Attempting to emit a signal that does not exist: " .. key .. " " .. tostring(self), 2)
+    end
+
+    for object, signals in pairs(signal.objects) do
+        for _, method in pairs(signals[key]) do
+            object[method](object)
+        end
+    end
+end
+
+--Returns the base object
 function object:base()
     --Double base since
     return getmetatable(getmetatable(self).base).base 
 end
 
+--Get key from object
 function object__index(table, key)
+    --print("INDEX: " .. tostring(table) .. " key: " .. key)
     local __properties = rawget(table, "__properties")
     if __properties ~= nil and __properties[key] ~= nil then
         if table.__properties[key].get == nil then
@@ -49,17 +108,23 @@ function object__index(table, key)
         return rawget(table, key)
     end
 
-    local mt = getmetatable(table)
-    if rawget(mt, "base")[key] ~= nil then
-        return rawget(mt, "base")[key]
+    local mt = table
+    while true do
+        mt = getmetatable(mt)
+        if mt == nil then
+            break
+        end
+        if rawget(mt, "base")[key] ~= nil then
+            return rawget(mt, "base")[key]
+        end
     end
 
     return nil
 end
 
+--Set key from object
 function object__newindex(table, key, value)
-    --print("object_newindex: " .. key .. " = " .. tostring(value) .. " " .. tostring(table))
-
+    --print("newINDEX: " .. tostring(table) .. " key: " .. key)
     local __properties = rawget(table, "__properties")
     if __properties ~= nil and __properties[key] ~= nil  then
         if table.__properties[key].set == nil then

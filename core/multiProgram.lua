@@ -25,16 +25,15 @@ function launchProcess(fun, x, y, w, h, ...)
     p.window = window.create(parentTerm, x, y, w, h, true)
     tProcesses[#tProcesses + 1] = p
     p.queueRedraw = function() redraw = true end
+    p.resumeProcess = function(event, ...) resumeProcess(p, event, ...) end
     setFocusIndex(#tProcesses)
     return p
 end
 
 function resumeProcess(p, event, ...)
-    --local p = tProcesses[i]
     term.redirect(p.window)
     local ok, result = coroutine.resume(p.co, event, ...)
-    --print(tostring(ok) .. " : " .. event .. " : " .. tostring(result) .. " : " .. tostring(coroutine.status(p.co) .. " : " .. tostring(coroutine.running ())))
-    p.queueRedraw()
+    --p.queueRedraw()
 end
 
 function resumeProcesses(event, ...)
@@ -70,10 +69,9 @@ function clearProcesses(force)
 end
 
 function endProcess(p)
-    debug.sethook(p.co, function()error("almost dead")end, "l")
+    debug.sethook(p.co, function() error("almost dead")end, "l")
     coroutine.resume(p.co)
-    print(coroutine.status(p.co))
-    error("asd")
+    --print(coroutine.status(p.co))
 end
 
 function getWindow(x, y)
@@ -116,8 +114,8 @@ local running = true
 function start()
     term.clear()
     while running do 
-        term.redirect(parentTerm)
-        local data = table.pack(os.pullEvent())
+        --term.redirect(parentTerm)
+        local data = table.pack(os.pullEventRaw())
         local event = data[1]
 
         if event == "mouse_click" then
@@ -128,22 +126,23 @@ function start()
             end
         end
 
-        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up"then
-            local p = tProcesses[getFocusIndex()]
+        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up" then
+            --local p = tProcesses[getFocusIndex()]
+            local p = tProcesses[1]
             local button, x, y = data[2], data[3], data[4]
-            local offsetX, offsetY =  p.window.getPosition()
+            local offsetX, offsetY= p.window.getPosition()
             resumeProcess(p, event, button, x - offsetX + 1, y - offsetY + 1)
         else --if event == "timer" then
             resumeProcesses(event, table.unpack(data, 2, #data))
         end
-        redrawWindows()
+        --redrawWindows()
     end
     --parentTerm.clear()
     --term.setCursorPos(1, 1)
     --print("Done...")
 end
 
-function exit()
+function exit() 
     clearProcesses(true)
     running = false
 end
@@ -158,6 +157,7 @@ end
 return {
     launchProgram = launchProgram, 
     launchProcess = launchProcess, 
+    resumeProcess = resumeProcess,
     start = start,
-    endProcess = endProcess
+    endProcess = endProcess,
 }   

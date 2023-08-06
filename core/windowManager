@@ -1,0 +1,30 @@
+local path = ".core."
+local multiProgram = require(path .. "multiProgram")
+
+multiProgram.launchProgram("/bruh4.lua", 3, 3, 51, 20)
+start()
+
+function start()
+    term.clear()
+    while running do 
+        local data = table.pack(os.pullEventRaw())
+        local event = data[1]
+
+        if event == "mouse_click" then
+            local button, x, y = data[2], data[3], data[4]
+            local p = getWindow(x, y)
+            if p ~= nil then    
+                setFocusIndex(getIndex(p))
+            end
+        end
+
+        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up" then
+            local p = tProcesses[1]
+            local button, x, y = data[2], data[3], data[4]
+            local offsetX, offsetY= p.window.getPosition()
+            resumeProcess(p, event, button, x - offsetX + 1, y - offsetY + 1)
+        else
+            resumeProcesses(event, table.unpack(data, 2, #data))
+        end
+    end
+end
