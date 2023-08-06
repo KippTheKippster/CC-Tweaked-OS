@@ -8,7 +8,7 @@ control._y = 0
 control._w = 13
 control._h = 5
 control.offsetTextX = 0
-control.text = "Control"
+control._text = "Control"
 control._style = style
 control.centerText = false
 control.background = true
@@ -20,7 +20,6 @@ control.rendering = true
 control.draggable = false
 control.children = {}
 control.parent = nil
-
 
 control:defineProperty('globalX', {
     get = function(table) return table._globalX end,
@@ -118,6 +117,17 @@ control:defineProperty('h', {
     end 
 })
 
+control:defineProperty('text', {
+    get = function(table) return table._text end,
+    set = function(table, value) 
+        local same = table._text == value
+        table._text = value 
+        if same == false then
+            table:redraw()
+        end
+    end 
+})
+
 control:defineProperty('visible', {
     get = function(table) return table._visible end,
     set = function(table, value) 
@@ -152,11 +162,19 @@ end
 function control:remove()
     for i = 1, #controls do
 		if controls[i] == self then
-            table.remove(controls, i)
+            --table.remove(controls, i)
 		end
 	end
+
+    --self:syncChildrenFunction("remove") --TODO reimplement
+
+    for i = 1, #self.parent.children do
+		if self.parent.children[i] == self then
+            table.remove(self.parent.children, i)
+		end
+	end
+
     canvas.remove(self)
-    self:syncChildrenFunction("remove")
 end
 
 function getControl(x, y, w, h, whitelist, p)
@@ -217,6 +235,30 @@ function control:render()
         return
     end
     --PANEL
+    self:drawPanel()
+    --TEXT
+    self:write()
+end
+
+function control:draw()
+    self:render()
+end
+
+--function control:getTextPosition()
+--    local x = 0
+--    local y = 0
+--    if self.centerText == false then
+--        x = self._globalX
+--        y = self._globalY
+--    else
+--        x = self._globalX + math.ceil((self._w - #self.text) / 2)
+--        y = self._globalY + math.floor((self._h) / 2)
+--    end
+--	
+--    return x + 1, y + 1
+--end
+
+function control:drawPanel()
     if self.background == true then
         local left = self._globalX + 1
         local up = self._globalY + 1
@@ -240,27 +282,7 @@ function control:render()
             self._style.borderColor
         )
     end
-    --TEXT
-    self:write()
 end
-
-function control:draw()
-    self:render()
-end
-
---function control:getTextPosition()
---    local x = 0
---    local y = 0
---    if self.centerText == false then
---        x = self._globalX
---        y = self._globalY
---    else
---        x = self._globalX + math.ceil((self._w - #self.text) / 2)
---        y = self._globalY + math.floor((self._h) / 2)
---    end
---	
---    return x + 1, y + 1
---end
 
 function control:getTextPosition()
     return getTextPosition(self._globalX, self._globalY, self._w, self._h, self.centerText, self.text)
@@ -287,7 +309,7 @@ function control:write()
 
     local l = #self.text
     if self.clipText == true then
-        l  = math.min(#self.text, self.w+1)
+        l  = math.min(#self.text, self.w - 1)
     end
     local s = self.offsetTextX + 1
 
@@ -308,6 +330,7 @@ end
 
 function control:addChild(o)
 	local t = {}
+
 	for i = 1, #self.children do
 		t[i] = self.children[i]
 	end
@@ -318,6 +341,10 @@ function control:addChild(o)
     o.style = self.style
     o.globalX = self.globalX + o.x
     o.globalY = self.globalY + o.y
+    if (self.text == "  Shell") then
+        --print("Baller")
+        --error("A")
+    end
     --self:syncChildrenKey("style", self._style)
 end
 
@@ -344,8 +371,17 @@ function control:drag(x, y)
     self.y = self.y + y
 end
 
+function control:toFront()
+    if self.parent.children[#self.parent.children] == self then return end
+    utils.pushBottom(self.parent.children, self)
+    self:redraw()
+end
+
 function control:toBack()
-    utils.move(actives.get_list(), self, 1)
+    if self.parent.children[1] == self then return end
+
+    utils.pushTop(self.parent.children, self)
+    self:redraw()
 end
 
 function control:click() end

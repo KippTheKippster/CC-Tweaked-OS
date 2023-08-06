@@ -5,9 +5,15 @@ active = objects.new_object()
 actives = {}
 active.name = 'active'
 
+--active:defineSignal("readyEvent")
+--active:connectSignal("readyEvent", active, "ready")
+
 function active:add()
-    table.insert(actives, self) 
-    self:ready()
+    table.insert(actives, self)
+    self:defineSignal("readyEvent") 
+    self:connectSignal("readyEvent", self, "ready")
+    self:emitSignal("readyEvent")
+    --self:ready()
 end
 
 function active:remove()

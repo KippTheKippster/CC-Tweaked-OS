@@ -9,6 +9,7 @@ function dropdown:ready()
     self.list = self:addVContainer()
     self.list.y = self.h
     self.list.visible = false
+    --self.list.mouseIgnore = true
 end 
 
 function dropdown:addToList(text)

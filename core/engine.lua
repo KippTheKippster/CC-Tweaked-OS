@@ -63,6 +63,7 @@ local vContainer = requireObject("vContainer", container)
 local hContainer = requireObject("hContainer", container)
 local flowContainer = requireObject("flowContainer", container)
 local scrollContainer = requireObject("scrollContainer", container)
+local windowControl = requireObject("windowControl", control, button)
 
 local editStyle = style:new{}
 editStyle.backgroundColor = colors.gray
@@ -85,12 +86,13 @@ for k, v in pairs(objectList) do
 end
 
 local w, h = term.getSize()
-local main = control:new{}
+main = control:new{}
 main.rendering = false
 main.text = ""
 main.style = mainStyle
 main.w = w
 main.h = h
+main.mouseIgnore = true
 main:add()
 running = false
 backgroundColor = colors.black
@@ -141,24 +143,46 @@ function redrawScreen()
     if not running then return end
 
     term.setBackgroundColor(backgroundColor)
+    main:draw()
+    drawChildren(main.children)
     --term.clear()
-    for i = 1, #canvases do
-        local c = canvases[i]
-        c:draw()     
-    end
+    --for i = 1, #canvases do
+    --    local c = canvases[i]
+    --    c:draw()     
+    --end
 end
 
 function processActives()
     while running do
         for key, value in pairs(renderQueue) do
             redrawScreen() --TODO Replace with redrawArea()
+            term.setCursorBlink(false) 
             --drawutils.drawScreen()
             break
         end 
         renderQueue = {}
-
-        actives.process()
+        main:update()
+        processChildren(main.children)
+        --actives.process()
         sleep(0.01)
+    end
+end
+
+function processChildren(c)
+    for i = 1, #c do
+        if #c[i].children > 0 then
+            processChildren(c[i].children)
+        end
+        c[i]:update()
+    end
+end
+
+function drawChildren(c)
+    for i = 1, #c do
+        c[i]:draw()
+        if #c[i].children > 0 then
+            drawChildren(c[i].children)
+        end
     end
 end
 

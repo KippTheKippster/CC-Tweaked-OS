@@ -15,7 +15,8 @@ function object:new(o)
 
     setmetatable(o, mt)   
     o.__properties = self.__properties or {} 
-    o.__signals = self.__signals or {}
+    --o.__signals = self.__signals or {}
+    o.__signals = {}
     return o 
 end
 
@@ -72,10 +73,10 @@ function object:connectSignal(key, o, method)
     --table.insert(signal.methods, 
 end
 
-function object:callSignal(key)
+function object:emitSignal(key)
     local signal = self.__signals[key]
     if signal == nil then
-        error("Trying to call a signal that does not exist: " .. key .. " " .. tostring(self), 2)
+        error("Attempting to emit a signal that does not exist: " .. key .. " " .. tostring(self), 2)
     end
 
     for object, signals in pairs(signal.objects) do

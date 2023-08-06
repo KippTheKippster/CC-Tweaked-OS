@@ -1,36 +1,21 @@
-local objects = require(".core.objects")
+local actives = require(".core.actives")
 local utils = require(".core.utils")
 
-local object = objects.new_object()
-object._globalX = 1
-object:defineProperty('globalX', {
-    get = function(table) return table._globalX end,
-    set = function(table, value) 
-        table._globalX = value 
-    end 
-})
+local a = actives.new_active()
+print(a)
 
-object:defineSignal("start")
-object.x = 2
-
-function object:create()
-    self:connectSignal("start", self, "onStart")
+function a:ready()
+    print("WAAAAAAY")
 end
 
-function object:onStart()
-    print("Start: " .. self.x)
-end
+a:add()
+
+local a1 = a:new{}
+
+a1:add()
 
 
-
-object:create()
-
-o1 = object:new{}
-o1.x = 32
-o1:create()
-
-object:callSignal("start")
-
+--a1:add()
 
 --object:callSignal("start")
 

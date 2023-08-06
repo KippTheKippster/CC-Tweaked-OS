@@ -31,11 +31,9 @@ function launchProcess(fun, x, y, w, h, ...)
 end
 
 function resumeProcess(p, event, ...)
-    --local p = tProcesses[i]
     term.redirect(p.window)
     local ok, result = coroutine.resume(p.co, event, ...)
-    --print(tostring(ok) .. " : " .. event .. " : " .. tostring(result) .. " : " .. tostring(coroutine.status(p.co) .. " : " .. tostring(coroutine.running ())))
-    p.queueRedraw()
+    --p.queueRedraw()
 end
 
 function resumeProcesses(event, ...)
