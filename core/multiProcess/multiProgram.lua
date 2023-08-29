@@ -7,16 +7,23 @@ local collision = require(path .. "collision")
 local renderQueue = {}
 local redraw = false
 
-function launchProgram(path, x, y, w, h, ...)
-    local env = { shell = shell, multishell = multishell }
-    env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
-    local args = table.pack(...)
-    return launchProcess(function()
-        os.run(env, path, table.unpack(args, 1, args.n))
-    end, x, y, w, h)
+local function resumeProcess(p, event, ...)
+    term.redirect(p.window)
+    local ok, result = coroutine.resume(p.co, event, ...)
+    --p.queueRedraw()
 end
 
-function launchProcess(fun, x, y, w, h, ...)
+local function resumeProcessAtIndex(i, event, ...)
+    resumeProcess(tProcesses[i], event, ...)
+end
+
+local function resumeProcesses(event, ...)
+    for i = 1, #tProcesses do
+        resumeProcess(tProcesses[i], event, ...)
+    end
+end
+
+local function launchProcess(fun, x, y, w, h, ...)
     local p = {}
     local args = table.pack(...)
     p.co = coroutine.create(function(args)
@@ -30,16 +37,13 @@ function launchProcess(fun, x, y, w, h, ...)
     return p
 end
 
-function resumeProcess(p, event, ...)
-    term.redirect(p.window)
-    local ok, result = coroutine.resume(p.co, event, ...)
-    --p.queueRedraw()
-end
-
-function resumeProcesses(event, ...)
-    for i = 1, #tProcesses do
-        resumeProcess(tProcesses[i], event, ...)
-    end
+local function launchProgram(path, x, y, w, h, ...)
+    local env = { shell = shell, multishell = multishell }
+    env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
+    local programArgs = table.pack(...)
+    return launchProcess(function()
+        os.run(env, path, table.unpack(programArgs, 1, programArgs.n))
+    end, x, y, w, h)
 end
 
 function clearProcess(i, force)
@@ -69,7 +73,7 @@ function clearProcesses(force)
 end
 
 function endProcess(p)
-    debug.sethook(p.co, function() error("almost dead")end, "l")
+    debug.sethook(p.co, function() error("almost dead") end, "l")
     coroutine.resume(p.co)
     --print(coroutine.status(p.co))
 end
@@ -110,8 +114,12 @@ function getFocusIndex()
     return focusIndex
 end
 
+local function getProcess(i)
+    return tProcesses[i]
+end
+
 local running = true
-function start()
+local function start()
     term.clear()
     while running do 
         --term.redirect(parentTerm)
@@ -158,6 +166,9 @@ return {
     launchProgram = launchProgram, 
     launchProcess = launchProcess, 
     resumeProcess = resumeProcess,
+    resumeProcesses = resumeProcesses,
     start = start,
     endProcess = endProcess,
+    resumeProcessAtIndex = resumeProcessAtIndex,
+    getProcess = getProcess
 }   

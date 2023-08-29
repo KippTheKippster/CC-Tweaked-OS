@@ -1,4 +1,4 @@
-return function(canvas)
+return function(canvas, input)
 local control = canvas:new{}
 
 control._globalX = 0
@@ -156,7 +156,7 @@ control:defineProperty('style', {
 function control:add()
     table.insert(controls, self)
     canvas.add(self) --super
-    self:draw()
+    self:redraw()
 end
 
 function control:remove()
@@ -227,6 +227,17 @@ function control:redraw()
 end
 
 function control:render()
+    --PANEL
+    local left = self._globalX + 1
+    local up = self._globalY + 1
+    local right = self._globalX + self._w
+    local down = self._globalY + self._h
+    self:drawPanel(left, up, right, down)
+    --TEXT
+    self:write()
+end
+
+function control:draw()
     if not running then
         return
     end
@@ -234,13 +245,7 @@ function control:render()
     if self.visible == false or self.rendering == false then
         return
     end
-    --PANEL
-    self:drawPanel()
-    --TEXT
-    self:write()
-end
 
-function control:draw()
     self:render()
 end
 
@@ -258,6 +263,29 @@ end
 --    return x + 1, y + 1
 --end
 
+function control:drawPanel(left, up, right, down)
+    if self.background == true then
+        drawutils.drawFilledBox(
+            left, 
+            up,
+            right,
+            down,
+            self._style.backgroundColor
+        )
+    end
+    
+    if self._style.border then
+        drawutils.drawBox(
+            left, 
+            up,
+            right,
+            down,
+            self._style.borderColor
+        )
+    end
+end
+
+--[[
 function control:drawPanel()
     if self.background == true then
         local left = self._globalX + 1
@@ -283,6 +311,7 @@ function control:drawPanel()
         )
     end
 end
+]]--
 
 function control:getTextPosition()
     return getTextPosition(self._globalX, self._globalY, self._w, self._h, self.centerText, self.text)
@@ -341,10 +370,6 @@ function control:addChild(o)
     o.style = self.style
     o.globalX = self.globalX + o.x
     o.globalY = self.globalY + o.y
-    if (self.text == "  Shell") then
-        --print("Baller")
-        --error("A")
-    end
     --self:syncChildrenKey("style", self._style)
 end
 
@@ -382,6 +407,22 @@ function control:toBack()
 
     utils.pushTop(self.parent.children, self)
     self:redraw()
+end
+
+function control:inFocus()
+    if self.focus == true then return true end
+
+    for i = 1, #self.children do
+        if self.children[i].focus == true then 
+            return true
+        end
+    end
+
+    return false 
+end
+
+function control:grabFocus()
+    input.grabControlFocus(self)
 end
 
 function control:click() end

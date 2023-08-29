@@ -50,7 +50,7 @@ function requireObject(name, ...)
     return o
 end
 
-local control = requireObject("control", canvas)
+local control = requireObject("control", canvas, input)
 
 local clickedStyle = style:new{}
 clickedStyle.backgroundColor = colors.white
@@ -90,12 +90,19 @@ main = control:new{}
 main.rendering = false
 main.text = ""
 main.style = mainStyle
-main.w = w
-main.h = h
+main.w = 61
+main.h = 61
 main.mouseIgnore = true
 main:add()
 running = false
 backgroundColor = colors.black
+
+local function onResizeEvent()
+    drawutils.resize()
+    --redrawScreen() --Very slow, should be called manually
+end
+
+input.addResizeEventListener(onResizeEvent)
 
 function getMain()
     return main
@@ -103,6 +110,10 @@ end
 
 function main:getObjects()
 	return objectList
+end
+
+function main:getObject(name)
+	return objectList[name]
 end
 
 function main:start()
