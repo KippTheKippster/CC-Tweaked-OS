@@ -93,6 +93,18 @@ function mouse.click(button, x, y)
     c:click()
 end
 
+local function grabControlFocus(c) 
+    if c == mouse.current then return end
+
+    if mouse.current ~= nil then
+        mouse.current.focus = false
+        mouse.current:focusChanged()
+    end
+    mouse.current = c
+    c.focus = true
+    c:focusChanged()
+end 
+
 function mouse.up(button, x, y)
     if mouse.current == nil then return end
     mouse.current:up()
@@ -179,6 +191,22 @@ function addMouseEventListener(o)
     table.insert(mouseEventListeners, o)
 end
 
+resizeEventListeners = {}
+
+function addResizeEventListener(o)
+    table.insert(resizeEventListeners, o)
+end
+
+function resizeEvent()
+    for i = 1, #resizeEventListeners do 
+        if type(resizeEventListeners[i]) == "table" then
+            resizeEventListeners[i]:resizeEvent()
+        elseif type(resizeEventListeners[i]) == "function" then
+            resizeEventListeners[i]()
+        end 
+    end
+end
+
 function processInput()
     while true do 
         local data = {os.pullEvent()}
@@ -214,7 +242,9 @@ function processInput()
                 data[3],
                 data[4]
             )
-        end
+        elseif event == "term_resize" then
+            resizeEvent()
+        end 
 
         if string.find(event, "mouse") ~= nil then
             mouseEvent(event, data)
@@ -228,5 +258,7 @@ return {
     addCharListener = addCharListener,
     processInput = processInput,
     addScrollListener = addScrollListener,
-    addMouseEventListener = addMouseEventListener
+    addMouseEventListener = addMouseEventListener,
+    addResizeEventListener = addResizeEventListener,
+    grabControlFocus = grabControlFocus
 }

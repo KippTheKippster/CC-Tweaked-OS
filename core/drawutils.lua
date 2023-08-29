@@ -30,6 +30,7 @@ function drawPixel(x, y, color)
         --error("Atempting to draw outside canvas!", 3)
         return
     end
+    --print("x: " .. x .. " y: " .. y .. " w: " .. w .. " h: " .. h)
     grid[x][y] = color
     paintutils.drawPixel(x, y, color)
 end
@@ -95,6 +96,40 @@ function drawFilledBox(startX, startY, endX, endY, color)
     end
 end
 
+local i = 0
+
+function resize()
+    i = i + 1
+    w, h = term.getSize()
+    if #grid == w then
+        --print("same!")
+    elseif w > #grid then
+        --print("Expand!")
+        for i = #grid, w do
+            grid[i] = {}
+            for j = 1, h do
+                grid[i][j] = 1
+            end
+        end
+    else
+        --print("Reduce!")
+        for i = w, #grid do
+            table.remove(grid, i)
+        end
+    end
+
+
+    if #grid[1] == h then
+    elseif h > #grid[1] then --Will auto add new slots if needed (maybe?)
+    else
+        for i = 1, w do
+            for j = h, #grid[i] do
+                table.remove(grid[i], j)
+            end
+        end
+    end
+end
+
 return {
     drawPixel = drawPixel,
     drawXLine = drawXLine,
@@ -102,5 +137,6 @@ return {
     drawBox = drawBox,
     drawFilledBox = drawFilledBox,
     getPixel = getPixel,
-    drawScreen = drawScreen
+    drawScreen = drawScreen,
+    resize = resize
 }

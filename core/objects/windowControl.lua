@@ -57,11 +57,11 @@ function windowControl:ready()
 end
 
 function windowControl:click()
-    self:toFront()
+    --self:toFront()
 end
 
 function windowControl:drag(x, y)
-    self:base().drag(self, x, y)
+    control.drag(self, x, y)
     self.w = self.oldW
     self.h = self.oldH
 end
