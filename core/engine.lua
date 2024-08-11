@@ -175,7 +175,7 @@ function processActives()
         main:update()
         processChildren(main.children)
         --actives.process()
-        sleep(0.01)
+        sleep(0.0001)
     end
 end
 

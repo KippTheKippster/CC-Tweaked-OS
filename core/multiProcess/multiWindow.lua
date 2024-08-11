@@ -1,3 +1,5 @@
+-- This seems kinda pointless, might remove
+
 return function(engine)
 local path = ".core.multiProcess."
 local multiProgram = require(path .. "multiProgram")    
@@ -15,10 +17,12 @@ local function launchProgram(programPath, x, y, w, h, ...)
     --multiProgram.launchProgram(path, x, y, w, h, ...)
     local window = programWindow:new{}
     engine:addChild(window)
+    window:toFront()
 
     local viewport = programViewport:new{}
     window:addViewport(viewport)
-    viewport.program = multiProgram.launchProgram(programPath, x, y, w, h, ...)
+    viewport:launchProgram(programPath, x, y, w, h, ...)
+    --viewport.program = multiProgram.launchProgram(programPath, x, y, w, h, ...)
 
     table.insert(viewports, viewport)
 
@@ -33,16 +37,30 @@ local function launchProgram(programPath, x, y, w, h, ...)
     return window
 end
 
-local function launchProcess(fun, x, y, w, h, ...)
+local function launchProcess(fun, x, y, w, h, ...) -- Launch a windowless process 
     local process = multiProgram.launchProcess(fun, x, y, w, h, ...)
     table.insert(nvProcesses, process)
     return process
 end
 
+local updating = false
+
 local function start(fun, ...)
     term.clear()
     local w, h = term.getSize()
     local main = launchProcess(fun, 1, 1, w, h, ...)
+
+    --local baseDrawPixel = paintutils.drawPixelInternal
+    --paintutils.drawPixelInternal = function(x, y, color)
+    --    baseDrawPixel(1, 1, color)
+    --    if updating then return end
+    --    updating = true
+    --    for i = 1, #viewports do
+    --        viewports[i]:updateWindow()
+    --    end
+    --    updating = false
+    --end
+
     while true do 
         local data = table.pack(os.pullEventRaw())
         local event = data[1]

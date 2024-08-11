@@ -1,3 +1,5 @@
+-- Extends windowControl, attaches a programViewport to a window.
+
 return function(windowControl, programViewport)
 local programWindow = windowControl:new{}
 programWindow.programViewport = nil
@@ -12,7 +14,7 @@ function programWindow:ready()
 
     self.scaleButton.up = function(o)
         o.parent:redraw()
-        o.parent.programViewport:updateWindow() --TODO FIX!!!
+        self.programViewport:updateWindow() --TODO FIX!!!
     end
 end
 
