@@ -1,3 +1,5 @@
+-- Handles coroutines of multiple programs
+
 local path = ".core."
 
 local tProcesses = {}

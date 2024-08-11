@@ -43,21 +43,25 @@ dropdown:addToList("Shell")
 function dropdown:optionPressed(i)
     local text = dropdown:getOptionText(i)
     if text == "New" then
-        local wi = engine:addWindowControl()
+        local w = engine:addWindowControl()
     elseif text == "Shell" then
-        multiWindow.launchProgram("rom/programs/shell.lua", 2, 2, 20, 10)
+        local w = multiWindow.launchProgram("rom/programs/shell.lua", 2, 2, 20, 10)
+        w.text = "  Shell"
     elseif text == "Exit" then
         shell.run("rom/programs/shell.lua")
         multiWindow.exit()
     elseif text == "File Explorer" then
-        multiWindow.launchProgram("/os/programs/fileExplorer.lua", 1, 1, 40, 15, 
+        local fileExplorer = multiWindow.launchProgram("/os/programs/fileExplorer.lua", 1, 1, 40, 15, 
         function(name, ctrl)
             if ctrl then
                 local w = multiWindow.launchProgram("/rom/programs/edit.lua", 0, 0, 30, 18, name)
+                w.text = "  Edit '" .. name .. "'" 
             else
                 local w = multiWindow.launchProgram(name, 2, 2, 20, 10)
+                w.text = "  " .. name   
             end
         end)
+        fileExplorer.text = "  File Explorer"
     end
 end
 

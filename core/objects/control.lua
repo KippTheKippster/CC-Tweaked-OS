@@ -194,7 +194,7 @@ function getControl(x, y, w, h, whitelist, p)
     return list
 end
 
-function redrawArea(x, y, w, h)
+function redrawArea(x, y, w, h) -- Unused
     term.setBackgroundColor(colors.black)
     term.setTextColor(colors.white)
     term.clear()
@@ -219,14 +219,12 @@ function redrawArea(x, y, w, h)
     end
 end
 
-i = 0
 function control:redraw()
     if not running then return end
     renderQueue[self] = true
-    i = i + 1
 end
 
-function control:render()
+function control:render() -- Determines how the control object is drawn
     --PANEL
     local left = self._globalX + 1
     local up = self._globalY + 1
@@ -237,7 +235,7 @@ function control:render()
     self:write()
 end
 
-function control:draw()
+function control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object use 'redraw' instead
     if not running then
         return
     end
@@ -391,7 +389,6 @@ end
 
 function control:drag(x, y)
     if not self.draggable then return end
-    --print(self.x + " : " + x)
     self.x = self.x + x
     self.y = self.y + y
 end
@@ -404,7 +401,6 @@ end
 
 function control:toBack()
     if self.parent.children[1] == self then return end
-
     utils.pushTop(self.parent.children, self)
     self:redraw()
 end
