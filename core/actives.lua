@@ -36,8 +36,8 @@ function active:update() end
 local function process()
     for i = 1, #actives do
         local a = actives[i]
-        a:update() 
-    end  
+        a:update()
+    end
 end
 
 local function new_active()

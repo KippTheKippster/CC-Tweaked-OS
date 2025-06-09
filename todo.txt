@@ -3,6 +3,15 @@
 #Scroll is not working
 #Show cursor
 #Make global function and variables local
+#Order dropdown in front of windows
+#Exit button
+#Show Error Messages
+Fix cursor blinking
+Settings menu
+
+Shortcuts:
+    alt tab
+    dropdown
 
 File explorer functionality:
     Rename file
@@ -11,5 +20,5 @@ File explorer functionality:
     Scroll
 
 Oddities:
-    A program that constantly checks for the resize event will constantly trigger redraw
-    Multishell will take priority over main os
+    #A program that constantly checks for the resize event will constantly trigger redraw
+    #Multishell will take priority over main os

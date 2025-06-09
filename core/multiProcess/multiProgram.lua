@@ -22,6 +22,7 @@ end
 local function resumeProcess(p, event, ...)
     term.redirect(p.window)
     local ok, result = coroutine.resume(p.co, event, ...)
+    return ok, result
     --p.queueRedraw()
 end
 
@@ -51,11 +52,13 @@ local function launchProcess(fun, x, y, w, h, ...)
 end
 
 local function launchProgram(path, x, y, w, h, ...)
-    local env = { shell = shell, multishell = multishell }
-    env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
+    local enva = { shell = shell, multishell = multishell }
+
+    enva.require, enva.package = dofile("rom/modules/main/cc/require.lua").make(enva, "")
     local programArgs = table.pack(...)
     return launchProcess(function(p)
-        os.run(env, path, table.unpack(programArgs, 1, programArgs.n))
+        enva.shell.openTab = function() end
+        os.run(enva, path, table.unpack(programArgs, 1, programArgs.n))
     end, x, y, w, h)
 end
 
@@ -78,10 +81,6 @@ local function clearProcesses(force)
     local force = force or false
     for i = 1, #tProcesses do
         clearProcess(i, force)
-    end
-
-    if (#tProcesses == 0 and force == false) then
-        exit()
     end
 end
 
@@ -132,7 +131,7 @@ local function start()
         if event == "mouse_click" then
             local button, x, y = data[2], data[3], data[4]
             local p = getWindow(x, y)
-            if p ~= nil then    
+            if p ~= nil then
                 setFocusIndex(getIndex(p))
             end
         end
@@ -173,5 +172,6 @@ return {
     start = start,
     endProcess = endProcess,
     resumeProcessAtIndex = resumeProcessAtIndex,
-    getProcess = getProcess
-}   
+    getProcess = getProcess,
+    clearProcesses = clearProcesses
+}

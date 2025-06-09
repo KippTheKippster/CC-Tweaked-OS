@@ -14,7 +14,7 @@ function programWindow:ready()
     self.minimizeButton = self:addButton()
     self.minimizeButton.w = 1
     self.minimizeButton.h = 1
-    self.minimizeButton.text = "="
+    self.minimizeButton.text = "-"
 
     self.minimizeButton.pressed = function(o)
         self.visible = false

@@ -9,6 +9,8 @@ local programWindow = require(path .. "programWindow")(engine:getObjects()["wind
 local viewports = {}
 local nvProcesses = {}
 
+local running = false
+
 local focusedWindowStyle = engine:newStyle()
 focusedWindowStyle.backgroundColor = colors.blue
 focusedWindowStyle.textColor = colors.white
@@ -16,10 +18,11 @@ local unfocusedWindowStyle = engine:newStyle()
 unfocusedWindowStyle.backgroundColor = colors.white
 unfocusedWindowStyle.textColor = colors.black
 
-local function launchProgram(programPath, x, y, w, h, ...)
+-- I don't like having parent here
+local function launchProgram(parent, programPath, x, y, w, h, ...)
     --multiProgram.launchProgram(path, x, y, w, h, ...)
     local window = programWindow:new{}
-    engine.root:addChild(window)
+    parent:addChild(window)
     window:toFront()
 
     local viewport = programViewport:new{}
@@ -48,83 +51,42 @@ local function launchProcess(fun, x, y, w, h, ...) -- Launch a windowless proces
     return process
 end
 
-local updating = false
-
 local function start(fun, ...)
     term.clear()
     local w, h = term.getSize()
     local main = launchProcess(fun, 1, 1, w, h, ...)
-
-    --local baseDrawPixel = paintutils.drawPixelInternal
-    --paintutils.drawPixelInternal = function(x, y, color)
-    --    baseDrawPixel(1, 1, color)
-    --    if updating then return end
-    --    updating = true
-    --    for i = 1, #viewports do
-    --        viewports[i]:updateWindow()
-    --    end
-    --    updating = false
-    --end
-
-    while true do 
+    running = true
+    while running do
         local data = table.pack(os.pullEventRaw())
         local event = data[1]
 
-        --local w = nil
-        --if event == "mouse_click" then
-        --    local button, x, y = data[2], data[3], data[4]
-        --    w = getWindow(x, y)
-        --    if w ~= nil then    
-        --    --    setFocusIndex(getIndex(w))
-        --    end
-        --    --local process = multiProgram.getProcess(getIndex(w))
-        --    for i = 1, #viewports do
-        --        if viewports[i].program == w then
-        --            --viewports[i]:grabFocus()
-        --        end
-        --    end
-        --end
-
         for i = 1, #viewports do
-            if viewports[i] == w then
-                --viewports[i]:grabFocus()
-            end
             viewports[i]:unhandledEvent(event, data)
         end
 
         for i = 1, #nvProcesses do
-            multiProgram.resumeProcess(nvProcesses[i], event, table.unpack(data, 2, #data)) --Fix!
+            local ok, err = multiProgram.resumeProcess(nvProcesses[i], event, table.unpack(data, 2, #data)) --Fix!
+            if ok == false then
+                term.setCursorPos(1, 1)
+                term.setBackgroundColor(colors.black)
+                printError(err)
+                exit()
+                return
+            end
         end
 
-        --multiProgram.resumeProcessAtIndex(1, event, table.unpack(data, 2, #data)) --Fix!
-        --multiProgram.resumeProcesses(event, table.unpack(data, 2, #data))
     end
 end
 
---[[
-            if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up" then
-            --local p = tProcesses[1]
-            local p = main
-            for i = 1, #viewports do
-                if viewports[i].focus == true then
-                    p = viewports[i].program
-                end
-            end
-            local button, x, y = data[2], data[3], data[4]
-            if p ~= getWindow(x, y) then
-                p = main
-            end 
-            local offsetX, offsetY = p.window.getPosition()
-            multiProgram.resumeProcess(p, event, button, x - offsetX + 1, y - offsetY + 1)
-        else
-            multiProgram.resumeProcesses(event, table.unpack(data, 2, #data))
-        end
-]]
+local function exit()
+    running = false
+end
 
-return 
+return
 {
     launchProgram = launchProgram,
     launchProcess = launchProcess,
-    start = start
+    start = start,
+    exit = exit
 }
 end

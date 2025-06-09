@@ -62,21 +62,15 @@ return function(control, multiProgram, parentTerm)
         multiProgram.resumeProcess(self.program, "term_resize")
 
         self.program.window.setVisible(true)
-        if self.parent:inFocus() == false then
+        if self.parent:inFocus() == false then -- This will refresh the entire viewport only if it is not in focus
             self.program.window.setVisible(false)
-        end
-        term.redirect(parentTerm)
-    end
-
-    function programViewport:focusChanged()
-        if self.parent:inFocus() then 
+        else
             local x, y = self.program.window.getCursorPos()
             local blink = self.program.window.getCursorBlink()
-            term.setCursorPos(x, y)
-            term.setCursorBlink(blink)
-        else
-            term.setCursorBlink(false)
+            --term.setCursorPos(x, y)
+            --term.setCursorBlink(true)
         end
+        term.redirect(parentTerm)
     end
 
     return programViewport
