@@ -1,21 +1,23 @@
-print("os starting...")
+print("mos is starting...")
 local engine = require(".core.engine")
 local utils = require(".core.utils")
 local multiWindow = require(".core.multiProcess.multiWindow")(engine)
 local parentTerm = term.current()
 
+local termW, teremH = term.getSize()
+
 local style = engine:getDefaultStyle()
-style.backgroundColor = colors.lightGray
+style.backgroundColor = colors.white
 
 local clickedStyle = engine:getDefaultClickedStyle()
 clickedStyle.textColor = colors.black
-clickedStyle.backgroundColor = colors.white
+clickedStyle.backgroundColor = colors.lightBlue
 
 --Background
-local background = engine:addIcon()
+local background =  engine.root:addIcon()
 background.y = 1
 background.x = 0
-background.text = "a"
+background.text = ""
 function background:update() --TODO, fix it so it textures can be loaded at startup
     if self.texture == nil then
         self.texture = paintutils.loadImage("os/textures/backgrounds/melvin.nfp")
@@ -23,49 +25,82 @@ function background:update() --TODO, fix it so it textures can be loaded at star
 end
 
 --Main
-local main = engine:addVContainer()
+local main = engine.root:addVContainer()
 main.y = 0
 
 --Top Bar
 local topBar = main:addHContainer()
 topBar.rendering = true
 topBar.background = true
-topBar.w = 51
-topBar.h = 0
+topBar.w = termW
+topBar.h = 1
 
 local dropdown = topBar:addDropdown()
 dropdown.text = "MOS"
+dropdown.w = 10
 --dropdown:addToList("New")
 dropdown:addToList("File Explorer")
 dropdown:addToList("Shell")
+dropdown:addToList("-Open Windows-", false)
 --dropdown:addToList("Exit")
+local windows = {}
+
+local function addWindow(w)
+    local count = 1
+    for key, _ in pairs(windows) do
+        count = count + 1
+    end
+    local text = count .. ". " .. w.text
+    windows[text] = w
+    w.closed = function(o)
+        dropdown:removeFromList(text)
+        windows[text] = nil
+    end
+    dropdown:addToList(text)
+    engine.input.grabControlFocus(w)
+    --w:grabFocus()
+end
 
 function dropdown:optionPressed(i)
     local text = dropdown:getOptionText(i)
     if text == "New" then
-        local w = engine:addWindowControl()
+        local w = engine.root:addWindowControl()
     elseif text == "Shell" then
         local w = multiWindow.launchProgram("rom/programs/shell.lua", 2, 2, 20, 10)
-        w.text = "  Shell"
+        w.text = "Shell"
+        addWindow(w)
     elseif text == "Exit" then
         shell.run("rom/programs/shell.lua")
         multiWindow.exit()
     elseif text == "File Explorer" then
         local fileExplorer = multiWindow.launchProgram("/os/programs/fileExplorer.lua", 1, 1, 40, 15, 
-        function(name, ctrl)
-            if ctrl then
-                local w = multiWindow.launchProgram("/rom/programs/edit.lua", 0, 0, 30, 18, name)
-                w.text = "  Edit '" .. name .. "'" 
+        function(path, name) -- This function is called when the user has chosen a file
+            if engine.input.isKey(341) then -- Lctrl
+                local w = multiWindow.launchProgram("/rom/programs/edit.lua", 0, 0, 30, 18, path)
+                w.text = "Edit '" .. name .. "'" 
+                addWindow(w)
             else
-                local w = multiWindow.launchProgram(name, 2, 2, 20, 10)
-                w.text = "  " .. name   
+                local w = multiWindow.launchProgram(path, 2, 2, 20, 10)
+                w.text = name   
+                addWindow(w)
             end
         end)
-        fileExplorer.text = "  File Explorer"
+        fileExplorer.text = "File Explorer"
+        addWindow(fileExplorer)
+    else
+        for name, window in pairs(windows) do
+            if name == text then
+                window.visible = true
+                window:toFront()
+                --window:grabFocus() -- TODO FIX THIS!
+            end
+        end
     end
 end
 
-local clock = topBar:addControl()
+local clock = engine.root:addControl() -- TODO add to topbar instead
+clock.x = termW - 5
+
 clock.h = 1
 
 local frameStyle = engine:newStyle()

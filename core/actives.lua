@@ -1,8 +1,8 @@
 local path = ".core."
 
-objects = require(path .. "objects")
-active = objects.new_object()
-actives = {}
+local objects = require(path .. "objects")
+local active = objects.new_object()
+local actives = {}
 active.name = 'active'
 
 --active:defineSignal("readyEvent")
@@ -33,18 +33,18 @@ end
 function active:ready() end
 function active:update() end
 
-function process()
+local function process()
     for i = 1, #actives do
         local a = actives[i]
         a:update() 
     end  
 end
 
-function new_active()
+local function new_active()
     return active:new()
 end
 
-function get_list()
+local function get_list()
     return actives
 end
 

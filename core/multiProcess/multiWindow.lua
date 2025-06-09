@@ -9,14 +9,17 @@ local programWindow = require(path .. "programWindow")(engine:getObjects()["wind
 local viewports = {}
 local nvProcesses = {}
 
-local windowStyle = engine:newStyle()
-windowStyle.backgroundColor = colors.blue
-windowStyle.textColor = colors.white
+local focusedWindowStyle = engine:newStyle()
+focusedWindowStyle.backgroundColor = colors.blue
+focusedWindowStyle.textColor = colors.white
+local unfocusedWindowStyle = engine:newStyle()
+unfocusedWindowStyle.backgroundColor = colors.white
+unfocusedWindowStyle.textColor = colors.black
 
 local function launchProgram(programPath, x, y, w, h, ...)
     --multiProgram.launchProgram(path, x, y, w, h, ...)
     local window = programWindow:new{}
-    engine:addChild(window)
+    engine.root:addChild(window)
     window:toFront()
 
     local viewport = programViewport:new{}
@@ -30,7 +33,9 @@ local function launchProgram(programPath, x, y, w, h, ...)
     window.y = y
     window.w = w
     window.h = h
-    window.style = windowStyle
+    window.style = focusedWindowStyle
+    window.focusedStyle = focusedWindowStyle
+    window.unfocusedStyle = unfocusedWindowStyle
     window.oldW = w --Fix bug so that the window doesn't resize to default size
     window.oldH = h
 
@@ -65,24 +70,24 @@ local function start(fun, ...)
         local data = table.pack(os.pullEventRaw())
         local event = data[1]
 
-        local w = nil
-        if event == "mouse_click" then
-            local button, x, y = data[2], data[3], data[4]
-            w = getWindow(x, y)
-            if w ~= nil then    
-            --    setFocusIndex(getIndex(w))
-            end
-            --local process = multiProgram.getProcess(getIndex(w))
-            for i = 1, #viewports do
-                if viewports[i].program == w then
-                    --viewports[i]:grabFocus()
-                end
-            end
-        end
+        --local w = nil
+        --if event == "mouse_click" then
+        --    local button, x, y = data[2], data[3], data[4]
+        --    w = getWindow(x, y)
+        --    if w ~= nil then    
+        --    --    setFocusIndex(getIndex(w))
+        --    end
+        --    --local process = multiProgram.getProcess(getIndex(w))
+        --    for i = 1, #viewports do
+        --        if viewports[i].program == w then
+        --            --viewports[i]:grabFocus()
+        --        end
+        --    end
+        --end
 
         for i = 1, #viewports do
             if viewports[i] == w then
-                viewports[i]:grabFocus()
+                --viewports[i]:grabFocus()
             end
             viewports[i]:unhandledEvent(event, data)
         end

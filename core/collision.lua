@@ -1,5 +1,5 @@
-collision = {}
 
+local collision = {}
 function collision.inArea(x, y, x1, y1, w, h)
     if (
         x <= x1 + w and

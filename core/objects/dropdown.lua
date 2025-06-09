@@ -12,8 +12,14 @@ function dropdown:ready()
     --self.list.mouseIgnore = true
 end 
 
-function dropdown:addToList(text)
-    local b = self.list:addButton()
+function dropdown:addToList(text, clickable)
+    local b 
+    if clickable == nil or clickable == true then
+        b = self.list:addButton()
+    else
+        b = self.list:addControl()
+    end
+    self.list.visible = false
     b.visible = false
     b.text = text
     b.h = 1
@@ -27,6 +33,27 @@ function dropdown:addToList(text)
     end
 end
 
+function dropdown:removeFromList(text)
+    for i = 1, #self.list.children do
+        if self.list.children[i].text == text then
+            self.list.children[i]:remove()
+            break
+        end
+    end
+end
+
+function dropdown:draw()
+    button.draw(self)
+    local maxLength = self.w
+    for i = 1, #self.list.children do
+        maxLength = math.max(#self.list.children[i].text, maxLength)
+    end
+
+    for i = 1, #self.list.children do
+        self.list.children[i].w = maxLength
+    end
+end
+
 function dropdown:pressed()
     self.list.visible = self.list.visible == false
 end
@@ -37,6 +64,14 @@ end
 
 function dropdown:getOption(i)
     return self.list.children[i]
+end
+
+function dropdown:getOptionsTextList()
+    local textList = {}
+    for i = 1, #self.list.children do
+        table.insert(textList, self.list.children[i].text)
+    end
+    return textList
 end
 
 function dropdown:optionPressed(i) end

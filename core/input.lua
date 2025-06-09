@@ -1,4 +1,6 @@
-mouse = {}
+return function(engine, collision)
+
+local mouse = {}
 mouse.current = nil
 mouse.clickTime = os.clock()
 mouse.doublePressed = false
@@ -7,7 +9,21 @@ mouse.dragY = 0
 
 local i1 = 0
 
-function childrenInArea(children, x, y)
+local function controlInArea(c, x, y) 
+    i1 = i1 + 1
+    if collision.inArea(
+        x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
+        ) 
+        and c.mouseIgnore == false
+        and c.visible == true
+    then
+        return c 
+    end
+
+    return nil
+end
+
+local function childrenInArea(children, x, y)
     for i = 1, #children do
         local index = #children - i + 1
         if #children[index].children > 0 then
@@ -25,22 +41,8 @@ function childrenInArea(children, x, y)
     return nil
 end
 
-function controlInArea(c, x, y) 
-    i1 = i1 + 1
-    if collision.inArea(
-        x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
-        ) 
-        and c.mouseIgnore == false
-        and c.visible == true
-    then
-        return c 
-    end
-
-    return nil
-end
-
 function mouse.getControl(x, y)
-    local inArea = childrenInArea(main.children, x, y)
+    local inArea = childrenInArea(engine.root.children, x, y)
     return inArea
     --[[
     for i = 1, #controls do
@@ -96,13 +98,16 @@ end
 local function grabControlFocus(c) 
     if c == mouse.current then return end
 
-    if mouse.current ~= nil then
-        mouse.current.focus = false
-        mouse.current:focusChanged()
+    local prev = mouse.current
+    if prev ~= nil then
+        prev.focus = false
     end
     mouse.current = c
     c.focus = true
     c:focusChanged()
+    if prev ~= nil then
+        prev:focusChanged()
+    end
 end 
 
 function mouse.up(button, x, y)
@@ -120,84 +125,80 @@ function mouse.drag(button, x, y)
     mouse.current:drag(relativeX, relativeY)
 end
 
-keys = {}
-keyListeners = {}
-charListeners = {}
-scrollListeners = {}
-mouseEventListeners = {}
+local keys = {}
+local keyListeners = {}
+local charListeners = {}
+local scrollListeners = {}
+local mouseEventListeners = {}
 
-function isKey(key)
-    if keys[key] == true then
-        return true
-    end
-    
-    return false
+local function isKey(key)
+    return keys[key] == true
 end
 
-function key(key)
+local function key(key)
     keys[key] = true
     for i = 1, #keyListeners do
         keyListeners[i]:key(key)
     end
 end
 
-function keyUp(key)
+local function keyUp(key)
     keys[key] = false
 end
 
-function addKeyListener(o)
+local function addKeyListener(o)
     table.insert(keyListeners, o)
 end
 
-function char(char)
+local function char(char)
     for i = 1, #charListeners do 
         charListeners[i]:char(char)
     end
 end
 
-function addCharListener(o)
+local function addCharListener(o)
     table.insert(charListeners, o)
 end
 
-function mouseClick(button, x, y)
+local function mouseClick(button, x, y)
     mouse.click(button, x, y)
 end
 
-function mouseScroll(dir, x, y)
+local function mouseScroll(dir, x, y)
     for i = 1, #scrollListeners do 
         scrollListeners[i]:scroll(dir, x, y)
     end
 end
 
-function addScrollListener(o)
+local function addScrollListener(o)
     table.insert(scrollListeners, o)
 end
 
-function mouseUp(button, x, y)
+local function mouseUp(button, x, y)
     mouse.up(button, x, y)
 end
 
-function mouseDrag(button, x, y)
+local function mouseDrag(button, x, y)
     mouse.drag(button, x, y)
 end 
 
-function mouseEvent(event, data)
+local function mouseEvent(event, data)
     for i = 1, #mouseEventListeners do 
         mouseEventListeners[i]:mouseEvent(event, data)
     end
 end
 
-function addMouseEventListener(o)
+local function addMouseEventListener(o)
     table.insert(mouseEventListeners, o)
 end
 
-resizeEventListeners = {}
+local resizeEventListeners = {}
 
-function addResizeEventListener(o)
+local function addResizeEventListener(o)
     table.insert(resizeEventListeners, o)
 end
 
-function resizeEvent()
+local function resizeEvent()
     for i = 1, #resizeEventListeners do 
         if type(resizeEventListeners[i]) == "table" then
             resizeEventListeners[i]:resizeEvent()
@@ -207,7 +208,7 @@ function resizeEvent()
     end
 end
 
-function processInput()
+local function processInput()
     while true do 
         local data = {os.pullEvent()}
         local event = data[1]
@@ -262,3 +263,4 @@ return {
     addResizeEventListener = addResizeEventListener,
     grabControlFocus = grabControlFocus
 }
+end

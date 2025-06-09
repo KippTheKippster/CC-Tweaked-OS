@@ -1,4 +1,4 @@
-return function(canvas, input)
+return function(canvas, engine, style)
 local control = canvas:new{}
 
 control._globalX = 0
@@ -154,17 +154,17 @@ control:defineProperty('style', {
 })
 
 function control:add()
-    table.insert(controls, self)
+    table.insert(engine.controls, self)
     canvas.add(self) --super
     self:redraw()
 end
 
 function control:remove()
-    for i = 1, #controls do
-		if controls[i] == self then
-            --table.remove(controls, i)
-		end
-	end
+    --for i = 1, #controls do
+	--	if controls[i] == self then
+    --        --table.remove(controls, i)
+	--	end
+	--end
 
     --self:syncChildrenFunction("remove") --TODO reimplement
 
@@ -220,8 +220,8 @@ function redrawArea(x, y, w, h) -- Unused
 end
 
 function control:redraw()
-    if not running then return end
-    renderQueue[self] = true
+    if not engine.running then return end
+    engine.renderQueue[self] = true
 end
 
 function control:render() -- Determines how the control object is drawn
@@ -235,8 +235,8 @@ function control:render() -- Determines how the control object is drawn
     self:write()
 end
 
-function control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object use 'redraw' instead
-    if not running then
+function control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'redraw' instead
+    if not engine.running then
         return
     end
 
@@ -263,7 +263,7 @@ end
 
 function control:drawPanel(left, up, right, down)
     if self.background == true then
-        drawutils.drawFilledBox(
+        engine.drawutils.drawFilledBox(
             left, 
             up,
             right,
@@ -273,7 +273,7 @@ function control:drawPanel(left, up, right, down)
     end
     
     if self._style.border then
-        drawutils.drawBox(
+        engine.drawutils.drawBox(
             left, 
             up,
             right,
@@ -290,7 +290,7 @@ function control:drawPanel()
         local up = self._globalY + 1
         local right = self._globalX + self._w
         local down = self._globalY + self._h
-        drawutils.drawFilledBox(
+        engine.drawutils.drawFilledBox(
             left, 
             up,
             right,
@@ -300,7 +300,7 @@ function control:drawPanel()
     end
     
     if self._style.border then
-        drawutils.drawBox(
+        engine.drawutils.drawBox(
             left, 
             up,
             right,
@@ -330,7 +330,7 @@ function getTextPosition(_x, _y, _w, _h, center, text)
 end
 
 function control:write()
-    if self.text == "" or self.text == nil then
+    if self._text == "" or self.text == nil then
         return
     end
 
@@ -347,7 +347,7 @@ function control:write()
     local x, y = term.getCursorPos()
     local t = self.text:sub(s, s + l)
     for i = 1, #t do
-        term.setBackgroundColor(drawutils.getPixel(term.getCursorPos()))
+        term.setBackgroundColor(engine.drawutils.getPixel(term.getCursorPos()))
         term.write(t:sub(i, i))
         x = x + 1
         term.setCursorPos(x, y)
@@ -409,7 +409,7 @@ function control:inFocus()
     if self.focus == true then return true end
 
     for i = 1, #self.children do
-        if self.children[i].focus == true then 
+        if self.children[i]:inFocus() then 
             return true
         end
     end
@@ -418,9 +418,10 @@ function control:inFocus()
 end
 
 function control:grabFocus()
-    input.grabControlFocus(self)
+    engine.input.grabControlFocus(self)
 end
 
+--Signal Functions that should be overwritten
 function control:click() end
 function control:pressed() end
 function control:doublePressed() end

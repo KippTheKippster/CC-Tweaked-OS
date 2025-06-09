@@ -1,12 +1,57 @@
 local path = ".core."
 local utils = require(".core.utils")
 
-object = {}
+local object = {}
+
+--Get key from object
+local function object__index(table, key)
+    --print("INDEX: " .. tostring(table) .. " key: " .. key)
+    local __properties = rawget(table, "__properties")
+    if __properties ~= nil and __properties[key] ~= nil then
+        if table.__properties[key].get == nil then
+            error("Attempting to read property with missing get function: " .. key .. " " .. tostring(table))
+        end
+
+        return table.__properties[key].get(table)
+    end 
+
+    if rawget(table, key) ~= nil then
+        return rawget(table, key)
+    end
+
+    local mt = table
+    while true do
+        mt = getmetatable(mt)
+        if mt == nil then
+            break
+        end
+        if rawget(mt, "base")[key] ~= nil then
+            return rawget(mt, "base")[key]
+        end
+    end
+
+    return nil
+end
+
+--Set key from object
+local function object__newindex(table, key, value)
+    --print("newINDEX: " .. tostring(table) .. " key: " .. key)
+    local __properties = rawget(table, "__properties")
+    if __properties ~= nil and __properties[key] ~= nil  then
+        if table.__properties[key].set == nil then
+            error("Attempting to assign read-only property: " .. key .. " " .. tostring(table) .. " with value " .. tostring(value) .. ".", 2)
+        end
+        table.__properties[key].set(table, value)
+        return
+    end 
+
+    rawset(table, key, value)
+end
 
 --Creates a new object, copying properties and signals to the new object
 function object:new(o)
     local o = o or {}
-    mt = 
+    local mt = 
     { 
         base = self, 
         __index = object__index,    
@@ -27,9 +72,9 @@ function object:remove()
 end
 
 --Defines a new property
-function object:defineProperty(key, methods)
-    if self.__properties[key] ~= nil then
-        error("Attempting to define an already defined property: " .. key .. " " .. tostring(self), 2)
+function object:defineProperty(key, methods, redefine)
+    if self.__properties[key] ~= nil and redefine ~= true then
+        error("Attempting to define an already defined property: " .. key .. " " .. tostring(self) .. " . " .. tostring(redefine) , 2)
     end
 
     if key == nil then
@@ -92,56 +137,11 @@ function object:base()
     return getmetatable(getmetatable(self).base).base 
 end
 
---Get key from object
-function object__index(table, key)
-    --print("INDEX: " .. tostring(table) .. " key: " .. key)
-    local __properties = rawget(table, "__properties")
-    if __properties ~= nil and __properties[key] ~= nil then
-        if table.__properties[key].get == nil then
-            error("Attempting to read property with missing get function: " .. key .. " " .. tostring(table))
-        end
-
-        return table.__properties[key].get(table)
-    end 
-
-    if rawget(table, key) ~= nil then
-        return rawget(table, key)
-    end
-
-    local mt = table
-    while true do
-        mt = getmetatable(mt)
-        if mt == nil then
-            break
-        end
-        if rawget(mt, "base")[key] ~= nil then
-            return rawget(mt, "base")[key]
-        end
-    end
-
-    return nil
-end
-
---Set key from object
-function object__newindex(table, key, value)
-    --print("newINDEX: " .. tostring(table) .. " key: " .. key)
-    local __properties = rawget(table, "__properties")
-    if __properties ~= nil and __properties[key] ~= nil  then
-        if table.__properties[key].set == nil then
-            error("Attempting to assign read-only property: " .. key .. " " .. tostring(table) .. " with value " .. tostring(value) .. ".", 2)
-        end
-        table.__properties[key].set(table, value)
-        return
-    end 
-
-    rawset(table, key, value)
-end
-
-function new_object()
+local function new_object()
     return object:new{}
 end
 
-function getObject()
+local function getObject()
     return object
 end
 
