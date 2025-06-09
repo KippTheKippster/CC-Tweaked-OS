@@ -59,7 +59,7 @@ end
 
 control:defineProperty('x', {
     get = function(table) return table._x end,
-    set = function(table, value) 
+    set = function(table, value)
         local value = value
         local same = table._x == value
         table._x = value 
@@ -68,7 +68,7 @@ control:defineProperty('x', {
             table:transformChanged();
             table:positionChanged();
         end
-    end 
+    end
 })
 
 control:defineProperty('y', {
@@ -101,7 +101,7 @@ control:defineProperty('w', {
             table:transformChanged();
             table:sizeChanged();
         end
-    end 
+    end
 })
 
 control:defineProperty('h', {
@@ -114,7 +114,7 @@ control:defineProperty('h', {
             table:transformChanged();
             table:sizeChanged();
         end
-    end 
+    end
 })
 
 control:defineProperty('text', {

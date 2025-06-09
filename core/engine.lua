@@ -127,11 +127,11 @@ end
 
 local function redrawScreen()
     if not engine.running then return end
-
     local old = term.current()
     term.redirect(screenBuffer)
     screenBuffer.setVisible(false)
     term.setBackgroundColor(engine.backgroundColor)
+    term.setCursorBlink(false)
     engine.root:draw()
     drawChildren(engine.root.children)
     screenBuffer.setVisible(true)
@@ -156,15 +156,14 @@ end
 
 
 local function processActives()
-    print(engine.running)
     while engine.running do
         for key, value in pairs(engine.renderQueue) do
             redrawScreen() --TODO Replace with redrawArea()
-            --term.setCursorBlink(false) 
+            --
             --drawutils.drawScreen()
             break
         end 
-        renderQueue = {}
+        engine.renderQueue = {}
         engine.root:update()
         processChildren(engine.root.children)
         --actives.process()
