@@ -6,8 +6,18 @@ local tProcesses = {}
 local focusIndex = 1
 local parentTerm = term.current()
 local collision = require(path .. "collision")
-local renderQueue = {}
-local redraw = false
+
+local function getIndex(p)
+    for i = 1, #tProcesses do
+        if tProcesses[i] == p then
+            return i
+        end
+    end
+end
+
+local function setFocusIndex(n)
+    focusIndex = n
+end
 
 local function resumeProcess(p, event, ...)
     term.redirect(p.window)
@@ -28,12 +38,13 @@ end
 local function launchProcess(fun, x, y, w, h, ...)
     local p = {}
     local args = table.pack(...)
-    p.co = coroutine.create(function(args)
-        fun(table.unpack(args, 1, args.n))
-    end)
     p.window = window.create(parentTerm, x, y, w, h, true)
+    term.redirect(p.window)
+    p.co = coroutine.create(function(args)
+        fun(p, table.unpack(args, 1, args.n))
+    end)
     tProcesses[#tProcesses + 1] = p
-    p.queueRedraw = function() redraw = true end
+    p.queueRedraw = function() redraw = true end -- Not sure what this does
     p.resumeProcess = function(event, ...) resumeProcess(p, event, ...) end
     setFocusIndex(#tProcesses)
     return p
@@ -43,12 +54,12 @@ local function launchProgram(path, x, y, w, h, ...)
     local env = { shell = shell, multishell = multishell }
     env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
     local programArgs = table.pack(...)
-    return launchProcess(function()
+    return launchProcess(function(p)
         os.run(env, path, table.unpack(programArgs, 1, programArgs.n))
     end, x, y, w, h)
 end
 
-function clearProcess(i, force)
+local function clearProcess(i, force)
     local force = force or false
     local p = tProcesses[i]
     if coroutine.status(p.co) == "dead" or force == true then
@@ -63,7 +74,7 @@ function clearProcess(i, force)
     end
 end
 
-function clearProcesses(force)
+local function clearProcesses(force)
     local force = force or false
     for i = 1, #tProcesses do
         clearProcess(i, force)
@@ -74,13 +85,13 @@ function clearProcesses(force)
     end
 end
 
-function endProcess(p)
+local function endProcess(p)
     debug.sethook(p.co, function() error("almost dead") end, "l")
     coroutine.resume(p.co)
     --print(coroutine.status(p.co))
 end
 
-function getWindow(x, y)
+local function getWindow(x, y)
     for i = 1, #tProcesses do
         local p = tProcesses[#tProcesses - i + 1]
         local window = p.window
@@ -94,27 +105,17 @@ function getWindow(x, y)
     return nil
 end 
 
-function redrawWindows()
-    for i = 1, #tProcesses do
-        tProcesses[i].window.redraw()
-    end
-end
+--function redrawWindows()
+--    for i = 1, #tProcesses do
+--        tProcesses[i].window.redraw()
+--    end
+--end
 
-function getIndex(p)
-    for i = 1, #tProcesses do
-        if tProcesses[i] == p then
-            return i
-        end
-    end
-end
 
-function setFocusIndex(n)
-    focusIndex = n
-end
 
-function getFocusIndex()
-    return focusIndex
-end
+--local function getFocusIndex()
+--    return focusIndex
+--end
 
 local function getProcess(i)
     return tProcesses[i]
@@ -140,7 +141,7 @@ local function start()
             --local p = tProcesses[getFocusIndex()]
             local p = tProcesses[1]
             local button, x, y = data[2], data[3], data[4]
-            local offsetX, offsetY= p.window.getPosition()
+            local offsetX, offsetY = p.window.getPosition()
             resumeProcess(p, event, button, x - offsetX + 1, y - offsetY + 1)
         else --if event == "timer" then
             resumeProcesses(event, table.unpack(data, 2, #data))
@@ -152,10 +153,10 @@ local function start()
     --print("Done...")
 end
 
-function exit() 
-    clearProcesses(true)
-    running = false
-end
+--local function exit() 
+--    clearProcesses(true)
+--    running = false
+--end
 
 --launchProgram("os/os.lua", 3, 3, 51, 20)
 --launchProgram("rom/tProcesses/fun/advanced/paint.lua", 3, 3, 51 - 51 / 2, 20 - 20 / 2, "multiPaint")

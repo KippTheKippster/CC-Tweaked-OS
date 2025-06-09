@@ -6,11 +6,25 @@ local paths = {}
 local args = {...}
 local callbackFunction = args[1]
 
-local main = engine:addVContainer()
+local main = engine.root:addVContainer()
+
+local function onExplorerResizeEvent()
+    main:redraw()
+    a.b = 2
+end
+
+
+function main:ready()
+    engine:getVCointainer().ready(main)
+    a.b = 2
+
+    engine.input.addResizeEventListener(onExplorerResizeEvent)
+end
+
 
 --tools
 local toolsStyle = engine:newStyle() 
-toolsStyle.backgroundColor = colors.lightGray
+toolsStyle.backgroundColor = colors.white
 
 local tools = main:addHContainer()
 tools.rendering = true
@@ -51,14 +65,14 @@ local clickedStyle = engine:newStyle()
 clickedStyle.backgroundColor = colors.gray
 clickedStyle.textColor = colors.white
 
-local fileButton = engine:getObject("button"):new{}
+local fileButton = engine.getObject("button"):new{}
 fileButton.h = 1
 fileButton.w = 52
 fileButton.normalStyle = style
 fileButton.clickedStyle = clickedStyle
 
 function fileButton:doublePressed()
-    callbackFunction(currentPath .. self.text, input.isKey(341))--Left CTRL
+    callbackFunction(currentPath .. self.text, self.text)--Left CTRL
 end
 
 local dirStyle = style:new{}

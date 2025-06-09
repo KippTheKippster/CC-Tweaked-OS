@@ -1,0 +1,15 @@
+#Renderbuffer
+#Resize should update correctly
+#Scroll is not working
+#Show cursor
+#Make global function and variables local
+
+File explorer functionality:
+    Rename file
+    Create file
+    Remove file
+    Scroll
+
+Oddities:
+    A program that constantly checks for the resize event will constantly trigger redraw
+    Multishell will take priority over main os

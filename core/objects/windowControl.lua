@@ -1,7 +1,8 @@
 return function(control, button)
 local windowControl = control:new{}
 windowControl.draggable = true
-windowControl.text = "  Window"
+windowControl.text = "Window"
+windowControl.label = nil
 windowControl.exitButton = nil
 windowControl.scaleButton = nil
 windowControl.minW = 10
@@ -9,9 +10,36 @@ windowControl.minH = 4
 windowControl.oldW = 0
 windowControl.oldH = 0
 
+
+windowControl:defineProperty('text', {
+    get = function(table) 
+        if table.label == nil then
+            return table._text 
+        else
+            return table.label.text
+        end
+    end,
+    set = function(table, value) 
+        if table.label == nil then
+            table._text = value 
+        else
+            table.label._text = value
+            table._text = ""
+        end
+    end 
+}, true)
+
 function windowControl:ready()
     self.oldW = self.w
     self.oldH = self.h
+
+    self.label = self:addControl()
+    self.label.x = 2
+    self.label.w = 1
+    self.label.h = 1
+    self.label.mouseIgnore = true
+    --self.label.text = "KDSAIO"
+    --self.label.text = self.text
 
     self.exitButton = button:new{}
     self:addChild(self.exitButton)

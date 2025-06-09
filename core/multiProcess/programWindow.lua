@@ -3,14 +3,29 @@
 return function(windowControl, programViewport)
 local programWindow = windowControl:new{}
 programWindow.programViewport = nil
+programWindow.minimizeButton = nil
+programWindow.focusedStyle = nil
+programWindow.unfocusedStyle = nil
 
 function programWindow:ready()
     --self:base().ready(self)
     windowControl.ready(self)
+
+    self.minimizeButton = self:addButton()
+    self.minimizeButton.w = 1
+    self.minimizeButton.h = 1
+    self.minimizeButton.text = "="
+
+    self.minimizeButton.pressed = function(o)
+        self.visible = false
+    end
+
     self.exitButton.pressed = function(o)
         self.programViewport:endProcess()
         o.parent:remove()
+        self:closed()
     end
+
 
     self.scaleButton.up = function(o)
         o.parent:redraw()
@@ -37,6 +52,10 @@ function programWindow:addViewport(pv)
     self.programViewport.click = function(o)
         o.parent:toFront()
     end
+
+    self.programViewport.focusChanged = function(o)
+        o.parent:updateStyle()
+    end
 end
 
 function programWindow:click()
@@ -50,8 +69,24 @@ end
 
 function programWindow:sizeChanged()
     windowControl.sizeChanged(self)
+    self.minimizeButton.x = self.w - 2
     self.programViewport.w = self.w
     self.programViewport.h = self.h - 1
 end
+
+function programWindow:focusChanged()
+    self:updateStyle()
+end
+
+function programWindow:updateStyle()
+    if self:inFocus() then -- or (self.programViewport ~= nil and self.programViewport:inFocus()) then
+        self.style = self.focusedStyle
+    else
+        self.style = self.unfocusedStyle
+    end
+end
+
+function programWindow:closed() end
+
 return programWindow
 end

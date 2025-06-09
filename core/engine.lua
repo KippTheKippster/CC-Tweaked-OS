@@ -1,15 +1,23 @@
 local path = ".core."
 
+local engine = {}
+
 local objects = require(path .. "objects")
 local actives = require(path .. "actives")
-input = require(path .. "input")
+local collision = require(path .. "collision")
+local input = require(path .. "input")(engine, collision)
 local utils = require(path .. "utils")
-drawutils = require(path .. "drawutils")
+local drawutils = require(path .. "drawutils")
+
+engine.input = input
+engine.drawutils = drawutils
 
 local active = actives.new_active()
 local canvas = active:new{}
 local canvases = {}
-renderQueue = {}
+local renderQueue = {}
+
+engine.renderQueue = renderQueue
 
 function canvas:toFront()
     utils.move(canvases, self, 1)
@@ -30,27 +38,26 @@ function canvas:remove()
     active.remove(self)
 end
 
-local collision = require(path .. "collision")
-
-style = objects.new_object()
+local style = objects.new_object()
 style.backgroundColor = colors.lightGray
 style.borderColor = colors.gray
 style.textColor = colors.black
 style.border = false
 
-controls = {}
+local controls = {}
+engine.controls = controls
 
 --Objects
-objectList = {}
+local objectList = {}
 objectList["canvas"] = canvas
 
-function requireObject(name, ...)
+local function requireObject(name, ...)
     local o = require(path .. "objects." .. name)(...)
     objectList[name] = o
     return o
 end
 
-local control = requireObject("control", canvas, input)
+local control = requireObject("control", canvas, engine, style) -- Should it only be engine as argument?
 
 local clickedStyle = style:new{}
 clickedStyle.backgroundColor = colors.white
@@ -86,109 +93,30 @@ for k, v in pairs(objectList) do
 end
 
 local w, h = term.getSize()
-main = control:new{}
-main.rendering = false
-main.text = ""
-main.style = mainStyle
-main.w = 61
-main.h = 61
-main.mouseIgnore = true
-main:add()
-running = false
-backgroundColor = colors.black
+local screenBuffer = window.create(term.current(), 1, 1, w, h)
+term.redirect(screenBuffer)
+local root = control:new{}
+root.rendering = false
+root.text = ""
+--root.style = mainStyle
+root.w = w
+root.h = h
+root.mouseIgnore = true
+root:add()
+root.input = input
+
+engine.running = false
+
+engine.backgroundColor = colors.black
+
+engine.root = root
 
 local function onResizeEvent()
     drawutils.resize()
     --redrawScreen() --Very slow, should be called manually
 end
 
-input.addResizeEventListener(onResizeEvent)
-
-function getMain()
-    return main
-end
-
-function main:getObjects()
-	return objectList
-end
-
-function main:getObject(name)
-	return objectList[name]
-end
-
-function main:start()
-    running = true
-    term.setBackgroundColor(backgroundColor)
-    redrawScreen()
-
-    parallel.waitForAny(
-        processActives,
-        processInput
-    )
-end
-
-function main:stop()
-    running = false
-end
-
-function main:setBackgroundColor(value)
-    redrawScreen()
-    backgroundColor = value
-end 
-
-function main:newStyle()
-    return style:new{}
-end
-
-function main:getDefaultStyle()
-    return style
-end
-
-function main:getDefaultClickedStyle()
-    return clickedStyle
-end
-
---start()
-
-function redrawScreen()
-    if not running then return end
-
-    term.setBackgroundColor(backgroundColor)
-    main:draw()
-    drawChildren(main.children)
-    --term.clear()
-    --for i = 1, #canvases do
-    --    local c = canvases[i]
-    --    c:draw()     
-    --end
-end
-
-function processActives()
-    while running do
-        for key, value in pairs(renderQueue) do
-            redrawScreen() --TODO Replace with redrawArea()
-            term.setCursorBlink(false) 
-            --drawutils.drawScreen()
-            break
-        end 
-        renderQueue = {}
-        main:update()
-        processChildren(main.children)
-        --actives.process()
-        sleep(0.0001)
-    end
-end
-
-function processChildren(c)
-    for i = 1, #c do
-        if #c[i].children > 0 then
-            processChildren(c[i].children)
-        end
-        c[i]:update()
-    end
-end
-
-function drawChildren(c)
+local function drawChildren(c)
     for i = 1, #c do
         c[i]:draw()
         if #c[i].children > 0 then
@@ -197,8 +125,97 @@ function drawChildren(c)
     end
 end
 
-function processInput()
+local function redrawScreen()
+    if not engine.running then return end
+
+    local old = term.current()
+    term.redirect(screenBuffer)
+    screenBuffer.setVisible(false)
+    term.setBackgroundColor(engine.backgroundColor)
+    engine.root:draw()
+    drawChildren(engine.root.children)
+    screenBuffer.setVisible(true)
+    term.redirect(old)
+    --term.current().setVisible(true)
+    --term.current().setVisible(false)
+    --term.clear()
+    --for i = 1, #canvases do
+    --    local c = canvases[i]
+    --    c:draw()     
+    --end
+end
+
+local function processChildren(c)
+    for i = 1, #c do
+        if #c[i].children > 0 then
+            processChildren(c[i].children)
+        end
+        c[i]:update()
+    end
+end
+
+
+local function processActives()
+    print(engine.running)
+    while engine.running do
+        for key, value in pairs(engine.renderQueue) do
+            redrawScreen() --TODO Replace with redrawArea()
+            --term.setCursorBlink(false) 
+            --drawutils.drawScreen()
+            break
+        end 
+        renderQueue = {}
+        engine.root:update()
+        processChildren(engine.root.children)
+        --actives.process()
+        sleep(0.0001)
+    end
+end
+
+local function processInput()
 	input.processInput()
 end
 
-return getMain()
+engine.start = function()
+    engine.running = true
+    engine.input.addResizeEventListener(onResizeEvent)
+    term.setBackgroundColor(engine.backgroundColor)
+    redrawScreen()
+
+    parallel.waitForAny(
+        processActives,
+        processInput
+    )
+end
+
+engine.stop = function()
+    engine.running = false
+end
+
+engine.getObjects = function()
+	return objectList
+end
+
+engine.getObject = function(name)
+	return objectList[name]
+end
+
+
+engine.setBackgroundColor = function(value)
+    redrawScreen()
+    engine.backgroundColor = value
+end 
+
+engine.newStyle = function()
+    return style:new{}
+end
+
+engine.getDefaultStyle = function()
+    return style
+end
+
+engine.getDefaultClickedStyle = function()
+    return clickedStyle
+end
+
+return engine

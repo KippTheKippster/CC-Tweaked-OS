@@ -9,10 +9,10 @@ style.textColor = colors.white
 clickedStyle = style:new{}
 clickedStyle.backgroundColor = colors.gray
 
-main = objects["control"]:new{}
-main.style = style
-main.visible = false
-main:add()
+engine.root = objects["control"]:new{}
+engine.root.style = style
+engine.root.visible = false
+engine.root:add()
 
 window = objects["control"]:new{}
 window.draggable = true
@@ -57,7 +57,7 @@ end
 scroll = objects["scrollContainer"]:new{}
 scroll:add()
 scroll.background = false
-main:addChild(scroll)
+engine.root:addChild(scroll)
 
 fileExplorer = objects["vContainer"]:new{}
 fileExplorer.visible = true
@@ -85,7 +85,7 @@ fileExplorer:openFolder("")
 
 w = window:new{}
 w.text = "Window"
-main:addChild(w)
+engine.root:addChild(w)
 w.style = clickedStyle
 w:add()
 

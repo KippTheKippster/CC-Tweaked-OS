@@ -6,32 +6,24 @@ return function(control, multiProgram, parentTerm)
     programViewport.style.backgroundColor = colors.red
     programViewport.mouseIgnore = false
     programViewport.program = nil
-    programViewport.bufferWindow = nil
-    
-    --function programViewport:ready()
-    --    input.addMouseEventListener(self)
-    --end
-    
-    --function programViewport:launchProgram(path, ...)
-    --    self.program = multiProgram.launchProgram(path, self.globalX, self.globalY, self.w, self.h, ...)
-    --    self:redraw()
-    --end
-
+    --programViewport.bufferWindow = nil
     
     function programViewport:draw()      
         if self.program == nil then return end
         self:updateWindow()
-        --self.program.window.redraw()
+        --self.program.window.redraw() -- Uncomment this to redraw unfocused windows
     end
 
     function programViewport:launchProgram(programPath, x, y, w, h, ...)
         self.program = multiProgram.launchProgram(programPath, x, y, w, h, ...)
         --self.bufferWindow = window.create(parentTerm, 5, 5, 27, 27)
-        self.program.window.setVisible(false)
+        self.program.window.setVisible(true)
+        --term.setCursorBlink(true)
+        --self.program.window.setCursorBlink(true) 
         local baseWrite = self.program.window.write
         self.program.window.write = function(text)
             baseWrite(text)
-            self:redraw()
+            --self:redraw()
         end
     end
 
@@ -45,8 +37,9 @@ return function(control, multiProgram, parentTerm)
 
     function programViewport:unhandledEvent(event, data)
         if self.program == nil then return end
-        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up" then
+        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
             if self.parent:inFocus() == false then return end
+            if event == "mouse_drag" and not self:inFocus() then return end
             local button, x, y = data[2], data[3], data[4]
             local offsetX, offsetY = self.program.window.getPosition()
             multiProgram.resumeProcess(self.program, event, button, x - offsetX + 1, y - offsetY + 1)
@@ -60,14 +53,31 @@ return function(control, multiProgram, parentTerm)
     
     function programViewport:updateWindow()
         if self.program == nil then return end
+        if self.visible == false then 
+            self.program.window.setVisible(false)
+            return 
+        end
         term.redirect(self.program.window)
-        --
         self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h, parentTerm) --, self.program.window)
-        --self.bufferWindow.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h, parentTerm) --, self.program.window)
-        self.program.window.setVisible(true)
         multiProgram.resumeProcess(self.program, "term_resize")
-        self.program.window.setVisible(false)
+
+        self.program.window.setVisible(true)
+        if self.parent:inFocus() == false then
+            self.program.window.setVisible(false)
+        end
         term.redirect(parentTerm)
     end
+
+    function programViewport:focusChanged()
+        if self.parent:inFocus() then 
+            local x, y = self.program.window.getCursorPos()
+            local blink = self.program.window.getCursorBlink()
+            term.setCursorPos(x, y)
+            term.setCursorBlink(blink)
+        else
+            term.setCursorBlink(false)
+        end
+    end
+
     return programViewport
 end
