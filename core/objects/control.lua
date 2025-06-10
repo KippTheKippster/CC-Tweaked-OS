@@ -426,6 +426,7 @@ function control:click() end
 function control:pressed() end
 function control:doublePressed() end
 function control:up() end
+function control:scroll(dir) end
 function control:focusChanged() end
 function control:positionChanged() end
 function control:globalPositionChanged() end

@@ -87,11 +87,11 @@ function mouse.click(button, x, y)
 		end
 		mouse.clickTime = time
 	end
-    
+
     if c == nil then
        return 
     end
-    
+
     c:click()
 end
 
@@ -123,6 +123,11 @@ function mouse.drag(button, x, y)
     mouse.dragX = x
     mouse.dragY = y
     mouse.current:drag(relativeX, relativeY)
+end
+
+function mouse.scroll(dir, x, y)
+    if mouse.current == nil then return end
+    mouse.current:scroll(dir)
 end
 
 local keys = {}
@@ -165,8 +170,9 @@ local function mouseClick(button, x, y)
 end
 
 local function mouseScroll(dir, x, y)
-    for i = 1, #scrollListeners do 
-        scrollListeners[i]:scroll(dir, x, y)
+    mouse.scroll(dir)
+    for i = 1, #scrollListeners do
+        scrollListeners[i].scroll(scrollListeners[i], dir, x, y)
     end
 end
 
@@ -209,7 +215,7 @@ local function resizeEvent()
 end
 
 local function processInput()
-    while true do 
+    while true do
         local data = {os.pullEvent()}
         local event = data[1]
 
@@ -245,7 +251,7 @@ local function processInput()
             )
         elseif event == "term_resize" then
             resizeEvent()
-        end 
+        end
 
         if string.find(event, "mouse") ~= nil then
             mouseEvent(event, data)

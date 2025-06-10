@@ -70,7 +70,6 @@ local function start(fun, ...)
                 term.setCursorPos(1, 1)
                 term.setBackgroundColor(colors.black)
                 printError(err)
-                exit()
                 return
             end
         end
