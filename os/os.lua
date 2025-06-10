@@ -2,9 +2,8 @@ print("mos is starting...")
 local engine = require(".core.engine")
 local utils = require(".core.utils")
 local multiWindow = require(".core.multiProcess.multiWindow")(engine)
-local parentTerm = term.current()
 
-local termW, teremH = term.getSize()
+local termW, termH = term.getSize()
 
 local style = engine:getDefaultStyle()
 style.backgroundColor = colors.white
@@ -13,14 +12,33 @@ local clickedStyle = engine:getDefaultClickedStyle()
 clickedStyle.textColor = colors.black
 clickedStyle.backgroundColor = colors.lightBlue
 
+--MOS
+local mos = {}
+
+--Profile
+function mos.loadProfile()
+    mos.profile = utils.loadTable("os/profiles/profile.sav")
+end
+
+function mos.saveProfile()
+    utils.saveTable(mos.profile, "os/profiles/profile.sav")
+end
+
+mos.loadProfile()
+if mos.profile == nil then
+    mos.profile = {}
+    mos.profile.backgroundPath = "os/textures/backgrounds/melvin.nfp"
+end
+
+
 --Background
-local background =  engine.root:addIcon()
+local background = engine.root:addIcon()
 background.y = 1
 background.x = 0
 background.text = ""
 function background:update() --TODO, fix it so it textures can be loaded at startup
     if self.texture == nil then
-        self.texture = paintutils.loadImage("os/textures/backgrounds/melvin.nfp")
+        self.texture = paintutils.loadImage(mos.profile.backgroundPath)
     end
 end
 
@@ -92,7 +110,7 @@ function dropdown:optionPressed(i)
         --shell.run("rom/programs/shell.lua")
         --multiWindow.exit()
     elseif text == "File Explorer" then
-        local fileExplorer = multiWindow.launchProgram(parent, "/os/programs/fileExplorer.lua", 1, 1, 40, 15, 
+        local fileExplorer = multiWindow.launchProgram(parent, "/os/programs/fileExplorer.lua", 1, 1, 40, 15,
         function(path, name) -- This function is called when the user has chosen a file
             if engine.input.isKey(341) then -- Lctrl
                 local w = multiWindow.launchProgram(parent, "/rom/programs/edit.lua", 0, 0, 30, 18, path)
@@ -107,7 +125,7 @@ function dropdown:optionPressed(i)
         fileExplorer.text = "File Explorer"
         addWindow(fileExplorer)
     elseif text == "Settings" then
-        local w = multiWindow.launchProgram(parent, "/os/programs/settings.lua", 1, 1, 40, 15)
+        local w = multiWindow.launchProgram(parent, "/os/programs/settings.lua", 1, 1, 40, 15, mos)
         w.text = "Settings"
         addWindow(w)
     else
@@ -140,6 +158,12 @@ end
 --engine:addChild(programWindow)
 
 local w, h = term.getSize()
+
+mos.engine = engine
+mos.root = engine.root
+mos.addWindow = addWindow
+mos.multiWindow = multiWindow
+mos.background = background
 
 --multiWindow.launchProcess(engine.start, 1, 1, w, h, engine)
 multiWindow.start(engine.start, engine)

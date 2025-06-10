@@ -21,9 +21,7 @@ function programWindow:ready()
     end
 
     self.exitButton.pressed = function(o)
-        self.programViewport:endProcess()
-        o.parent:remove()
-        self:closed()
+        self:close()
     end
 
 
@@ -32,6 +30,14 @@ function programWindow:ready()
         self.programViewport:updateWindow() --TODO FIX!!!
     end
 end
+
+
+function programWindow:close()
+    self.programViewport:endProcess()
+    self:remove()
+    self:closed()
+end
+
 
 function programWindow:render()
     --PANEL

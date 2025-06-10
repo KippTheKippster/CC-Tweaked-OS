@@ -7,11 +7,15 @@
 #Exit button
 #Show Error Messages
 Fix cursor blinking
-Settings menu
+Remove update loop
+
+Settings menu:
+    #Change background
 
 Shortcuts:
     alt tab
     dropdown
+    fullscreen
 
 File explorer functionality:
     Rename file
@@ -22,3 +26,4 @@ File explorer functionality:
 Oddities:
     #A program that constantly checks for the resize event will constantly trigger redraw
     #Multishell will take priority over main os
+    If pressed is used instead of click in settings then the entire window becomes a button

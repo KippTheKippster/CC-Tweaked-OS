@@ -1,4 +1,4 @@
-function contains(t, v)
+local function contains(t, v)
     for _, x in pairs(t) do
         if v == x then 
             return true
@@ -7,13 +7,13 @@ function contains(t, v)
     return false
 end
 
-function combine(first, second)
+local function combine(first, second)
 	for k,v in pairs(second) do 
 		table.insert(first, v)
 	end
 end
 
-function move(tb, object, position)
+local function move(tb, object, position)
 	for i = 1, #tb do
 		if tb[i] == object then
 			tb[i] = tb[i + position] --sets the current position to the object that is occupying the wanted position
@@ -22,7 +22,7 @@ function move(tb, object, position)
 	end
 end
 
-function split(s, c)
+local function split(s, c)
     local strings = {}
     local start = 1
     for i = 1, #s do
@@ -36,7 +36,7 @@ function split(s, c)
     return strings
 end
 
-function hasTag(data, tag)
+local function hasTag(data, tag)
 	tags = data["tags"]
 	if tags[tag] == true then
 		return true
@@ -45,7 +45,7 @@ function hasTag(data, tag)
 	end
 end
 
-function printTable(table, recursive, prefix)
+local function printTable(table, recursive, prefix)
 	if table == nil then error("Atempting to print a nil value", 2) end
 	if prefix == nil then prefix = "" end
 	print(prefix .. "{")
@@ -60,7 +60,7 @@ function printTable(table, recursive, prefix)
 	print(prefix .. "}")
 end
 
-function clamp(value, min, max)
+local function clamp(value, min, max)
     if max == nil or min == nil then
         error("Attempting to clamp nil value", 2)
     end
@@ -73,13 +73,13 @@ function clamp(value, min, max)
     end
 end
 
-function getDir(value)
+local function getDir(value)
     local value = clamp(value, -1, 1)
     --value = math.min(value + 0.5)
     return value
 end
 
-function capitaliseFirst(text)
+local function capitaliseFirst(text)
 	return (text:gsub("^%l", string.upper))
 end
 
@@ -97,21 +97,86 @@ local function push(table, object, dir)
 	return nil
 end
 
-function pushUp(table, object)
+local function pushUp(table, object)
 	return push(table, object, -1)
 end
 
-function pushDown(table, object)
+local function pushDown(table, object)
 	return push(table, object, 1)
 end
 
-function pushTop(table, object)
+local function pushTop(table, object)
 	repeat until pushUp(table, object) == 1
 end
 
-function pushBottom(table, object)
+local function pushBottom(table, object)
 	repeat until pushDown(table, object) == #table
 end
+
+-- Salt Taken from https://github.com/VaiN474/salt/tree/master
+local function saveTable(tbl,file,compressed)
+
+    local f,err = io.open(file,"w")
+    if err then print(err) return end
+    local indent = 1
+
+    -- local functions to make things easier
+    local function exportstring(s)
+        s=string.format("%q",s)
+        s=s:gsub("\\\n","\\n")
+        s=s:gsub("\r","")
+        s=s:gsub(string.char(26),"\"..string.char(26)..\"")
+        return s
+    end
+    local function serialize(o)
+        if type(o) == "number" then
+            f:write(o)
+        elseif type(o) == "boolean" then
+            if o then f:write("true") else f:write("false") end
+        elseif type(o) == "string" then
+            f:write(exportstring(o))
+        elseif type(o) == "table" then
+            f:write("{" .. (compressed and "" or "\n"))
+            indent = indent + 1
+            local tab = ""
+            for i=1,indent do tab = tab .. "    " end
+            for k,v in pairs(o) do
+                f:write((compressed and "" or tab) .. "[")
+                serialize(k)
+                f:write("]" .. (compressed and "=" or " = "))
+                serialize(v)
+                f:write("," .. (compressed and "" or "\n"))
+            end
+            indent = indent - 1
+            tab = ""
+            for i=1,indent do tab = tab .. "    " end
+            f:write((compressed and "" or tab) .. "}")
+        else
+            print("unable to serialzie data: "..tostring(o))
+            f:write("nil," .. (compressed and "" or " -- ***ERROR: unsupported data type: "..type(o).."!***"))
+        end
+    end
+
+    f:write("return {" .. (compressed and "" or "\n"))
+    local tab = "    "
+    for k,v in pairs(tbl) do
+        f:write((compressed and "" or tab) .. "[")
+        serialize(k)
+        f:write("]" .. (compressed and "=" or " = "))
+        serialize(v)
+        f:write("," .. (compressed and "" or "\n"))
+    end
+    f:write("}")
+    f:close()
+end
+
+local function loadTable(file)
+    local data,err = loadfile(file)
+    if err then return nil,err else return data() end
+end
+--
+
+
 
 return{
 	contains = contains,
@@ -125,5 +190,7 @@ return{
 	pushUp = pushUp,
 	pushDown = pushDown,
 	pushTop = pushTop,
-	pushBottom = pushBottom
+	pushBottom = pushBottom,
+	saveTable = saveTable,
+	loadTable = loadTable
 }

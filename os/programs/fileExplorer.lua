@@ -6,21 +6,19 @@ local paths = {}
 local args = {...}
 local callbackFunction = args[1]
 
-local main = engine.root:addVContainer()
+local main = engine.root:addControl()
+local inputReader = {}
 
-local function onExplorerResizeEvent()
-    main:redraw()
-    a.b = 2
-end
+engine.input.addScrollListener(inputReader)
+engine.input.addResizeEventListener(inputReader)
+
 
 
 function main:ready()
     engine:getVCointainer().ready(main)
     a.b = 2
 
-    engine.input.addResizeEventListener(onExplorerResizeEvent)
 end
-
 
 --tools
 local toolsStyle = engine:newStyle() 
@@ -47,6 +45,7 @@ end
 
 --files
 local vContainer = main:addVContainer()
+vContainer:toBack()
 vContainer.rendering = true
 vContainer.background = true
 vContainer.visible = true
@@ -55,7 +54,31 @@ vContainer.style.backgroundColor = colors.black
 vContainer.x = 0
 vContainer.y = 0
 vContainer.w = 51
-vContainer.h = 21
+vContainer.h = 99
+
+function inputReader:scroll(dir, x, y)
+    local newY = vContainer.y - dir
+    local w, h = term.getSize()
+    term.setTextColour(colors.white)
+    if newY > 1 then
+        --vContainer.y = 1
+        --return
+    elseif newY < h - #vContainer.children then
+        --vContainer.y = h - #vContainer.children
+        --return
+    end
+    vContainer.y = newY
+    --print(#vContainer.children .. " : " .. vContainer.y .. " : " .. vContainer.h .. " : " .. h)
+    --print(h - #vContainer.children)
+end
+
+
+function inputReader:resizeEvent()
+    local w, h = term.getSize()
+    main.h = h + 2
+    vContainer.h = 99
+end
+
 
 local style = engine:newStyle()
 style.backgroundColor = colors.black
@@ -82,6 +105,7 @@ local dirButton = fileButton:new{}
 dirButton.normalStyle = dirStyle
 
 local function openFolder(path)
+    vContainer.y = 1
     tools.text = "  res:/" .. path
     --term.clear()
     for i = 1, #vContainer.children do
