@@ -27,7 +27,6 @@ local function launchProgram(parentTerm, parentControl, programPath, x, y, w, h,
 
     local viewport = programViewport:new{}
     window:addViewport(viewport)
-    viewport:launchProgram(parentTerm, programPath, x, y, w, h, ...)
     --viewport.program = multiProgram.launchProgram(programPath, x, y, w, h, ...)
 
     table.insert(viewports, viewport)
@@ -41,6 +40,8 @@ local function launchProgram(parentTerm, parentControl, programPath, x, y, w, h,
     window.unfocusedStyle = unfocusedWindowStyle
     window.oldW = w --Fix bug so that the window doesn't resize to default size
     window.oldH = h
+
+    viewport:launchProgram(parentTerm, programPath, ...)
 
     return window
 end
@@ -66,6 +67,7 @@ local function start(parentTerm, fun, ...)
             if ok == false then
                 term.setCursorPos(1, 1)
                 term.setBackgroundColor(colors.black)
+                term.setTextColor(colors.red)
                 printError(err)
                 return
             end

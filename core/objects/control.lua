@@ -1,5 +1,5 @@
-return function(canvas, engine, style)
-local control = canvas:new{}
+return function(object, engine, style)
+local control = object:new{}
 
 control._globalX = 0
 control._globalY = 0
@@ -155,7 +155,7 @@ control:defineProperty('style', {
 
 function control:add()
     table.insert(engine.controls, self)
-    canvas.add(self) --super
+    self:ready()
     self:redraw()
 end
 
@@ -175,7 +175,7 @@ function control:remove()
 
     self.parent:childrenChanged()
 
-    canvas.remove(self)
+    engine.controls[self] = nil -- IS THIS CORRECT?
 end
 
 function getControl(x, y, w, h, whitelist, p)
@@ -247,19 +247,6 @@ function control:draw() -- Draws the control object if it is valid, NOTE this sh
     self:render()
 end
 
---function control:getTextPosition()
---    local x = 0
---    local y = 0
---    if self.centerText == false then
---        x = self._globalX
---        y = self._globalY
---    else
---        x = self._globalX + math.ceil((self._w - #self.text) / 2)
---        y = self._globalY + math.floor((self._h) / 2)
---    end
---	
---    return x + 1, y + 1
---end
 
 function control:drawPanel(left, up, right, down)
     if self.background == true then
@@ -283,33 +270,6 @@ function control:drawPanel(left, up, right, down)
     end
 end
 
---[[
-function control:drawPanel()
-    if self.background == true then
-        local left = self._globalX + 1
-        local up = self._globalY + 1
-        local right = self._globalX + self._w
-        local down = self._globalY + self._h
-        engine.drawutils.drawFilledBox(
-            left, 
-            up,
-            right,
-            down,
-            self._style.backgroundColor
-        )
-    end
-    
-    if self._style.border then
-        engine.drawutils.drawBox(
-            left, 
-            up,
-            right,
-            down,
-            self._style.borderColor
-        )
-    end
-end
-]]--
 
 function control:getTextPosition()
     return getTextPosition(self._globalX, self._globalY, self._w, self._h, self.centerText, self.text)
@@ -424,6 +384,7 @@ function control:grabFocus()
 end
 
 --Signal Functions that should be overwritten
+function control:ready() end
 function control:treeEntered() end
 function control:childrenChanged() end
 function control:click() end

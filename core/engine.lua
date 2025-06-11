@@ -2,8 +2,7 @@ local path = ".core."
 
 local engine = {}
 
-local objects = require(path .. "objects")
-local actives = require(path .. "actives")
+local object = require(path .. "object")
 local collision = require(path .. "collision")
 local input = require(path .. "input")(engine, collision)
 local utils = require(path .. "utils")
@@ -12,33 +11,11 @@ local drawutils = require(path .. "drawutils")
 engine.input = input
 engine.drawutils = drawutils
 
-local active = actives.new_active()
-local canvas = active:new{}
-local canvases = {}
 local renderQueue = {}
 
 engine.renderQueue = renderQueue
 
-function canvas:toFront()
-    utils.move(canvases, self, 1)
-end
-
-function canvas:draw() end
-function canvas:add()
-    table.insert(canvases, self)  
-    active.add(self) --super
-end
-
-function canvas:remove()
-    for i = 1, #canvases do
-		if canvases[i] == self then
-            table.remove(canvases, i)
-		end
-	end
-    active.remove(self)
-end
-
-local style = objects.new_object()
+local style = object:new{}
 style.backgroundColor = colors.lightGray
 style.borderColor = colors.gray
 style.textColor = colors.black
@@ -49,7 +26,6 @@ engine.controls = controls
 
 --Objects
 local objectList = {}
-objectList["canvas"] = canvas
 
 local function requireObject(name, ...)
     local o = require(path .. "objects." .. name)(...)
@@ -57,7 +33,7 @@ local function requireObject(name, ...)
     return o
 end
 
-local control = requireObject("control", canvas, engine, style) -- Should it only be engine as argument?
+local control = requireObject("control", object, engine, style) -- Should it only be engine as argument?
 
 local clickedStyle = style:new{}
 clickedStyle.backgroundColor = colors.white
@@ -96,6 +72,9 @@ local parentTerm = term.current()
 local w, h = parentTerm.getSize()
 local screenBuffer = window.create(parentTerm, 1, 1, w, h)
 term.redirect(screenBuffer) -- NOTE IMPORTANT (Otherwise viewports will draw behind screenbuffer since their parents will be the parent of the screenbuffer)
+
+engine.parentTerm = parentTerm
+engine.screenBuffer = screenBuffer
 
 if __Global == nil then
     __Global = {}
@@ -150,9 +129,7 @@ engine.start = function()
     engine.running = true
     engine.input.addResizeEventListener(onResizeEvent)
     
-    --term.setCursorBlink(false)
-    --term.setBackgroundColor(engine.backgroundColor)
-    
+
     redrawScreen()
 
     local drawCount = 0
@@ -163,6 +140,12 @@ engine.start = function()
                     drawCount = drawCount + 1
                     redrawScreen()
                     engine.renderQueue = {}
+                    
+                    --term.setTextColor(colors.white)
+                    --term.setBackgroundColor(colors.black)
+                    --print(drawCount)
+                    
+                    break
                 end
                 sleep(0.0001) 
             end
