@@ -27,7 +27,6 @@ function programWindow:ready()
 
     self.scaleButton.up = function(o)
         o.parent:redraw()
-        self.programViewport:updateWindow() --TODO FIX!!!
     end
 end
 

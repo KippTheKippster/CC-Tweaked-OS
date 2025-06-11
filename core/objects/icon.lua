@@ -1,6 +1,17 @@
 return function(control)
 local icon = control:new{}
-icon.texture = nil -- = paintutils.loadImage("test.nfp")
+icon._texture = nil -- = paintutils.loadImage("test.nfp")
+
+icon:defineProperty('texture', {
+    get = function(table) return table._texture end,
+    set = function(table, value) 
+        local same = table._texture == value
+        table._texture = value 
+        if same == false then
+            table:redraw()
+        end
+    end 
+})
 
 function icon:draw()
     if self.texture == nil then return end

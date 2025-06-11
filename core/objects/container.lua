@@ -6,7 +6,7 @@ container.visible = true
 --container.background = false
 container.rendering = false
 
-function container:update()
+function container:childrenChanged()
 	self:sort()
 end
 

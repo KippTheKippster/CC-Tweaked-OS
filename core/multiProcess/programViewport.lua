@@ -1,11 +1,12 @@
 -- Extends control, draws the inbuilt cc-tweaked window object on to a control object.
 
-return function(control, multiProgram, parentTerm)
+return function(control, multiProgram)
     local programViewport = control:new{}
     programViewport.rendering = false
     programViewport.style.backgroundColor = colors.red
     programViewport.mouseIgnore = false
     programViewport.program = nil
+    programViewport.parentTerm = nil
     --programViewport.bufferWindow = nil
     
     function programViewport:draw()      
@@ -14,17 +15,9 @@ return function(control, multiProgram, parentTerm)
         --self.program.window.redraw() -- Uncomment this to redraw unfocused windows
     end
 
-    function programViewport:launchProgram(programPath, x, y, w, h, ...)
-        self.program = multiProgram.launchProgram(programPath, x, y, w, h, ...)
-        --self.bufferWindow = window.create(parentTerm, 5, 5, 27, 27)
-        self.program.window.setVisible(true)
-        --term.setCursorBlink(true)
-        --self.program.window.setCursorBlink(true) 
-        local baseWrite = self.program.window.write
-        self.program.window.write = function(text)
-            baseWrite(text)
-            --self:redraw()
-        end
+    function programViewport:launchProgram(parentTerm, programPath, x, y, w, h, ...)
+        self.parentTerm = parentTerm
+        self.program = multiProgram.launchProgram(parentTerm, programPath, x, y, w, h, ...)
     end
 
     function programViewport:endProcess()
@@ -37,6 +30,7 @@ return function(control, multiProgram, parentTerm)
 
     function programViewport:unhandledEvent(event, data)
         if self.program == nil then return end
+        term.redirect(self.program.window)
         if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
             if self.parent:inFocus() == false then return end
             if event == "mouse_drag" and not self:inFocus() then return end
@@ -49,6 +43,7 @@ return function(control, multiProgram, parentTerm)
         else
             multiProgram.resumeProcess(self.program, event, table.unpack(data, 2, #data))
         end
+        term.redirect(self.parentTerm)
     end
     
     function programViewport:updateWindow()
@@ -57,20 +52,15 @@ return function(control, multiProgram, parentTerm)
             self.program.window.setVisible(false)
             return 
         end
-        term.redirect(self.program.window)
-        self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h, parentTerm) --, self.program.window)
+       
+        self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h) --, self.program.window)
         multiProgram.resumeProcess(self.program, "term_resize")
-
+        
         self.program.window.setVisible(true)
-        if self.parent:inFocus() == false then -- This will refresh the entire viewport only if it is not in focus
+        if self.parent:inFocus() == false then -- This makes it so that only the focused viewport is drawn via the 'write' function
             self.program.window.setVisible(false)
-        else
-            local x, y = self.program.window.getCursorPos()
-            local blink = self.program.window.getCursorBlink()
-            --term.setCursorPos(x, y)
-            --term.setCursorBlink(true)
         end
-        term.redirect(parentTerm)
+        term.redirect(self.parentTerm)
     end
 
     return programViewport

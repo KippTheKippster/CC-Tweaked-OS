@@ -6,6 +6,7 @@
 #Order dropdown in front of windows
 #Exit button
 #Show Error Messages
+Delay treeEntered function call? (To prevent having to addChild under the function definition)
 Fix cursor blinking
 Remove update loop
 

@@ -4,7 +4,7 @@ local path = ".core."
 
 local tProcesses = {}
 local focusIndex = 1
-local parentTerm = term.current()
+--local parentTerm = term.current()
 local collision = require(path .. "collision")
 
 local function getIndex(p)
@@ -20,9 +20,8 @@ local function setFocusIndex(n)
 end
 
 local function resumeProcess(p, event, ...)
-    term.redirect(p.window)
-    local ok, result = coroutine.resume(p.co, event, ...)
-    return ok, result
+    --term.redirect(p.window)
+    return coroutine.resume(p.co, event, ...)
     --p.queueRedraw()
 end
 
@@ -36,11 +35,16 @@ local function resumeProcesses(event, ...)
     end
 end
 
-local function launchProcess(fun, x, y, w, h, ...)
+local i = 0
+local function launchProcess(parentTerm, fun, x, y, w, h, ...)
     local p = {}
     local args = table.pack(...)
     p.window = window.create(parentTerm, x, y, w, h, true)
-    term.redirect(p.window)
+    if i == 1 then
+        --local a = b.c
+    end
+    i = i + 1
+    --term.redirect(p.window)
     p.co = coroutine.create(function(args)
         fun(p, table.unpack(args, 1, args.n))
     end)
@@ -51,14 +55,13 @@ local function launchProcess(fun, x, y, w, h, ...)
     return p
 end
 
-local function launchProgram(path, x, y, w, h, ...)
-    local enva = { shell = shell, multishell = multishell }
+local function launchProgram(parentTerm, path, x, y, w, h, ...)
+    local env = { shell = shell, multishell = multishell }
 
-    enva.require, enva.package = dofile("rom/modules/main/cc/require.lua").make(enva, "")
+    env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
     local programArgs = table.pack(...)
-    return launchProcess(function(p)
-        enva.shell.openTab = function() end
-        os.run(enva, path, table.unpack(programArgs, 1, programArgs.n))
+    return launchProcess(parentTerm, function(p)
+        os.run(env, path, table.unpack(programArgs, 1, programArgs.n))
     end, x, y, w, h)
 end
 
@@ -111,7 +114,6 @@ end
 --end
 
 
-
 --local function getFocusIndex()
 --    return focusIndex
 --end
@@ -121,7 +123,7 @@ local function getProcess(i)
 end
 
 local running = true
-local function start()
+local function start() -- Note this goes unused
     term.clear()
     while running do 
         --term.redirect(parentTerm)
@@ -145,24 +147,8 @@ local function start()
         else --if event == "timer" then
             resumeProcesses(event, table.unpack(data, 2, #data))
         end
-        --redrawWindows()
     end
-    --parentTerm.clear()
-    --term.setCursorPos(1, 1)
-    --print("Done...")
 end
-
---local function exit() 
---    clearProcesses(true)
---    running = false
---end
-
---launchProgram("os/os.lua", 3, 3, 51, 20)
---launchProgram("rom/tProcesses/fun/advanced/paint.lua", 3, 3, 51 - 51 / 2, 20 - 20 / 2, "multiPaint")
---launchProgram("rom/tProcesses/shell.lua", 3, 3, 51 - 51 / 2, 20 - 20 / 2)
---launchProgram("test2.lua", 1, 1, 15, 18)
---term.clear()
---start()
 
 return {
     launchProgram = launchProgram, 

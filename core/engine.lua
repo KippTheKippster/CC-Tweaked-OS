@@ -92,23 +92,34 @@ for k, v in pairs(objectList) do
     end
 end
 
-local w, h = term.getSize()
-local screenBuffer = window.create(term.current(), 1, 1, w, h)
-term.redirect(screenBuffer)
+local parentTerm = term.current()
+local w, h = parentTerm.getSize()
+local screenBuffer = window.create(parentTerm, 1, 1, w, h)
+term.redirect(screenBuffer) -- NOTE IMPORTANT (Otherwise viewports will draw behind screenbuffer since their parents will be the parent of the screenbuffer)
+
+if __Global == nil then
+    __Global = {}
+end
+
+__Global.initial = parentTerm
+__Global.buffer = screenBuffer
+__Global.print = function ()
+    printError("Initial: " .. tostring(Global.initial))
+    printError("Buffer : " .. tostring(Global.buffer))
+end
+
 local root = control:new{}
 root.rendering = false
-root.text = ""
+root.text = "root"
 --root.style = mainStyle
 root.w = w
 root.h = h
 root.mouseIgnore = true
 root:add()
-root.input = input
+--root.input = input
 
 engine.running = false
-
 engine.backgroundColor = colors.black
-
 engine.root = root
 
 local function onResizeEvent()
@@ -116,74 +127,51 @@ local function onResizeEvent()
     --redrawScreen() --Very slow, should be called manually
 end
 
-local function drawChildren(c)
+local function drawBranch(o)
+    o:draw()
+    local c = o.children
     for i = 1, #c do
-        c[i]:draw()
-        if #c[i].children > 0 then
-            drawChildren(c[i].children)
-        end
+        drawBranch(c[i])
     end
 end
 
 local function redrawScreen()
-    if not engine.running then return end
-    local old = term.current()
     term.redirect(screenBuffer)
     screenBuffer.setVisible(false)
-    term.setBackgroundColor(engine.backgroundColor)
-    term.setCursorBlink(false)
-    engine.root:draw()
-    drawChildren(engine.root.children)
+
+    drawBranch(engine.root)
+
     screenBuffer.setVisible(true)
-    term.redirect(old)
-    --term.current().setVisible(true)
-    --term.current().setVisible(false)
-    --term.clear()
-    --for i = 1, #canvases do
-    --    local c = canvases[i]
-    --    c:draw()     
-    --end
-end
-
-local function processChildren(c)
-    for i = 1, #c do
-        if #c[i].children > 0 then
-            processChildren(c[i].children)
-        end
-        c[i]:update()
-    end
-end
-
-
-local function processActives()
-    while engine.running do
-        for key, value in pairs(engine.renderQueue) do
-            redrawScreen() --TODO Replace with redrawArea()
-            --
-            --drawutils.drawScreen()
-            break
-        end 
-        engine.renderQueue = {}
-        engine.root:update()
-        processChildren(engine.root.children)
-        --actives.process()
-        sleep(0.0001)
-    end
-end
-
-local function processInput()
-	input.processInput()
+    term.redirect(parentTerm)
 end
 
 engine.start = function()
+    if engine.running then return end
     engine.running = true
     engine.input.addResizeEventListener(onResizeEvent)
-    term.setBackgroundColor(engine.backgroundColor)
+    
+    --term.setCursorBlink(false)
+    --term.setBackgroundColor(engine.backgroundColor)
+    
     redrawScreen()
 
+    local drawCount = 0
     parallel.waitForAny(
-        processActives,
-        processInput
+        function ()
+            while engine.running do
+                for key, value in pairs(engine.renderQueue) do
+                    drawCount = drawCount + 1
+                    redrawScreen()
+                    engine.renderQueue = {}
+                end
+                sleep(0.0001) 
+            end
+        end, 
+        function ()
+            while engine.running do
+                input.processInput()
+            end
+        end
     )
 end
 
@@ -201,7 +189,7 @@ end
 
 
 engine.setBackgroundColor = function(value)
-    redrawScreen()
+    --redrawScreen()
     engine.backgroundColor = value
 end 
 
