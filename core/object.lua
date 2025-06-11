@@ -145,7 +145,4 @@ local function getObject()
     return object
 end
 
-return { 
-    new_object = new_object, 
-    getObject = getObject
-}
+return object

@@ -75,9 +75,6 @@ function windowControl:ready()
 
     self.scaleButton.doublePressed = function(o)
         local w, h = term.getSize()
-        print(w .. " : " .. h)
-        print(term.current())
-        --while true do end
         local wi = o.parent
         wi.x = 0
         wi.y = 0

@@ -10,10 +10,13 @@ local fileExplorer = nil
 changeBackground.text = "Change Background"
 changeBackground.h = 1
 
-function changeBackground:click()
-    if fileExplorer ~= nil then return end
+function changeBackground:pressed()
+    if fileExplorer ~= nil then
+        fileExplorer:remove()
+        fileExplorer = nil
+    end
 
-    fileExplorer = mos.multiWindow.launchProgram(mos.root, "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (path, name)
+    fileExplorer = mos.launchProgram("/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (path, name)
         fileExplorer:close()
         fileExplorer = nil
         local suffix = ".nfp"
@@ -26,7 +29,7 @@ function changeBackground:click()
             mos.addWindow(w)
         end
     end)
-    fileExplorer.text = "Choose Background"
+    fileExplorer.text = "Choose .nfp"
     mos.addWindow(fileExplorer)
 end
 
