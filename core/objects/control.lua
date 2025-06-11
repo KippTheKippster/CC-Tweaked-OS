@@ -167,12 +167,13 @@ function control:remove()
 	--end
 
     --self:syncChildrenFunction("remove") --TODO reimplement
-
     for i = 1, #self.parent.children do
 		if self.parent.children[i] == self then
             table.remove(self.parent.children, i)
 		end
 	end
+
+    self.parent:childrenChanged()
 
     canvas.remove(self)
 end
@@ -220,7 +221,6 @@ function redrawArea(x, y, w, h) -- Unused
 end
 
 function control:redraw()
-    if not engine.running then return end
     engine.renderQueue[self] = true
 end
 
@@ -368,6 +368,8 @@ function control:addChild(o)
     o.style = self.style
     o.globalX = self.globalX + o.x
     o.globalY = self.globalY + o.y
+    o.treeEntered(o) -- TODO Maybe make recursive
+    self:childrenChanged()
     --self:syncChildrenKey("style", self._style)
 end
 
@@ -422,6 +424,8 @@ function control:grabFocus()
 end
 
 --Signal Functions that should be overwritten
+function control:treeEntered() end
+function control:childrenChanged() end
 function control:click() end
 function control:pressed() end
 function control:doublePressed() end

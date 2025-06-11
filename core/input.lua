@@ -68,7 +68,6 @@ function mouse.click(button, x, y)
     local c = mouse.getControl(x, y)
     if mouse.current ~= c then
         mouse.clickTime = os.clock()
-
         if mouse.current ~= nil then
             mouse.current:up()
             mouse.current.focus = false
@@ -215,47 +214,45 @@ local function resizeEvent()
 end
 
 local function processInput()
-    while true do
-        local data = {os.pullEvent()}
-        local event = data[1]
+    local data = {os.pullEvent()}
+    local event = data[1]
 
-        if event == 'key' then
-            key(data[2])
-        elseif event == 'key_up' then
-            keyUp(data[2])
-        elseif event == 'char' then
-            char(data[2])
-        elseif event == 'mouse_click' then
-            mouseClick(
-                data[2],
-                data[3],
-                data[4]
-            )
-        elseif event == 'mouse_up' then
-            mouseUp(
-                data[2],
-                data[3],
-                data[4]
-            )
-        elseif event == "mouse_drag" then
-            mouseDrag(
-                data[2],
-                data[3],
-                data[4]
-            )
-        elseif event == "mouse_scroll" then
-            mouseScroll(
-                data[2],
-                data[3],
-                data[4]
-            )
-        elseif event == "term_resize" then
-            resizeEvent()
-        end
+    if event == 'key' then
+        key(data[2])
+    elseif event == 'key_up' then
+        keyUp(data[2])
+    elseif event == 'char' then
+        char(data[2])
+    elseif event == 'mouse_click' then
+        mouseClick(
+            data[2],
+            data[3],
+            data[4]
+        )
+    elseif event == 'mouse_up' then
+        mouseUp(
+            data[2],
+            data[3],
+            data[4]
+        )
+    elseif event == "mouse_drag" then
+        mouseDrag(
+            data[2],
+            data[3],
+            data[4]
+        )
+    elseif event == "mouse_scroll" then
+        mouseScroll(
+            data[2],
+            data[3],
+            data[4]
+        )
+    elseif event == "term_resize" then
+        resizeEvent()
+    end
 
-        if string.find(event, "mouse") ~= nil then
-            mouseEvent(event, data)
-        end
+    if string.find(event, "mouse") ~= nil then
+        mouseEvent(event, data)
     end
 end
 

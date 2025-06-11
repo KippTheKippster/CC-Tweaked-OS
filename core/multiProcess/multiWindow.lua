@@ -3,7 +3,7 @@
 return function(engine)
 local path = ".core.multiProcess."
 local multiProgram = require(path .. "multiProgram")    
-local programViewport = require(path .. "programViewport")(engine:getObjects()["control"], multiProgram, term.current())
+local programViewport = require(path .. "programViewport")(engine:getObjects()["control"], multiProgram)
 local programWindow = require(path .. "programWindow")(engine:getObjects()["windowControl"], programViewport)
 
 local viewports = {}
@@ -19,15 +19,15 @@ unfocusedWindowStyle.backgroundColor = colors.white
 unfocusedWindowStyle.textColor = colors.black
 
 -- I don't like having parent here
-local function launchProgram(parent, programPath, x, y, w, h, ...)
+local function launchProgram(parentTerm, parentControl, programPath, x, y, w, h, ...)
     --multiProgram.launchProgram(path, x, y, w, h, ...)
     local window = programWindow:new{}
-    parent:addChild(window)
-    window:toFront()
+    parentControl:addChild(window)
+    --window:toFront()
 
     local viewport = programViewport:new{}
     window:addViewport(viewport)
-    viewport:launchProgram(programPath, x, y, w, h, ...)
+    viewport:launchProgram(parentTerm, programPath, x, y, w, h, ...)
     --viewport.program = multiProgram.launchProgram(programPath, x, y, w, h, ...)
 
     table.insert(viewports, viewport)
@@ -45,27 +45,24 @@ local function launchProgram(parent, programPath, x, y, w, h, ...)
     return window
 end
 
-local function launchProcess(fun, x, y, w, h, ...) -- Launch a windowless process 
-    local process = multiProgram.launchProcess(fun, x, y, w, h, ...)
+local function launchProcess(parentTerm, fun, x, y, w, h, ...) -- Launch a windowless process 
+    local process = multiProgram.launchProcess(parentTerm, fun, x, y, w, h, ...)
     table.insert(nvProcesses, process)
     return process
 end
 
-local function start(fun, ...)
+local function start(parentTerm, fun, ...)
     term.clear()
     local w, h = term.getSize()
-    local main = launchProcess(fun, 1, 1, w, h, ...)
+    local main = launchProcess(parentTerm, fun, 1, 1, w, h, ...)
     running = true
     while running do
         local data = table.pack(os.pullEventRaw())
         local event = data[1]
 
-        for i = 1, #viewports do
-            viewports[i]:unhandledEvent(event, data)
-        end
-
-        for i = 1, #nvProcesses do
-            local ok, err = multiProgram.resumeProcess(nvProcesses[i], event, table.unpack(data, 2, #data)) --Fix!
+        for i = 1, #nvProcesses do -- NOTE this is only called for windowless processes (aka the processes from 'launchProcess' NOT 'launchProgram')
+            --term.redirect(nvProcesses[i].window)
+            local ok, err = coroutine.resume(nvProcesses[i].co, event, table.unpack(data, 2, #data)) --multiProgram.resumeProcess(nvProcesses[i], event, table.unpack(data, 2, #data)) --Fix!
             if ok == false then
                 term.setCursorPos(1, 1)
                 term.setBackgroundColor(colors.black)
@@ -74,6 +71,9 @@ local function start(fun, ...)
             end
         end
 
+        for i = 1, #viewports do
+            viewports[i]:unhandledEvent(event, data)
+        end
     end
 end
 

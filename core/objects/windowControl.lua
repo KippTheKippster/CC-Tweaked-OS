@@ -38,8 +38,6 @@ function windowControl:ready()
     self.label.w = 1
     self.label.h = 1
     self.label.mouseIgnore = true
-    --self.label.text = "KDSAIO"
-    --self.label.text = self.text
 
     self.exitButton = button:new{}
     self:addChild(self.exitButton)
@@ -57,6 +55,7 @@ function windowControl:ready()
     self.scaleButton.w = 1
     self.scaleButton.h = 1
     self.scaleButton.text = "%"
+
     self.scaleButton.drag = function(o, relativeX, relativeY)
         local wi = o.parent
         local w = wi.w
@@ -76,11 +75,16 @@ function windowControl:ready()
 
     self.scaleButton.doublePressed = function(o)
         local w, h = term.getSize()
+        print(w .. " : " .. h)
+        print(term.current())
+        --while true do end
         local wi = o.parent
         wi.x = 0
         wi.y = 0
         wi.w = w
         wi.h = h
+        wi:toFront()
+        wi:grabFocus()
     end
 end
 

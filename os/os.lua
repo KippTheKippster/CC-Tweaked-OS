@@ -2,6 +2,7 @@ print("mos is starting...")
 local engine = require(".core.engine")
 local utils = require(".core.utils")
 local multiWindow = require(".core.multiProcess.multiWindow")(engine)
+local parentTerm = term.current()
 
 local termW, termH = term.getSize()
 
@@ -32,15 +33,16 @@ end
 
 
 --Background
-local background = engine.root:addIcon()
+local background = engine.getObject("icon"):new{}
+background.text = ""
+
+function background:treeEntered()
+    self.texture = paintutils.loadImage(mos.profile.backgroundPath)
+end
+
+engine.root:addChild(background)
 background.y = 1
 background.x = 0
-background.text = ""
-function background:update() --TODO, fix it so it textures can be loaded at startup
-    if self.texture == nil then
-        self.texture = paintutils.loadImage(mos.profile.backgroundPath)
-    end
-end
 
 --Main
 local main = engine.root:addVContainer()
@@ -64,10 +66,11 @@ dropdown.text = "MOS"
 dropdown.w = 10
 --dropdown:addToList("New")
 dropdown:addToList("File Explorer")
-dropdown:addToList("Shell")
 dropdown:addToList("Settings")
+dropdown:addToList("Shell")
 dropdown:addToList("Exit")
 dropdown:addToList("-Open Windows-", false)
+
 --dropdown:addToList("Exit")
 local windows = {}
 
@@ -95,12 +98,13 @@ function dropdown:click()
 end
 
 function dropdown:optionPressed(i)
+    --local parentTerm = term.current()
     local parent = engine.root
     local text = dropdown:getOptionText(i)
     if text == "New" then
         local w = engine.root:addWindowControl()
     elseif text == "Shell" then
-        local w = multiWindow.launchProgram(parent, "rom/programs/advanced/multishell.lua", 2, 2, 20, 10)
+        local w = multiWindow.launchProgram(parentTerm, parent, "rom/programs/advanced/multishell.lua", 2, 2, 20, 10)
         w.text = "Shell"
         addWindow(w)
     elseif text == "Exit" then
@@ -110,14 +114,14 @@ function dropdown:optionPressed(i)
         --shell.run("rom/programs/shell.lua")
         --multiWindow.exit()
     elseif text == "File Explorer" then
-        local fileExplorer = multiWindow.launchProgram(parent, "/os/programs/fileExplorer.lua", 1, 1, 40, 15,
+        local fileExplorer = multiWindow.launchProgram(parentTerm, parent, "/os/programs/fileExplorer.lua", 1, 1, 40, 15,
         function(path, name) -- This function is called when the user has chosen a file
             if engine.input.isKey(341) then -- Lctrl
-                local w = multiWindow.launchProgram(parent, "/rom/programs/edit.lua", 0, 0, 30, 18, path)
+                local w = multiWindow.launchProgram(parentTerm, parent, "/rom/programs/edit.lua", 0, 0, 30, 18, path)
                 w.text = "Edit '" .. name .. "'" 
                 addWindow(w)
             else
-                local w = multiWindow.launchProgram(parent, path, 2, 2, 20, 10)
+                local w = multiWindow.launchProgram(parentTerm, parent, path, 2, 2, 20, 10)
                 w.text = name
                 addWindow(w)
             end
@@ -125,7 +129,7 @@ function dropdown:optionPressed(i)
         fileExplorer.text = "File Explorer"
         addWindow(fileExplorer)
     elseif text == "Settings" then
-        local w = multiWindow.launchProgram(parent, "/os/programs/settings.lua", 1, 1, 40, 15, mos)
+        local w = multiWindow.launchProgram(parentTerm, parent, "/os/programs/settings.lua", 1, 1, 40, 15, mos)
         w.text = "Settings"
         addWindow(w)
     else
@@ -166,4 +170,4 @@ mos.multiWindow = multiWindow
 mos.background = background
 
 --multiWindow.launchProcess(engine.start, 1, 1, w, h, engine)
-multiWindow.start(engine.start, engine)
+multiWindow.start(term.current(), engine.start, engine)

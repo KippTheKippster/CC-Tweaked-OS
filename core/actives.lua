@@ -10,9 +10,10 @@ active.name = 'active'
 
 function active:add()
     table.insert(actives, self)
-    self:defineSignal("readyEvent") 
-    self:connectSignal("readyEvent", self, "ready")
-    self:emitSignal("readyEvent")
+    self:ready()
+    --self:defineSignal("readyEvent") 
+    --self:connectSignal("readyEvent", self, "ready")
+    --self:emitSignal("readyEvent")
     --self:ready()
 end
 
