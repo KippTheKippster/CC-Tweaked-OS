@@ -47,6 +47,7 @@ background.x = 0
 
 --Main
 local main = engine.root:addVContainer()
+main.expandW = true
 main.y = 0
 
 function main:update()
@@ -59,7 +60,7 @@ end
 local topBar = main:addHContainer()
 topBar.rendering = true
 topBar.background = true
-topBar.w = termW
+topBar.expandW = true
 topBar.h = 1
 
 local dropdown = engine.root:addDropdown()
@@ -161,20 +162,27 @@ clock.x = termW - 5
 
 clock.h = 1
 
-local frameStyle = engine:newStyle()
-frameStyle.backgroundColor = colors.cyan
+engine.input.addResizeEventListener(clock)
 
-local bodyStyle = engine:newStyle()
-bodyStyle.backgroundColor = colors.lightGray
+function clock:resizeEvent() 
+    self.x = term.getSize() - 5
+end
+
 
 function clock:update()
     self.text = textutils.formatTime(os.time('local'), true)
     --self:redraw()
 end
 
---engine:addChild(programWindow)
+local frameStyle = engine:newStyle()
+frameStyle.backgroundColor = colors.cyan
 
-local w, h = term.getSize()
+local bodyStyle = engine:newStyle()
+bodyStyle.backgroundColor = colors.lightGray
+
+
+
+--engine:addChild(programWindow)
 
 mos.parentTerm = parentTerm
 mos.engine = engine
@@ -184,5 +192,4 @@ mos.launchProgram = launchProgram
 mos.multiWindow = multiWindow
 mos.background = background
 
---multiWindow.launchProcess(engine.start, 1, 1, w, h, engine)
 multiWindow.start(term.current(), engine.start, engine)

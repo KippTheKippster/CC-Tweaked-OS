@@ -4,6 +4,7 @@ dropdown.text = "Drop-down"
 dropdown.h = 1
 dropdown.list = nil
 dropdown.open = false
+dropdown.dragSelectable = false
 
 function dropdown:ready()
     self.list = self:addVContainer()
@@ -16,6 +17,7 @@ function dropdown:addToList(text, clickable)
     local b 
     if clickable == nil or clickable == true then
         b = self.list:addButton()
+        b.dragSelectable = false
     else
         b = self.list:addControl()
     end
@@ -54,8 +56,15 @@ function dropdown:draw()
     end
 end
 
-function dropdown:pressed()
-    self.list.visible = self.list.visible == false
+function dropdown:click()
+    button.click(self)
+    self.list.visible = true
+end
+
+
+function dropdown:up()
+    button.up(self)
+    self.list.visible = false
 end
 
 function dropdown:getOptionText(i)

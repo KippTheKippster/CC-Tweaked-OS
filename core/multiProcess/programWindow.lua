@@ -33,8 +33,8 @@ end
 
 function programWindow:close()
     self.programViewport:endProcess()
-    self:remove()
     self:closed()
+    self:remove()
 end
 
 

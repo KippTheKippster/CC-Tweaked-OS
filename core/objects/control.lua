@@ -7,6 +7,8 @@ control._x = 0
 control._y = 0
 control._w = 13
 control._h = 5
+control.expandW = false
+control.expandH = false
 control.offsetTextX = 0
 control._text = "Control"
 control._style = style
@@ -18,31 +20,32 @@ control.mouseIgnore = false
 control._visible = true
 control.rendering = true
 control.draggable = false
+control.dragSelectable = false
 control.children = {}
 control.parent = nil
 
 control:defineProperty('globalX', {
-    get = function(table) return table._globalX end,
-    set = function(table, value) 
-        local same = table._globalX == value
-        table._globalX = value 
+    get = function(o) return o._globalX end,
+    set = function(o, value) 
+        local same = o._globalX == value
+        o._globalX = value 
         if same == false then
-            table:updateGlobalPosition();
-            table:transformChanged();
-            table:globalPositionChanged();
+            o:updateGlobalPosition()
+            o:transformChanged()
+            o:globalPositionChanged()
         end
     end 
 })
 
 control:defineProperty('globalY', {
-    get = function(table) return table._globalY end,
-    set = function(table, value) 
-        local same = table._globalY == value
-        table._globalY = value 
+    get = function(o) return o._globalY end,
+    set = function(o, value) 
+        local same = o._globalY == value
+        o._globalY = value 
         if same == false then
-            table:updateGlobalPosition();
-            table:transformChanged();
-            table:globalPositionChanged();
+            o:updateGlobalPosition()
+            o:transformChanged()
+            o:globalPositionChanged()
         end
     end 
 })
@@ -51,173 +54,167 @@ function control:updateGlobalPosition()
     for i = 1, #self.children do
         local c = self.children[i]
         c.globalX = self.globalX + c.x
-        c.globalY = self.globalY + c.y 
+        c.globalY = self.globalY + c.y
     end
 
     self:redraw()
 end
 
 control:defineProperty('x', {
-    get = function(table) return table._x end,
-    set = function(table, value)
+    get = function(o) return o._x end,
+    set = function(o, value)
         local value = value
-        local same = table._x == value
-        table._x = value 
+        local same = o._x == value
+        o._x = value 
         if same == false then
-            table:udpatePosition()
-            table:transformChanged();
-            table:positionChanged();
+            o:updatePosition()
+            o:transformChanged()
+            o:positionChanged()
         end
     end
 })
 
 control:defineProperty('y', {
-    get = function(table) return table._y end,
-    set = function(table, value) 
+    get = function(o) return o._y end,
+    set = function(o, value) 
         local value = value 
-        local same = table._y == value
-        table._y = value 
+        local same = o._y == value
+        o._y = value 
         if same == false then
-            table:udpatePosition()
-            table:transformChanged();
-            table:positionChanged();
+            o:updatePosition()
+            o:transformChanged()
+            o:positionChanged()
         end
     end 
 })
 
-function control:udpatePosition()
+function control:updatePosition()
     self.globalX = self.parent.globalX + self.x
     self.globalY = self.parent.globalY + self.y
     self:redraw()
 end
 
 control:defineProperty('w', {
-    get = function(table) return table._w end,
-    set = function(table, value) 
-        local same = table._w == value
-        table._w = value 
+    get = function(o) return o._w end,
+    set = function(o, value) 
+        local same = o._w == value
+        o._w = value 
         if same == false then
-            table:redraw()
-            table:transformChanged();
-            table:sizeChanged();
+            o:redraw()
+            o:transformChanged()
+            o:_expandChildren()
+            o:sizeChanged()
         end
     end
 })
 
 control:defineProperty('h', {
-    get = function(table) return table._h end,
-    set = function(table, value) 
-        local same = table._h == value
-        table._h = value 
+    get = function(o) return o._h end,
+    set = function(o, value) 
+        local same = o._h == value
+        o._h = value 
         if same == false then
-            table:redraw()
-            table:transformChanged();
-            table:sizeChanged();
+            o:redraw()
+            o:transformChanged()
+            o:_expandChildren()
+            o:sizeChanged()
         end
     end
 })
 
-control:defineProperty('text', {
-    get = function(table) return table._text end,
-    set = function(table, value) 
-        local same = table._text == value
-        table._text = value 
+control:defineProperty('expandW', {
+    get = function(o) return o._expandW end,
+    set = function(o, value) 
+        local same = o._expandW == value
+        o._expandW = value 
+        if same == false and o._expandW == true then
+            if o.parent ~= nil then
+                o.parent:_expandChildren()
+            end
+        end
+    end
+})
+
+control:defineProperty('expandH', {
+    get = function(o) return o._expandH end,
+    set = function(o, value) 
+        local same = o._expandH == value
+        o._expandH = value 
         if same == false then
-            table:redraw()
+            o.parent:_expandChildren()
+        end
+    end
+})
+
+function control:_expandChildren()
+    for i = 1, #self.children do
+        local c = self.children[i]
+        if c.expandH then
+            c.h = self.h
+        end
+        if c.expandW then
+            c.w = self.w
+        end
+    end
+end
+
+control:defineProperty('text', {
+    get = function(o) return o._text end,
+    set = function(o, value) 
+        local same = o._text == value
+        o._text = value 
+        if same == false then
+            o:redraw()
         end
     end 
 })
 
 control:defineProperty('visible', {
-    get = function(table) return table._visible end,
-    set = function(table, value) 
-        local same = table._visible == value
-        table._visible = value 
+    get = function(o) return o._visible end,
+    set = function(o, value) 
+        local same = o._visible == value
+        o._visible = value 
         if same == false then
-            table:syncChildrenKey("visible", table._visible)
-            table:visibilityChanged();
+            o:syncChildrenKey("visible", o._visible)
+            o:visibilityChanged();
         end
-    end 
+    end
 })
 
 control:defineProperty('style', {
-    get = function(table) return table._style end,
-    set = function(table, value) 
-        local same = table._style == value
-        table._style = value 
+    get = function(o) return o._style end,
+    set = function(o, value) 
+        local same = o._style == value
+        o._style = value 
         if same == false then
-            table:syncChildrenKey("style", table._style)
-            table:redraw()
-            table:styleChanged();
+            o:syncChildrenKey("style", o._style)
+            o:redraw()
+            o:styleChanged();
         end
     end 
 })
 
 function control:add()
-    table.insert(engine.controls, self)
+    --table.insert(engine.controls, self)
+    --engine.controls[self] = 
     self:ready()
     self:redraw()
 end
 
 function control:remove()
-    --for i = 1, #controls do
-	--	if controls[i] == self then
-    --        --table.remove(controls, i)
-	--	end
-	--end
+    --for i = 1, #self.children do
+    --    self.children[i]:remove()
+    --end
 
-    --self:syncChildrenFunction("remove") --TODO reimplement
     for i = 1, #self.parent.children do
-		if self.parent.children[i] == self then
+	    if self.parent.children[i] == self then
             table.remove(self.parent.children, i)
 		end
 	end
 
     self.parent:childrenChanged()
-
-    engine.controls[self] = nil -- IS THIS CORRECT?
-end
-
-function getControl(x, y, w, h, whitelist, p)
-    local list = {}
-    for i = 1, #controls do
-        local c = controls[i]
-        if whitelist[i] == nil and collision.overlappingArea(x, y, w, h, c.globalX, c.globalY, c.w, c.h) then
-            --table.insert(list, c)
-            --print(tostring(c) .. " : " .. i)
-            if p then
-                print(c)
-            end 
-            list[i] = c
-            --print(list[i])
-        end
-    end
-    return list
-end
-
-function redrawArea(x, y, w, h) -- Unused
-    term.setBackgroundColor(colors.black)
-    term.setTextColor(colors.white)
-    term.clear()
-    term.setCursorPos(1, 4)
-
-    local list = getControl(x, y, w, h, {}, false)
-    for k, v in pairs(list) do
-        local newList = getControl(v._globalX, v._globalY, v._w, v._h, list, true)
-        for kn, vn in pairs(list) do
-            --list[kn] = vn
-        end
-    end
-    
-    for k, v in pairs(list) do
-        list[k]:draw()
-    end
-    
-    term.setTextColor(colors.white)
-    term.setBackgroundColor(colors.red)
-    for k, v in pairs(list) do
-        --list[k]:draw()
-    end
+    --self = {}
+    --object.remove(self)
 end
 
 function control:redraw()
@@ -300,7 +297,6 @@ function control:write()
     end
     local s = self.offsetTextX + 1
 
-    
     term.setCursorPos(self:getTextPosition())
     term.setTextColor(self._style.textColor)
 
@@ -330,6 +326,7 @@ function control:addChild(o)
     o.globalY = self.globalY + o.y
     o.treeEntered(o) -- TODO Maybe make recursive
     self:childrenChanged()
+    self:_expandChildren()
     --self:syncChildrenKey("style", self._style)
 end
 
