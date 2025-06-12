@@ -56,8 +56,8 @@ function dropdown:draw()
     end
 end
 
-function dropdown:click()
-    button.click(self)
+function dropdown:pressed()
+    button.pressed(self)
     self.list.visible = true
 end
 
