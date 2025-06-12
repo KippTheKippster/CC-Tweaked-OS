@@ -21,8 +21,8 @@ style.borderColor = colors.gray
 style.textColor = colors.black
 style.border = false
 
-local controls = {}
-engine.controls = controls
+--local controls = {}
+--engine.controls = controls
 
 --Objects
 local objectList = {}
@@ -68,10 +68,12 @@ for k, v in pairs(objectList) do
     end
 end
 
+term.setCursorBlink(false)
 local parentTerm = term.current()
-local w, h = parentTerm.getSize()
-local screenBuffer = window.create(parentTerm, 1, 1, w, h)
+local initialW, initialH = parentTerm.getSize()
+local screenBuffer = window.create(parentTerm, 1, 1, initialW, initialH)
 term.redirect(screenBuffer) -- NOTE IMPORTANT (Otherwise viewports will draw behind screenbuffer since their parents will be the parent of the screenbuffer)
+term.setCursorBlink(false)
 
 engine.parentTerm = parentTerm
 engine.screenBuffer = screenBuffer
@@ -91,8 +93,10 @@ local root = control:new{}
 root.rendering = false
 root.text = "root"
 --root.style = mainStyle
-root.w = w
-root.h = h
+root.w = initialW
+root.h = initialH
+--root.expandW = true
+--root.expandH = true
 root.mouseIgnore = true
 root:add()
 --root.input = input
@@ -103,7 +107,10 @@ engine.root = root
 
 local function onResizeEvent()
     drawutils.resize()
-    --redrawScreen() --Very slow, should be called manually
+    local w, h = parentTerm.getSize()
+    screenBuffer.reposition(1, 1, w, h)
+    engine.root.w, engine.root.h = w, h
+    --print(root.w .. " : " .. root.h)
 end
 
 local function drawBranch(o)
@@ -119,7 +126,7 @@ local function redrawScreen()
     screenBuffer.setVisible(false)
 
     drawBranch(engine.root)
-
+    
     screenBuffer.setVisible(true)
     term.redirect(parentTerm)
 end
@@ -128,7 +135,7 @@ engine.start = function()
     if engine.running then return end
     engine.running = true
     engine.input.addResizeEventListener(onResizeEvent)
-    
+    engine.root:_expandChildren() -- FIXME this should be called automatically 
 
     redrawScreen()
 
@@ -140,14 +147,14 @@ engine.start = function()
                     drawCount = drawCount + 1
                     redrawScreen()
                     engine.renderQueue = {}
-                    
+
                     --term.setTextColor(colors.white)
                     --term.setBackgroundColor(colors.black)
-                    --print(drawCount)
-                    
+                    --print(#controls)
+
                     break
                 end
-                sleep(0.0001) 
+                sleep(0.0001)
             end
         end, 
         function ()

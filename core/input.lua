@@ -119,6 +119,18 @@ function mouse.drag(button, x, y)
     if mouse.current == nil then return end
     local relativeX = x - mouse.dragX
     local relativeY = y - mouse.dragY
+    local c = mouse.getControl(x, y)
+    if c ~= nil and c ~= mouse.current and c.dragSelectable == true then
+        if mouse.current.dragSelectable == false then
+            mouse.current:up()
+        end
+        mouse.current.focus = false
+        mouse.current:focusChanged()
+        c.focus = true
+        c:focusChanged()
+        c:click()
+        mouse.current = c
+    end
     mouse.dragX = x
     mouse.dragY = y
     mouse.current:drag(relativeX, relativeY)

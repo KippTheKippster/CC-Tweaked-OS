@@ -69,6 +69,8 @@ function object:remove()
     for k in pairs (self) do
         self [k] = nil
     end
+
+    self = nil
 end
 
 --Defines a new property

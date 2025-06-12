@@ -8,7 +8,7 @@ return function(control, multiProgram)
     programViewport.program = nil
     programViewport.parentTerm = nil
     
-    function programViewport:draw()      
+    function programViewport:draw()
         if self.program == nil then return end
         self:updateWindow()
     end
@@ -57,10 +57,10 @@ return function(control, multiProgram)
             self.program.window.setVisible(false)
             return 
         end
-       
+
         self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h) --, self.program.window)
         multiProgram.resumeProcess(self.program, "term_resize")
-        
+
         self.program.window.setVisible(true)
         if self.parent:inFocus() == false then -- This makes it so that only the focused viewport is constantly drawn (unfocused windows have to wait for next redraw)
             self.program.window.setVisible(false)

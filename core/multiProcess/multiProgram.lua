@@ -40,17 +40,14 @@ local function launchProcess(parentTerm, fun, x, y, w, h, ...)
     local p = {}
     local args = table.pack(...)
     p.window = window.create(parentTerm, x, y, w, h, true)
-    if i == 1 then
-        --local a = b.c
-    end
-    i = i + 1
-    --term.redirect(p.window)
     p.co = coroutine.create(function(args)
+        term.redirect(p.window)
         fun(p, table.unpack(args, 1, args.n))
+        term.redirect(parentTerm)
     end)
     tProcesses[#tProcesses + 1] = p
-    p.queueRedraw = function() redraw = true end -- Not sure what this does
-    p.resumeProcess = function(event, ...) resumeProcess(p, event, ...) end
+    --p.queueRedraw = function() redraw = true end -- Not sure what this does
+    --p.resumeProcess = function(event, ...) resumeProcess(p, event, ...) end
     setFocusIndex(#tProcesses)
     return p
 end

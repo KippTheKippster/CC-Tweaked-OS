@@ -1,7 +1,7 @@
 Fix cursor blinking
-Removing objects does not free them from memory
 Delay treeEntered function call? (To prevent having to addChild under the function definition)
-Sometimes when pressing change background the new window will chose the wrong term.redirect
+#Removing objects does not free them from memory
+#Sometimes when pressing change background the new window will chose the wrong term.redirect
 #Renderbuffer
 #Resize should update correctly
 #Scroll is not working
