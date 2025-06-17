@@ -126,7 +126,10 @@ local function redrawScreen()
     screenBuffer.setVisible(false)
 
     drawBranch(engine.root)
-    
+
+    --term.setCursorPos(1,1)
+    --term.setTextColor(colors.blue)
+
     screenBuffer.setVisible(true)
     term.redirect(parentTerm)
 end
@@ -156,7 +159,7 @@ engine.start = function()
                 end
                 sleep(0.0001)
             end
-        end, 
+        end,
         function ()
             while engine.running do
                 input.processInput()

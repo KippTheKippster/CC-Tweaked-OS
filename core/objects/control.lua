@@ -15,6 +15,7 @@ control._style = style
 control.centerText = false
 control.background = true
 control.focus = false
+control.propogateFocusUp = false
 control.clipText = false
 control.mouseIgnore = false
 control._visible = true
@@ -237,7 +238,7 @@ function control:draw() -- Draws the control object if it is valid, NOTE this sh
         return
     end
 
-    if self.visible == false or self.rendering == false then
+    if self.visible == false or self.rendering == false or self.parent == nil then
         return
     end
 
@@ -328,6 +329,18 @@ function control:addChild(o)
     self:childrenChanged()
     self:_expandChildren()
     --self:syncChildrenKey("style", self._style)
+end
+
+function control:removeChild(o)
+    for i = 1, #self.children do
+        if self.children[i] == o then
+            table.remove(self.children, i)
+            break
+        end
+    end
+
+    o.parent = nil
+    self:childrenChanged()
 end
 
 function control:syncChildrenKey(key, value)

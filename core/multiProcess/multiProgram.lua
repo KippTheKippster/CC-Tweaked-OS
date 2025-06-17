@@ -52,13 +52,18 @@ local function launchProcess(parentTerm, fun, x, y, w, h, ...)
     return p
 end
 
-local function launchProgram(parentTerm, path, x, y, w, h, ...)
+local function launchProgram(parentTerm, programPath, extraEnv, x, y, w, h, ...)
     local env = { shell = shell, multishell = multishell }
+    extraEnv = extraEnv or {}
 
     env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
+    for k, v in pairs(extraEnv) do
+        env[k] = v
+    end
+
     local programArgs = table.pack(...)
     return launchProcess(parentTerm, function(p)
-        os.run(env, path, table.unpack(programArgs, 1, programArgs.n))
+        os.run(env, programPath, table.unpack(programArgs, 1, programArgs.n))
     end, x, y, w, h)
 end
 

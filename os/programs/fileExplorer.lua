@@ -5,6 +5,12 @@ local paths = {}
 
 local args = {...}
 local callbackFunction = args[1]
+local mos = __mos
+
+if mos == nil then
+    printError("File Explorer must be opened with MOS!")
+    return
+end
 
 --local main = engine.root:addControl()
 --main.expandW = true
@@ -13,6 +19,12 @@ local inputReader = {}
 
 engine.input.addScrollListener(inputReader)
 engine.input.addResizeEventListener(inputReader)
+
+--background
+local background = engine.root:addControl()
+background.text = ""
+background.expandW = true
+background.expandH = true
 
 --tools
 local toolsStyle = engine:newStyle() 
@@ -35,8 +47,6 @@ backButton.normalStyle = toolsStyle
 --files
 local vContainer = engine.root:addVContainer()
 vContainer:toBack()
-vContainer.rendering = true
-vContainer.background = true
 vContainer.visible = true
 vContainer.style.backgroundColor = colors.black
 
@@ -48,6 +58,8 @@ vContainer.h = 1
 --vContainer.h = 99
 vContainer.expandW = true
 vContainer.expandH = true
+
+background:toBack()
 
 local style = engine:newStyle()
 style.backgroundColor = colors.black
@@ -126,12 +138,17 @@ function inputReader:scroll(dir, x, y)
     local newY = vContainer.y - dir
     local w, h = term.getSize()
     term.setTextColour(colors.white)
+    if #vContainer.children - h < 0 then
+        vContainer.y = 1
+        return
+    end
+
     if newY > 1 then
-        --vContainer.y = 1
-        --return
+        vContainer.y = 1
+        return
     elseif newY < h - #vContainer.children then
-        --vContainer.y = h - #vContainer.children
-        --return
+        vContainer.y = h - #vContainer.children
+        return
     end
     vContainer.y = newY
     --print(#vContainer.children .. " : " .. vContainer.y .. " : " .. vContainer.h .. " : " .. h)
@@ -140,6 +157,7 @@ end
 
 
 function inputReader:resizeEvent()
+    inputReader:scroll(0, 0, 0)
     --local w, h = term.getSize()
     --main.h = h + 2
     --vContainer.h = 99
@@ -160,4 +178,22 @@ function dirButton:doublePressed()
 end
 
 openFolder("")
+
+local toolDropdown = mos.engine.getObject("dropdown"):new{}
+
+local function windowFocusChanged(focus)
+    if focus then
+        mos.addToToolbar(toolDropdown)
+    else
+        mos.removeFromToolbar(toolDropdown)
+    end
+end
+
+mos.addTool(__window, windowFocusChanged)
+
+toolDropdown.text = "File"
+toolDropdown:addToList("New File")
+toolDropdown:addToList("New Folder")
+toolDropdown:addToList("Close")
+
 engine:start()

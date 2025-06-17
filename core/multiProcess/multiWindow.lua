@@ -19,7 +19,7 @@ unfocusedWindowStyle.backgroundColor = colors.white
 unfocusedWindowStyle.textColor = colors.black
 
 -- I don't like having parent here
-local function launchProgram(parentTerm, parentControl, programPath, x, y, w, h, ...)
+local function launchProgram(parentTerm, parentControl, programPath, extraEnv, x, y, w, h, ...)
     --multiProgram.launchProgram(path, x, y, w, h, ...)
     local window = programWindow:new{}
     parentControl:addChild(window)
@@ -41,7 +41,9 @@ local function launchProgram(parentTerm, parentControl, programPath, x, y, w, h,
     window.oldW = w --Fix bug so that the window doesn't resize to default size
     window.oldH = h
 
-    viewport:launchProgram(parentTerm, programPath, ...)
+    extraEnv.__window = window
+
+    viewport:launchProgram(parentTerm, programPath, extraEnv, ...)
 
     return window
 end
