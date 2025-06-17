@@ -15,6 +15,7 @@ function programWindow:ready()
     self.minimizeButton.w = 1
     self.minimizeButton.h = 1
     self.minimizeButton.text = "-"
+    self.minimizeButton.propogateFocusUp = true
 
     self.minimizeButton.pressed = function(o)
         self.visible = false
@@ -23,7 +24,6 @@ function programWindow:ready()
     self.exitButton.pressed = function(o)
         self:close()
     end
-
 
     self.scaleButton.up = function(o)
         o.parent:redraw()
@@ -54,13 +54,14 @@ function programWindow:addViewport(pv)
     self:addChild(pv)
     pv.y = 1
     pv.h = pv.h - 1
-    self.programViewport.click = function(o)
-        o.parent:toFront()
-    end
+    pv.propogateFocusUp = true
+    --self.programViewport.click = function(o)
+    --    o.parent:toFront()
+    --end
 
-    self.programViewport.focusChanged = function(o)
-        o.parent:updateStyle()
-    end
+    --self.programViewport.focusChanged = function(o)
+    --    o.parent:updateFocus()
+    --end
 end
 
 function programWindow:click()
@@ -80,14 +81,17 @@ function programWindow:sizeChanged()
 end
 
 function programWindow:focusChanged()
-    self:updateStyle()
+    self:updateFocus()
 end
 
-function programWindow:updateStyle()
+function programWindow:updateFocus()
     if self:inFocus() then -- or (self.programViewport ~= nil and self.programViewport:inFocus()) then
         self.style = self.focusedStyle
+        --term.setCursorBlink(true)
+        self:toFront()
     else
         self.style = self.unfocusedStyle
+        --term.setCursorBlink(false)
     end
 end
 

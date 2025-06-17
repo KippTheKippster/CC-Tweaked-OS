@@ -62,29 +62,59 @@ function mouse.getControl(x, y)
     ]]--
 end
 
+function mouse.getFocusOwner(o)
+    if o == nil or o.propogateFocusUp == false then
+        return o
+    else
+        return mouse.getFocusOwner(o.parent)
+    end
+end
+
+function mouse.changeFocus(o)
+    if o == mouse.current then
+        return
+    end
+
+    local owner = mouse.getFocusOwner(o)
+
+    if mouse.current ~= nil then
+        local currentOwner = mouse.getFocusOwner(mouse.current)
+        currentOwner.focus = false
+        currentOwner:focusChanged()
+    end
+
+    mouse.current = o
+
+    if owner ~= nil then
+        owner.focus = true
+        owner:focusChanged()
+    end
+end
+
 function mouse.click(button, x, y)
     mouse.dragX = x
     mouse.dragY = y
     local c = mouse.getControl(x, y)
-    if mouse.current ~= c then
+    if mouse.current ~= c then -- If user clicks on a new control
         mouse.clickTime = os.clock()
         if mouse.current ~= nil then
             mouse.current:up()
-            mouse.current.focus = false
-            mouse.current:focusChanged()
+            --mouse.current.focus = false
+            --mouse.current:focusChanged()
         end
-        mouse.current = c 
-        if mouse.current ~= nil then
-            mouse.current.focus = true
-            mouse.current:focusChanged()
-        end
-    elseif c ~= nil then
+        mouse.changeFocus(c)
+        --mouse.current = c 
+        --if mouse.current ~= nil then
+        --    mouse.current.focus = true
+        --    mouse.current:focusChanged()
+        --end
+    elseif c ~= nil then -- If user clicks on the same control
 		local time = os.clock()
 		local delta = time - mouse.clickTime
+		mouse.clickTime = time
 		if delta < 0.4 then
 			c:doublePressed(delta)
 		end
-		mouse.clickTime = time
 	end
 
     if c == nil then
@@ -95,18 +125,19 @@ function mouse.click(button, x, y)
 end
 
 local function grabControlFocus(c) 
-    if c == mouse.current then return end
+    mouse.changeFocus(c)
+    --if c == mouse.current then return end
 
-    local prev = mouse.current
-    if prev ~= nil then
-        prev.focus = false
-    end
-    mouse.current = c
-    c.focus = true
-    c:focusChanged()
-    if prev ~= nil then
-        prev:focusChanged()
-    end
+    --local prev = mouse.current
+    --if prev ~= nil then
+    --    prev.focus = false
+    --end
+    --mouse.current = c
+    --c.focus = true
+    --c:focusChanged()
+    --if prev ~= nil then
+    --    prev:focusChanged()
+   -- end
 end 
 
 function mouse.up(button, x, y)
@@ -225,8 +256,24 @@ local function resizeEvent()
     end
 end
 
+local rawEventListeners = {}
+
+local function addRawEventListener(o)
+    table.insert(rawEventListeners, o)
+end
+
+local function rawEvent(data)
+    for i = 1, #rawEventListeners do 
+        if type(rawEventListeners[i]) == "table" then
+            rawEventListeners[i]:rawEvent(data)
+        elseif type(rawEventListeners[i]) == "function" then
+            rawEventListeners[i](data)
+        end
+    end
+end
+
 local function processInput()
-    local data = {os.pullEvent()}
+    local data = {os.pullEventRaw()}
     local event = data[1]
 
     if event == 'key' then
@@ -263,6 +310,8 @@ local function processInput()
         resizeEvent()
     end
 
+    rawEvent(data)
+
     if string.find(event, "mouse") ~= nil then
         mouseEvent(event, data)
     end
@@ -276,6 +325,7 @@ return {
     addScrollListener = addScrollListener,
     addMouseEventListener = addMouseEventListener,
     addResizeEventListener = addResizeEventListener,
+    addRawEventListener = addRawEventListener,
     grabControlFocus = grabControlFocus
 }
 end

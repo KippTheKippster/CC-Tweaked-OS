@@ -26,10 +26,15 @@ function mos.saveProfile()
     utils.saveTable(mos.profile, "os/profiles/profile.sav")
 end
 
+local function getOrAddProfileSetting(key, value)
+    mos.profile[key] = value
+end
+
 mos.loadProfile()
 if mos.profile == nil then
     mos.profile = {}
     mos.profile.backgroundPath = "os/textures/backgrounds/melvin.nfp"
+    mos.profile.backgroundUpdateTime = 0.1
 end
 
 
@@ -45,25 +50,30 @@ engine.root:addChild(background)
 background.y = 1
 background.x = 0
 
---Main
-local main = engine.root:addVContainer()
-main.expandW = true
-main.y = 0
+local windowsContainer = engine.root:addControl()
+windowsContainer.rendering = false
+windowsContainer.y = 1
 
-function main:update()
-    if engine.input.isKey(keys.leftCtrl) and engine.input.isKey(keys.tab) then
-        local a = b.c
-    end
-end
+--Main
+--local main = engine.root:addVContainer()
+--main.expandW = true
+--main.y = 0
+
+--function main:update()
+--    if engine.input.isKey(keys.leftCtrl) and engine.input.isKey(keys.tab) then
+--        local a = b.c
+--    end
+--end
 
 --Top Bar
-local topBar = main:addHContainer()
-topBar.rendering = true
-topBar.background = true
-topBar.expandW = true
-topBar.h = 1
+local toolBar = engine.root:addHContainer()
+toolBar.rendering = true
+toolBar.background = true
+toolBar.expandW = true
+toolBar.h = 1
+toolBar.separation = 1
 
-local dropdown = engine.root:addDropdown()
+local dropdown = toolBar:addDropdown()
 dropdown.text = "MOS"
 dropdown.w = 3
 --dropdown:addToList("New")
@@ -73,13 +83,29 @@ dropdown:addToList("Shell")
 dropdown:addToList("Exit")
 --dropdown:addToList("-Open Windows-", false)
 
-local windowsDropdown = engine.root:addDropdown()
+local windowsDropdown = toolBar:addDropdown()
 windowsDropdown.text = "Windows"
 windowsDropdown.w = 7
-windowsDropdown.x = 4
 
 --dropdown:addToList("Exit")
 local windows = {}
+local customTools = {}
+local currentWindow = nil
+
+local function windowFocusChanged(window, focus)
+    if focus == false then return end
+
+    if currentWindow ~= window then
+        if customTools[currentWindow] ~= nil then
+            customTools[currentWindow](false)
+        end
+        if customTools[window] ~= nil then
+            customTools[window](true)
+        end
+    end
+
+    currentWindow = window
+end
 
 local function addWindow(w)
     local count = 1
@@ -89,20 +115,36 @@ local function addWindow(w)
     local text = count .. "." .. w.text
     windows[text] = w
     w.closed = function(o)
+        if customTools[o] ~= nil then
+            customTools[o](false)
+        end
         windowsDropdown:removeFromList(text)
         windows[text] = nil
     end
+    local base = w.focusChanged
+    --w.focusChanged = function(o)
+    --    base(o)
+    --    windowFocusChanged(o, w.focus)
+    --end
+    base = w.visibilityChanged
+    --w.visibilityChanged = function(o)
+    --    base(o)
+    --    if o.visible == false then
+    --        windowFocusChanged(o, false)   
+    --    end
+    --end
     windowsDropdown:addToList(text)
     w:grabFocus()
     windowsDropdown:toFront()
 end
 
-local function launchProgram(path, x, y, w, h, ...)
+local function launchProgram(name, path, x, y, w, h, ...)
     local parentTerm = engine.screenBuffer
-    local parent = engine.root
-    local w = multiWindow.launchProgram(parentTerm, parent, path, 2, 2, 20, 10, ...)
-    addWindow(w)
-    return w
+    local parent = windowsContainer
+    local window = multiWindow.launchProgram(parentTerm, parent, path, {__mos = mos }, x, y, w, h, ...)
+    window.text = name
+    addWindow(window)
+    return window
 end
 
 function dropdown:click()
@@ -117,7 +159,7 @@ function dropdown:optionPressed(i)
     if text == "New" then
         local w = engine.root:addWindowControl()
     elseif text == "Shell" then
-        local w = launchProgram("rom/programs/advanced/multishell.lua", 2, 2, 20, 10)
+        local w = launchProgram("Shell", "rom/programs/advanced/multishell.lua", 2, 2, 20, 10)
         w.text = "Shell"
     elseif text == "Exit" then
         multiWindow.exit()
@@ -128,20 +170,20 @@ function dropdown:optionPressed(i)
         term.clear()
         print("MOS Terminated...")
     elseif text == "File Explorer" then
-        local fileExplorer = launchProgram("/os/programs/fileExplorer.lua", 1, 1, 40, 15,
+        local fileExplorer = launchProgram("File Explorer", "/os/programs/fileExplorer.lua", 1, 1, 40, 15,
             function(path, name) -- This function is called when the user has chosen a file
                 if engine.input.isKey(keys.leftCtrl) then -- Lctrl
-                    local w = launchProgram("/rom/programs/edit.lua", 0, 0, 30, 18, path)
+                    local w = launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", 0, 0, 30, 18, path)
                     w.text = "Edit '" .. name .. "'" 
                 else
-                    local w = launchProgram(path, 2, 2, 20, 10)
+                    local w = launchProgram(name, path, 2, 2, 20, 10)
                     w.text = name
                 end
             end
-        )
+        , mos)
         fileExplorer.text = "File Explorer"
     elseif text == "Settings" then
-        local w = launchProgram("/os/programs/settings.lua", 1, 1, 40, 15, mos)
+        local w = launchProgram("Settings", "/os/programs/settings.lua", 1, 1, 40, 15, mos)
         w.text = "Settings"
     end
 end
@@ -157,22 +199,56 @@ function windowsDropdown:optionPressed(i)
     end
 end
 
+
+local function addTool(window, callbackFunction)
+    customTools[window] = callbackFunction
+    customTools[window](true)
+end
+
+
+local function removeTool(window)
+    customTools[window](false)
+    customTools[window] = nil
+end
+
+
+local function addToToolbar(control)
+    toolBar:addChild(control)
+end
+
+
+local function removeFromToolbar(control)
+    toolBar:removeChild(control)
+end
+
 local clock = engine.root:addControl() -- TODO add to topbar instead
 clock.x = termW - 5
 
 clock.h = 1
 
+local clock_timer_id = os.startTimer(mos.profile.backgroundUpdateTime)
+
 engine.input.addResizeEventListener(clock)
+engine.input.addRawEventListener(clock)
 
 function clock:resizeEvent() 
     self.x = term.getSize() - 5
 end
 
-
 function clock:update()
     self.text = textutils.formatTime(os.time('local'), true)
-    --self:redraw()
+    clock_timer_id = os.startTimer(mos.profile.backgroundUpdateTime)
+    self:redraw() -- Perhaps this shouldn't be a control object
 end
+
+function clock:rawEvent(data)
+    local event, id = data[1], data[2]
+    if event == "timer" and id == clock_timer_id then
+        self:update()
+    end
+end
+
+clock:update()
 
 local frameStyle = engine:newStyle()
 frameStyle.backgroundColor = colors.cyan
@@ -191,5 +267,9 @@ mos.addWindow = addWindow
 mos.launchProgram = launchProgram
 mos.multiWindow = multiWindow
 mos.background = background
+mos.addTool = addTool
+mos.removeTool = removeTool
+mos.addToToolbar = addToToolbar
+mos.removeFromToolbar = removeFromToolbar
 
 multiWindow.start(term.current(), engine.start, engine)

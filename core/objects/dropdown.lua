@@ -9,12 +9,13 @@ dropdown.dragSelectable = false
 function dropdown:ready()
     self.list = self:addVContainer()
     self.list.y = self.h
+    --self.list.rendering = true
     self.list.visible = false
     --self.list.mouseIgnore = true
-end 
+end
 
 function dropdown:addToList(text, clickable)
-    local b 
+    local b = nil
     if clickable == nil or clickable == true then
         b = self.list:addButton()
         b.dragSelectable = false
@@ -38,6 +39,7 @@ end
 function dropdown:removeFromList(text)
     for i = 1, #self.list.children do
         if self.list.children[i].text == text then
+            self.list:removeChild(self.list.children[i])
             self.list.children[i]:remove()
             break
         end

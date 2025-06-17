@@ -45,6 +45,7 @@ function windowControl:ready()
     self.exitButton.x = self.w - 1
     self.exitButton.w = 1
     self.exitButton.h = 1
+    self.exitButton.propogateFocusUp = true
 
     self.exitButton.pressed = function(o)
         o.parent:remove()
@@ -55,6 +56,7 @@ function windowControl:ready()
     self.scaleButton.w = 1
     self.scaleButton.h = 1
     self.scaleButton.text = "%"
+    self.scaleButton.propogateFocusUp = true
 
     self.scaleButton.drag = function(o, relativeX, relativeY)
         local wi = o.parent
