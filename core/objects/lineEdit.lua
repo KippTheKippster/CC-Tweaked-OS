@@ -38,18 +38,17 @@ end
 function lineEdit:render()
     control.render(self)
     if self.focus then
-        --[[
         term.setCursorPos(self.globalX + #self.text + self.cursorOffset + 1, self.globalY + 1)
-        term.setBackgroundColor(self.style.textColor)
-        term.setTextColor(self.style.backgroundColor)
+        term.setBackgroundColor(self.style.backgroundColor)
+        term.setTextColor(self.style.textColor)
         local char = self.trueText:sub(
             #self.text + self.cursorOffset + 1,
             #self.text + self.cursorOffset + 1
         )
-        if char == "" then 
+        if char == "" then
             char = " "
         end
-        term.write(char)]]--
+        term.write(char)
     end
 end
 
@@ -68,21 +67,17 @@ function lineEdit:trueTextChanged()
 end
 
 function lineEdit:char(char)
-    if true then return end
     if self.focus == false then return end
     self.trueText = (
         self.trueText:sub(0, #self.trueText + self.cursorOffset) .. 
         char ..
         self.trueText:sub(#self.trueText + self.cursorOffset + 1)
-    )
-    return
- 
+    ) 
 end
 
 lineEdit.co = nil
 
-function lineEdit:key(key) 
-    if true then return end
+function lineEdit:key(key)
     if self.focus == false then return end
 	if key == 259 then --Backspace
         if input.isKey(keys.leftCtrl) then
@@ -116,6 +111,7 @@ function lineEdit:focusChanged()
         self.style = self.focusStyle
         self:grabCursorControl()
         --self.co = coroutine.create(read)
+        --[[
         term.setTextColour(colors.white)
         parallel.waitForAny(function ()
             self.trueText = read()
@@ -123,7 +119,7 @@ function lineEdit:focusChanged()
             while true do
                 sleep(1.0)
             end
-        end)
+        end)]]
     else
         term.setCursorBlink(false)
         self.style = self.normalStyle
