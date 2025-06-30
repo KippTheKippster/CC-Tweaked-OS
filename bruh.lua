@@ -1,47 +1,16 @@
-local actives = require(".core.actives")
+local engine = require(".core.engine")
 local utils = require(".core.utils")
+local multiWindow = require(".core.multiProcess.multiWindow")(engine)
 
-local a = actives.new_active()
-print(a)
+local engine = require(".core.engine")
 
-function a:ready()
-    print("WAAAAAAY")
+local button = engine.root:addButton()
+button.y = 2
+
+function button:pressed()
+    engine.stop()
 end
 
-a:add()
+local edit = engine.root:addLineEdit()
 
-local a1 = a:new{}
-
-a1:add()
-
-
---a1:add()
-
---object:callSignal("start")
-
---[[
-object:defineSignal("test")
-
-local o1 = object:new{}
-local ba = o1:new{}
-
-print("o1: " .. tostring(o1))
-print("object: " .. tostring(object))
-object:connectSignal("test", o1, "onSignal")
-object:connectSignal("test", o1, "onSignala")
-object:connectSignal("test", o1, "onSignalb")
-object:connectSignal("test", ba, "onSignal")
-function o1:onSignal()
-    print("Eh, what the flip?")
-end
-function o1:onSignala()
-    print("Eh, what the florp?")
-end
-function o1:onSignalb()
-    print("Eh, what the frick?")
-end
-function ba:onSignal()
-    print("BALLLER")
-end
-object:callSignal("test")
-]]--
+engine.start()

@@ -125,7 +125,7 @@ local function getProcess(i)
 end
 
 local running = true
-local function start() -- Note this goes unused
+local function start() -- Note: this goes unused
     term.clear()
     while running do 
         --term.redirect(parentTerm)

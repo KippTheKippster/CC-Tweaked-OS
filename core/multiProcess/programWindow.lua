@@ -7,6 +7,7 @@ programWindow.minimizeButton = nil
 programWindow.focusedStyle = nil
 programWindow.unfocusedStyle = nil
 
+
 function programWindow:ready()
     --self:base().ready(self)
     windowControl.ready(self)
@@ -32,8 +33,10 @@ end
 
 
 function programWindow:close()
+    self.programViewport.terminated = true
     self.programViewport:endProcess()
     self:closed()
+    self:emitSignal(self.closedSignal)
     self:remove()
 end
 
@@ -89,10 +92,22 @@ function programWindow:updateFocus()
         self.style = self.focusedStyle
         --term.setCursorBlink(true)
         self:toFront()
+        self:grabCursorControl()
     else
         self.style = self.unfocusedStyle
+        self:releaseCursorControl()
         --term.setCursorBlink(false)
     end
+end
+
+function programWindow:updateCursor()
+    local window = self.programViewport.program.window
+    local parentTerm = term.current()
+    term.redirect(window)
+    term.setCursorPos(window.getCursorPos())
+    term.setCursorBlink(window.getCursorBlink())
+    term.setTextColor(window.getTextColor())
+    term.redirect(parentTerm)
 end
 
 function programWindow:closed() end

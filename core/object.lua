@@ -5,7 +5,14 @@ local object = {}
 
 --Get key from object
 local function object__index(table, key)
-    --print("INDEX: " .. tostring(table) .. " key: " .. key)
+    --if table == A then
+        --print("INDEX: " .. tostring(table) .. " key: " .. key)
+        if table["__properties"] then
+            --return
+        end
+         
+    --end
+
     local __properties = rawget(table, "__properties")
     if __properties ~= nil and __properties[key] ~= nil then
         if table.__properties[key].get == nil then
@@ -19,15 +26,12 @@ local function object__index(table, key)
         return rawget(table, key)
     end
 
-    local mt = table
-    while true do
-        mt = getmetatable(mt)
-        if mt == nil then
-            break
-        end
+    local mt = getmetatable(table)
+    while mt ~= nil do
         if rawget(mt, "base")[key] ~= nil then
             return rawget(mt, "base")[key]
         end
+        mt = getmetatable(mt)
     end
 
     return nil
@@ -60,8 +64,8 @@ function object:new(o)
 
     setmetatable(o, mt)   
     o.__properties = self.__properties or {} 
-    --o.__signals = self.__signals or {}
-    o.__signals = {}
+    o.__connections = {}
+    --o.__signals = {}
     return o 
 end
 
@@ -86,7 +90,48 @@ function object:defineProperty(key, methods, redefine)
     self.__properties[key] = methods
 end
 
+function object:createSignal()
+    local signal = {}
+    signal.connections = {}
+    signal.connect = function (signal, method, ...)
+        local connection = {
+            method = method,
+            binds = table.pack(...)
+        }
+        table.insert(signal.connections, connection)
+    end
+    signal.emit = function (signal, ...)
+        for i = 1, #signal.connections do
+            local connection = signal.connections[i]
+            connection.method(table.unpack(connection.binds), ...)
+        end
+    end
+    --table.insert(self.__signals)
+    return signal
+end
+
+function object:connectSignal(signal, method, ...)
+    if self.__connections[signal] == nil then
+        self.__connections[signal] = {}
+    end
+    local connection = {
+        method = method,
+        binds = table.pack(...)
+    }
+    table.insert(self.__connections[signal], connection)
+end
+
+function object:emitSignal(signal, ...)
+    local connections = self.__connections[signal]
+    if connections ~= nil then
+        for i = 1, #connections do
+            connections[i].method(table.unpack(connections[i].binds), ...)
+        end
+    end
+end
+
 --Defines a new signal
+--[[
 function object:defineSignal(key)
     if self.__signals[key] ~= nil then
         error("Attempting to define an already defined signal: " .. key .. " " .. tostring(self), 2)
@@ -101,6 +146,7 @@ function object:defineSignal(key)
         objects = {}
     }
 end
+
 
 --Connect a signal to method
 function object:connectSignal(key, o, method)
@@ -132,6 +178,7 @@ function object:emitSignal(key)
         end
     end
 end
+]]--
 
 --Returns the base object
 function object:base()
