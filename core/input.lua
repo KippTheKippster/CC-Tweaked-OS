@@ -2,22 +2,24 @@ return function(engine, collision)
 
 local mouse = {}
 mouse.current = nil
+mouse.cursorControl = nil
 mouse.clickTime = os.clock()
 mouse.doublePressed = false
 mouse.dragX = 0
 mouse.dragY = 0
 
-local i1 = 0
+local function isControlInArea(c, x, y)
+    return collision.inArea(
+        x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
+        )
+end
 
 local function controlInArea(c, x, y) 
-    i1 = i1 + 1
-    if collision.inArea(
-        x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
-        ) 
+    if isControlInArea(c, x, y)
         and c.mouseIgnore == false
         and c.visible == true
     then
-        return c 
+        return c
     end
 
     return nil
@@ -26,14 +28,14 @@ end
 local function childrenInArea(children, x, y)
     for i = 1, #children do
         local index = #children - i + 1
-        if #children[index].children > 0 then
+        if children[index].visible == true and #children[index].children > 0 then
             local inArea = childrenInArea(children[index].children, x, y)
             if inArea ~= nil then
                 return inArea
             end
         end
         local inArea = controlInArea(children[index], x, y)
-        if inArea ~= nil then
+        if inArea ~= nil and inArea.visible == true then
             return inArea
         end
     end
@@ -42,24 +44,7 @@ local function childrenInArea(children, x, y)
 end
 
 function mouse.getControl(x, y)
-    local inArea = childrenInArea(engine.root.children, x, y)
-    return inArea
-    --[[
-    for i = 1, #controls do
-        local c = controls[#controls - i + 1] --Go in inverse order so the collision of the mouse matches with visuals (the button on top gets pressed)
-        print(main)
-        if collision.inArea(
-            x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
-            ) 
-			and c.mouseIgnore == false
-            and c.visible == true
-        then
-            return c 
-        end
-    end
-    
-    return nil
-    ]]--
+    return childrenInArea(engine.root.children, x, y)
 end
 
 function mouse.getFocusOwner(o)
@@ -70,75 +55,88 @@ function mouse.getFocusOwner(o)
     end
 end
 
+function mouse.propogateInput(o, method, ...)
+    method(o, ...)
+    if o.propogateInputUp == true then
+        mouse.propogateInput(o.parent)
+    end
+end
+
 function mouse.changeFocus(o)
-    if o == mouse.current then
+    local owner = mouse.getFocusOwner(o)
+    local currentOwner = mouse.getFocusOwner(mouse.current)
+
+    if owner == currentOwner then
+        mouse.current = o
         return
     end
 
-    local owner = mouse.getFocusOwner(o)
-
-    if mouse.current ~= nil then
-        local currentOwner = mouse.getFocusOwner(mouse.current)
+    if currentOwner ~= nil then
         currentOwner.focus = false
-        currentOwner:focusChanged()
     end
-
-    mouse.current = o
 
     if owner ~= nil then
         owner.focus = true
+    end
+
+    if currentOwner ~= nil then
+        currentOwner:focusChanged()
+    end
+
+    if owner ~= nil then
+        focusChangedEvent(owner)
         owner:focusChanged()
     end
+
+    mouse.current = o
+end
+
+function mouse.inTerm(x, y)
+    local w, h = term.getSize()
+    return collision.inArea(x, y, 1, 1, w, h)
 end
 
 function mouse.click(button, x, y)
     mouse.dragX = x
     mouse.dragY = y
     local c = mouse.getControl(x, y)
-    if mouse.current ~= c then -- If user clicks on a new control
+    if mouse.current ~= c then -- If user clicks on a new control (or nothing)
         mouse.clickTime = os.clock()
         if mouse.current ~= nil then
             mouse.current:up()
-            --mouse.current.focus = false
-            --mouse.current:focusChanged()
         end
-        mouse.changeFocus(c)
-        --mouse.current = c 
-        --if mouse.current ~= nil then
-        --    mouse.current.focus = true
-        --    mouse.current:focusChanged()
-        --end
+        mouse.changeFocus(c, true)
     elseif c ~= nil then -- If user clicks on the same control
 		local time = os.clock()
 		local delta = time - mouse.clickTime
 		mouse.clickTime = time
-		if delta < 0.4 then
+		if delta < 0.33 then
 			c:doublePressed(delta)
 		end
 	end
 
     if c == nil then
-       return 
+       return
     end
 
     c:click()
 end
 
-local function grabControlFocus(c) 
+local function grabControlFocus(c)
     mouse.changeFocus(c)
-    --if c == mouse.current then return end
+end
 
-    --local prev = mouse.current
-    --if prev ~= nil then
-    --    prev.focus = false
-    --end
-    --mouse.current = c
-    --c.focus = true
-    --c:focusChanged()
-    --if prev ~= nil then
-    --    prev:focusChanged()
-   -- end
-end 
+local function releaseControlFocus(c)
+    mouse.changeFocus(nil)
+end
+
+local function setCursorControl(c)
+    mouse.cursorControl = c
+end
+
+local function getCursorControl()
+    return mouse.cursorControl
+end
 
 function mouse.up(button, x, y)
     if mouse.current == nil then return end
@@ -151,16 +149,10 @@ function mouse.drag(button, x, y)
     local relativeX = x - mouse.dragX
     local relativeY = y - mouse.dragY
     local c = mouse.getControl(x, y)
-    if c ~= nil and c ~= mouse.current and c.dragSelectable == true then
-        if mouse.current.dragSelectable == false then
-            mouse.current:up()
-        end
-        mouse.current.focus = false
-        mouse.current:focusChanged()
-        c.focus = true
-        c:focusChanged()
+    if c ~= nil and c ~= mouse.current and c.dragSelectable == true and mouse.current.dragSelectable == true then
+        mouse.current:up()
+        mouse.changeFocus(c, true)
         c:click()
-        mouse.current = c
     end
     mouse.dragX = x
     mouse.dragY = y
@@ -168,8 +160,39 @@ function mouse.drag(button, x, y)
 end
 
 function mouse.scroll(dir, x, y)
-    if mouse.current == nil then return end
-    mouse.current:scroll(dir)
+    --if mouse.current == nil then return end
+    local function scrollControl(c, dir, x, y)
+        if isControlInArea(c, x, y) == true then
+            c:scroll(dir)
+        end
+
+        for i = 1, #c.children do
+            scrollControl(c.children[i], dir, x, y)
+        end
+    end
+
+    scrollControl(engine.root, dir, x, y)
+    --mouse.current:scroll(dir)
+end
+
+local function getFocus()
+    return mouse.getFocusOwner(mouse.current)
+end
+
+local focusChangedListeners = {}
+
+local function addFocusChangedListener(o)
+    table.insert(focusChangedListeners, o)
+end
+
+function focusChangedEvent(o)
+    for i = 1, #focusChangedListeners do 
+        if type(focusChangedListeners[i]) == "table" then
+            focusChangedListeners[i]:focusChangedEvent(o)
+        elseif type(focusChangedListeners[i]) == "function" then
+            focusChangedListeners[i](o)
+        end 
+    end
 end
 
 local keys = {}
@@ -208,11 +231,13 @@ local function addCharListener(o)
 end
 
 local function mouseClick(button, x, y)
+    if mouse.inTerm(x, y) == false then return end
     mouse.click(button, x, y)
 end
 
-local function mouseScroll(dir, x, y)
-    mouse.scroll(dir)
+local function mouseScroll(dir, x, y) -- NOTE: This is bad, TODO remake how objects recieve input
+    if mouse.inTerm(x, y) == false then return end
+    mouse.scroll(dir, x, y)
     for i = 1, #scrollListeners do
         scrollListeners[i].scroll(scrollListeners[i], dir, x, y)
     end
@@ -223,10 +248,12 @@ local function addScrollListener(o)
 end
 
 local function mouseUp(button, x, y)
+    if mouse.inTerm(x, y) == false then return end
     mouse.up(button, x, y)
 end
 
 local function mouseDrag(button, x, y)
+    if mouse.inTerm(x, y) == false then return end 
     mouse.drag(button, x, y)
 end 
 
@@ -326,6 +353,11 @@ return {
     addMouseEventListener = addMouseEventListener,
     addResizeEventListener = addResizeEventListener,
     addRawEventListener = addRawEventListener,
-    grabControlFocus = grabControlFocus
+    grabControlFocus = grabControlFocus,
+    releaseControlFocus = releaseControlFocus,
+    getFocus = getFocus,
+    addFocusChangedListener = addFocusChangedListener,
+    setCursorControl = setCursorControl,
+    getCursorControl = getCursorControl
 }
 end

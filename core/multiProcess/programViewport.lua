@@ -7,6 +7,7 @@ return function(control, multiProgram)
     programViewport.mouseIgnore = false
     programViewport.program = nil
     programViewport.parentTerm = nil
+    programViewport.terminated = false
     
     function programViewport:draw()
         if self.program == nil then return end
@@ -27,9 +28,16 @@ return function(control, multiProgram)
 
     function programViewport:unhandledEvent(event, data)
         if self.program == nil then return end
-        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
+        if self.terminated == true then
+            if event == "key" then
+                self.parent:close()
+            end
+            return
+        end
+        
+        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" or event == "mouse_scroll" then
             if self.parent:inFocus() == false then return end
-            if event == "mouse_drag" and not self:inFocus() then return end
+            --if event == "mouse_drag" and not self:inFocus() then return end
 
             term.redirect(self.program.window)
 
@@ -47,6 +55,16 @@ return function(control, multiProgram)
             
             multiProgram.resumeProcess(self.program, event, table.unpack(data, 2, #data))
         end
+
+        if coroutine.status(self.program.co) == "dead" and self.terminated == false then
+            term.redirect(self.program.window)
+            term.setBackgroundColor(colors.black)
+            term.setTextColor(colors.white)
+            print("Press any key to close window.")
+
+            self.terminated = true
+        end
+
         term.redirect(self.parentTerm)
     end
     

@@ -6,10 +6,9 @@ local object = require(path .. "object")
 local collision = require(path .. "collision")
 local input = require(path .. "input")(engine, collision)
 local utils = require(path .. "utils")
-local drawutils = require(path .. "drawutils")
 
 engine.input = input
-engine.drawutils = drawutils
+engine.utils = utils
 
 local renderQueue = {}
 
@@ -21,8 +20,6 @@ style.borderColor = colors.gray
 style.textColor = colors.black
 style.border = false
 
---local controls = {}
---engine.controls = controls
 
 --Objects
 local objectList = {}
@@ -40,7 +37,7 @@ clickedStyle.backgroundColor = colors.white
 clickedStyle.textColor = colors.orange
 
 local button = requireObject("button", control, style, clickedStyle)
-local dropdown = requireObject("dropdown", button)
+local dropdown = requireObject("dropdown", button, input, utils)
 local container = requireObject("container", control)
 local vContainer = requireObject("vContainer", container)
 local hContainer = requireObject("hContainer", container)
@@ -55,7 +52,7 @@ editStyle.centerText = false
 local editFocusStyle = editStyle:new()
 editFocusStyle.backgroundColor = colors.lightGray
 
-local lineEdit = requireObject("lineEdit", control, editStyle, editFocusStyle)
+local lineEdit = requireObject("lineEdit", control, editStyle, editFocusStyle, input)
 local icon = requireObject("icon", control)
 
 --Engine
@@ -68,12 +65,11 @@ for k, v in pairs(objectList) do
     end
 end
 
-term.setCursorBlink(false)
 local parentTerm = term.current()
 local initialW, initialH = parentTerm.getSize()
 local screenBuffer = window.create(parentTerm, 1, 1, initialW, initialH)
-term.redirect(screenBuffer) -- NOTE IMPORTANT (Otherwise viewports will draw behind screenbuffer since their parents will be the parent of the screenbuffer)
-term.setCursorBlink(false)
+--term.redirect(screenBuffer) -- NOTE IMPORTANT (Otherwise viewports will draw behind screenbuffer since their parents will be the parent of the screenbuffer)
+--NOTE This in no longer needed since the parent term is now passed through as an argument when creating viewports
 
 engine.parentTerm = parentTerm
 engine.screenBuffer = screenBuffer
@@ -85,35 +81,30 @@ end
 __Global.initial = parentTerm
 __Global.buffer = screenBuffer
 __Global.print = function ()
-    printError("Initial: " .. tostring(Global.initial))
-    printError("Buffer : " .. tostring(Global.buffer))
+    printError("Initial: " .. tostring(__Global.initial))
+    printError("Buffer : " .. tostring(__Global.buffer))
 end
 
 local root = control:new{}
 root.rendering = false
 root.text = "root"
---root.style = mainStyle
 root.w = initialW
 root.h = initialH
---root.expandW = true
---root.expandH = true
 root.mouseIgnore = true
 root:add()
---root.input = input
 
 engine.running = false
 engine.backgroundColor = colors.black
 engine.root = root
 
 local function onResizeEvent()
-    drawutils.resize()
     local w, h = parentTerm.getSize()
     screenBuffer.reposition(1, 1, w, h)
     engine.root.w, engine.root.h = w, h
-    --print(root.w .. " : " .. root.h)
 end
 
 local function drawBranch(o)
+    if o.visible == false then return end
     o:draw()
     local c = o.children
     for i = 1, #c do
@@ -127,8 +118,12 @@ local function redrawScreen()
 
     drawBranch(engine.root)
 
-    --term.setCursorPos(1,1)
-    --term.setTextColor(colors.blue)
+
+    if input.getCursorControl() == nil then
+        term.setCursorBlink(false)
+    else
+        input.getCursorControl():updateCursor()
+    end
 
     screenBuffer.setVisible(true)
     term.redirect(parentTerm)
@@ -150,11 +145,6 @@ engine.start = function()
                     drawCount = drawCount + 1
                     redrawScreen()
                     engine.renderQueue = {}
-
-                    --term.setTextColor(colors.white)
-                    --term.setBackgroundColor(colors.black)
-                    --print(#controls)
-
                     break
                 end
                 sleep(0.0001)
@@ -179,12 +169,6 @@ end
 engine.getObject = function(name)
 	return objectList[name]
 end
-
-
-engine.setBackgroundColor = function(value)
-    --redrawScreen()
-    engine.backgroundColor = value
-end 
 
 engine.newStyle = function()
     return style:new{}

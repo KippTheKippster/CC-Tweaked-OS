@@ -57,25 +57,23 @@ local changeBackground = addSettingsButton("Change Background Texture")
 
 function changeBackground:pressed()
     if fileExplorer ~= nil then
-        fileExplorer:remove()
-        fileExplorer = nil
+        --fileExplorer:remove()
+        --fileExplorer = nil
     end
 
-    fileExplorer = mos.launchProgram("/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (path, name)
-        fileExplorer:close()
-        fileExplorer = nil
+    fileExplorer = mos.launchProgram("Choose .nfp", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (path, name)
+        --fileExplorer:close()
+        --fileExplorer = nil
         local suffix = ".nfp"
         if path:sub(-#suffix) == suffix then
             mos.background.texture = paintutils.loadImage(path)
             mos.profile.backgroundPath = path
             mos.saveProfile()  
-        else -- Why isn't this working?
-            local w = mos.engine:addWindowControl()
-            mos.addWindow(w)
+        else
+            --local w = mos.engine:addWindowControl()
+            --mos.addWindow(w)
         end
     end)
-    fileExplorer.text = "Choose .nfp"
-    mos.addWindow(fileExplorer)
 end
 
 local changeUpdateTime = addSettingsButton("Change Background Update Time")

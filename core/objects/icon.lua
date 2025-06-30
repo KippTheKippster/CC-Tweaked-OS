@@ -13,7 +13,7 @@ icon:defineProperty('texture', {
     end 
 })
 
-function icon:draw()
+function icon:render()
     if self.texture == nil then return end
 	paintutils.drawImage(self.texture, self.globalX + 1, self.globalY + 1)
 end

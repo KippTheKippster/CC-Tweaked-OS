@@ -8,7 +8,7 @@ function hContainer:sort()
 	local y = 0
 	for i = 1, #self.children do
 		local c = self.children[i]
-		c.globalX = self.globalX + w
+		c.x = w
 		if self.center == true then
 			y = self.globalY + math.ceil((self.h - c.h) / 2)
 		else

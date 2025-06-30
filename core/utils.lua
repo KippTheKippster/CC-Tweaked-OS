@@ -7,6 +7,15 @@ local function contains(t, v)
     return false
 end
 
+local function find(t, v)
+    for i = 1, #t do
+        if t[i] == v then
+            return i
+        end
+    end
+    return nil
+end
+
 local function combine(first, second)
 	for k,v in pairs(second) do 
 		table.insert(first, v)
@@ -180,6 +189,7 @@ end
 
 return{
 	contains = contains,
+    find = find,
 	split = split,
 	combine = combine,
 	printTable = printTable,

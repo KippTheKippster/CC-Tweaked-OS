@@ -27,16 +27,34 @@ function mos.saveProfile()
 end
 
 local function getOrAddProfileSetting(key, value)
-    mos.profile[key] = value
+    if mos.profile[key] == nil then
+        mos.profile[key] = value
+        return value
+    else
+        return mos.profile[key]
+    end
 end
+
+local function validateProfile(profile, defaultProfile)
+    for k, v in pairs(defaultProfile) do
+        if profile[k] == nil then
+            profile[k] = v
+        end
+    end
+end
+
+local defaultProfile = {
+    backgroundPath = "os/textures/backgrounds/melvin.nfp",
+    backgroundUpdateTime = 0.1,
+    programExecptions = {
+        nfp = "/rom/programs/fun/advanced/paint.lua",
+        txt = "/rom/programs/edit.lua"
+    }
+}
 
 mos.loadProfile()
-if mos.profile == nil then
-    mos.profile = {}
-    mos.profile.backgroundPath = "os/textures/backgrounds/melvin.nfp"
-    mos.profile.backgroundUpdateTime = 0.1
-end
 
+validateProfile(mos.profile, defaultProfile)
 
 --Background
 local background = engine.getObject("icon"):new{}
@@ -52,7 +70,7 @@ background.x = 0
 
 local windowsContainer = engine.root:addControl()
 windowsContainer.rendering = false
-windowsContainer.y = 1
+-- windowsContainer.y = 1
 
 --Main
 --local main = engine.root:addVContainer()
@@ -72,6 +90,7 @@ toolBar.background = true
 toolBar.expandW = true
 toolBar.h = 1
 toolBar.separation = 1
+toolBar.mouseIgnore = true
 
 local dropdown = toolBar:addDropdown()
 dropdown.text = "MOS"
@@ -87,14 +106,16 @@ local windowsDropdown = toolBar:addDropdown()
 windowsDropdown.text = "Windows"
 windowsDropdown.w = 7
 
---dropdown:addToList("Exit")
+local clock = engine.root:addControl() -- TODO add to topbar instead
+clock.x = termW - 5
+clock.h = 1
+
 local windows = {}
+local windowId = 1
 local customTools = {}
 local currentWindow = nil
 
-local function windowFocusChanged(window, focus)
-    if focus == false then return end
-
+local function windowFocusChanged(window)
     if currentWindow ~= window then
         if customTools[currentWindow] ~= nil then
             customTools[currentWindow](false)
@@ -107,35 +128,47 @@ local function windowFocusChanged(window, focus)
     currentWindow = window
 end
 
+local function focusChangedEvent(o)
+    if utils.contains(windows, o) then
+        windowFocusChanged(o)
+    end
+end
+
+engine.input.addFocusChangedListener(focusChangedEvent)
+
+local function windowClosed(a)
+    windowsDropdown:removeFromList(a[2])
+    if customTools[a[1]] ~= nil then
+        customTools[a[1]](false)
+    end
+    windows[a[1]] = nil
+end
+
+local function windowFullscreenChanged(w)
+    --toolBar.rendering = w.fullscreen == false
+    background.visible = w.fullscreen == false
+    --w.text = ""
+    --w.rendering = true
+    --clock.visible = w.fullscreen == false
+end
+
 local function addWindow(w)
     local count = 1
     for key, _ in pairs(windows) do
         count = count + 1
     end
-    local text = count .. "." .. w.text
+
+    local text = w.text
+    text = windowId .. "." .. w.text
+
     windows[text] = w
-    w.closed = function(o)
-        if customTools[o] ~= nil then
-            customTools[o](false)
-        end
-        windowsDropdown:removeFromList(text)
-        windows[text] = nil
-    end
-    local base = w.focusChanged
-    --w.focusChanged = function(o)
-    --    base(o)
-    --    windowFocusChanged(o, w.focus)
-    --end
-    base = w.visibilityChanged
-    --w.visibilityChanged = function(o)
-    --    base(o)
-    --    if o.visible == false then
-    --        windowFocusChanged(o, false)   
-    --    end
-    --end
-    windowsDropdown:addToList(text)
+    w:connectSignal(w.closedSignal, windowClosed, {w, text})
+    w:connectSignal(w.fullscreenChangedSignal, windowFullscreenChanged, w)
     w:grabFocus()
-    windowsDropdown:toFront()
+    term.setCursorPos(5,5)
+    windowsDropdown:addToList(text)
+
+    windowId = windowId + 1
 end
 
 local function launchProgram(name, path, x, y, w, h, ...)
@@ -147,14 +180,7 @@ local function launchProgram(name, path, x, y, w, h, ...)
     return window
 end
 
-function dropdown:click()
-    engine.getObject("dropdown").click(self)
-    dropdown:toFront()
-end
-
 function dropdown:optionPressed(i)
-    local parentTerm = engine.screenBuffer
-    local parent = engine.root
     local text = dropdown:getOptionText(i)
     if text == "New" then
         local w = engine.root:addWindowControl()
@@ -170,20 +196,25 @@ function dropdown:optionPressed(i)
         term.clear()
         print("MOS Terminated...")
     elseif text == "File Explorer" then
-        local fileExplorer = launchProgram("File Explorer", "/os/programs/fileExplorer.lua", 1, 1, 40, 15,
-            function(path, name) -- This function is called when the user has chosen a file
+        local fileExplorer = launchProgram("File Explorer", "/os/programs/fileExplorer.lua", 7, 2, 35, 15,
+            function(path, name, ...) -- This function is called when the user has chosen a file
                 if engine.input.isKey(keys.leftCtrl) then -- Lctrl
-                    local w = launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", 0, 0, 30, 18, path)
-                    w.text = "Edit '" .. name .. "'" 
+                    launchProgram("Edit '" .. name .. "'", "/os/programs/multishellEdit.lua", 1, 1, 24, 12, shell, multishell, path)
                 else
-                    local w = launchProgram(name, path, 2, 2, 20, 10)
-                    w.text = name
+                    for k, v in pairs(mos.profile.programExecptions) do
+                        local suffix = "." .. k
+                        if name:sub(-#suffix) == suffix then
+                            launchProgram(name, v, 1, 1, 24, 12, path, ...)
+                            return
+                        end
+                    end
+                    
+                    launchProgram(name, path, 1, 1, 24, 12, ...)
                 end
             end
         , mos)
-        fileExplorer.text = "File Explorer"
     elseif text == "Settings" then
-        local w = launchProgram("Settings", "/os/programs/settings.lua", 1, 1, 40, 15, mos)
+        local w = launchProgram("Settings", "/os/programs/settings.lua", 20, 5, 30, 13, mos)
         w.text = "Settings"
     end
 end
@@ -193,43 +224,31 @@ function windowsDropdown:optionPressed(i)
     for name, window in pairs(windows) do
         if name == text then
             window.visible = true
-            window:toFront()
             window:grabFocus()
+            window:toFront()
         end
     end
 end
 
-
-local function addTool(window, callbackFunction)
+local function bindTool(window, callbackFunction)
     customTools[window] = callbackFunction
-    customTools[window](true)
+    callbackFunction(true)
 end
-
-
-local function removeTool(window)
-    customTools[window](false)
-    customTools[window] = nil
-end
-
 
 local function addToToolbar(control)
     toolBar:addChild(control)
 end
 
-
 local function removeFromToolbar(control)
     toolBar:removeChild(control)
 end
 
-local clock = engine.root:addControl() -- TODO add to topbar instead
-clock.x = termW - 5
-
-clock.h = 1
 
 local clock_timer_id = os.startTimer(mos.profile.backgroundUpdateTime)
+local root = engine.root
 
 engine.input.addResizeEventListener(clock)
-engine.input.addRawEventListener(clock)
+engine.input.addRawEventListener(root)
 
 function clock:resizeEvent() 
     self.x = term.getSize() - 5
@@ -241,10 +260,36 @@ function clock:update()
     self:redraw() -- Perhaps this shouldn't be a control object
 end
 
-function clock:rawEvent(data)
-    local event, id = data[1], data[2]
-    if event == "timer" and id == clock_timer_id then
-        self:update()
+function root:rawEvent(data)
+    local event = data[1]
+    if event == "timer" and data[2] == clock_timer_id then
+        clock:update()
+    end
+
+    if event == "key" then
+        if data[2] == keys.w then
+            if engine.input.isKey(keys.leftCtrl) then
+                if utils.contains(windows, engine.input.getFocus()) then
+                    engine.input.getFocus():close()
+                end
+            end
+        elseif engine.input.isKey(keys.leftAlt) then
+            for i = 1, #toolBar.children do
+                if data[2] == keys.one + (i - 1) then
+                    if toolBar.children[i].next then
+                        toolBar.children[i]:next()
+                    end
+                end
+            end
+        end
+    elseif event == "key_up" then
+        if data[2] == keys.leftAlt then
+            for i = 1, #toolBar.children do
+                if toolBar.children[i] and toolBar.children[i].release then
+                    toolBar.children[i]:release()
+                end
+            end
+        end 
     end
 end
 
@@ -256,10 +301,6 @@ frameStyle.backgroundColor = colors.cyan
 local bodyStyle = engine:newStyle()
 bodyStyle.backgroundColor = colors.lightGray
 
-
-
---engine:addChild(programWindow)
-
 mos.parentTerm = parentTerm
 mos.engine = engine
 mos.root = engine.root
@@ -267,6 +308,7 @@ mos.addWindow = addWindow
 mos.launchProgram = launchProgram
 mos.multiWindow = multiWindow
 mos.background = background
+mos.bindTool = bindTool
 mos.addTool = addTool
 mos.removeTool = removeTool
 mos.addToToolbar = addToToolbar

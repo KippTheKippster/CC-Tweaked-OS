@@ -1,6 +1,12 @@
-Fix cursor blinking
 Delay treeEntered function call? (To prevent having to addChild under the function definition)
-Rework style/add themes
+Fix lineEdit scroll
+#Improve .visible
+#Make ready only be called once
+#Fix infinite loop in fileExplorer when using arrow keys
+#Merge fullscreen window into toolbar
+#Fix mouse scroll
+#Rework style/add themes
+#Fix cursor blinking
 #Dynamic scaling
 #Improve focus
 #Removing objects does not free them from memory
@@ -19,18 +25,22 @@ Settings menu:
     #Change background
 
 Shortcuts:
-    alt tab
-    dropdown
+    #alt tab
+    #dropdown
     fullscreen
 
 File explorer functionality:
-    Rename file
-    Create file
-    Remove file
-    Scroll
+    #Rename file
+    #Create file
+    #Remove file
+    #Scroll
 
 Oddities:
-    Dropdown menu is at wrong position
+    When focus is grabbed after a window is closed the os freezes (see fileExplorer close)
+    If a program is opened in edit mode by fileExplorer and then executed it leads to the native term being used 
+    table.insert in addChild leads to stack overflow
+    #Selecting windows throug toolbar doesn't work
+    #Dropdown menu is at wrong position
     #A program that constantly checks for the resize event will constantly trigger redraw
     #Multishell will take priority over main os
     #If pressed is used instead of click in settings then the entire window becomes a button

@@ -2,7 +2,7 @@ engine = require(".core.engine")
 utils = require(".core.utils")
 objects = engine.getObjects()
 
-style = objects["style"]:new{}
+style = engine:newStyle()
 style.backgroundColor = colors.black
 style.textColor = colors.white
 

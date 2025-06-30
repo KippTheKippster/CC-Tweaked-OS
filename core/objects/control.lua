@@ -12,10 +12,12 @@ control.expandH = false
 control.offsetTextX = 0
 control._text = "Control"
 control._style = style
+control.inheritStyle = true
 control.centerText = false
 control.background = true
 control.focus = false
 control.propogateFocusUp = false
+control.propogateInputUp = true
 control.clipText = false
 control.mouseIgnore = false
 control._visible = true
@@ -176,7 +178,7 @@ control:defineProperty('visible', {
         local same = o._visible == value
         o._visible = value 
         if same == false then
-            o:syncChildrenKey("visible", o._visible)
+            --o:syncChildrenKey("visible", o._visible)
             o:visibilityChanged();
         end
     end
@@ -188,7 +190,12 @@ control:defineProperty('style', {
         local same = o._style == value
         o._style = value 
         if same == false then
-            o:syncChildrenKey("style", o._style)
+            for i = 1, #o.children do
+                local c = o.children[i]
+                if c.inheritStyle == true then
+                    c.style = o._style
+                end
+            end
             o:redraw()
             o:styleChanged();
         end
@@ -196,10 +203,9 @@ control:defineProperty('style', {
 })
 
 function control:add()
-    --table.insert(engine.controls, self)
-    --engine.controls[self] = 
     self:ready()
     self:redraw()
+    self.add = function () end -- A bit of a ugly hack to prevent add being called multiple times
 end
 
 function control:remove()
@@ -212,6 +218,10 @@ function control:remove()
             table.remove(self.parent.children, i)
 		end
 	end
+
+    if engine.input.getCursorControl() == self then
+        self:releaseCursorControl()
+    end
 
     self.parent:childrenChanged()
     --self = {}
@@ -248,7 +258,7 @@ end
 
 function control:drawPanel(left, up, right, down)
     if self.background == true then
-        engine.drawutils.drawFilledBox(
+        paintutils.drawFilledBox(
             left, 
             up,
             right,
@@ -258,7 +268,7 @@ function control:drawPanel(left, up, right, down)
     end
     
     if self._style.border then
-        engine.drawutils.drawBox(
+        paintutils.drawBox(
             left, 
             up,
             right,
@@ -304,7 +314,7 @@ function control:write()
     local x, y = term.getCursorPos()
     local t = self.text:sub(s, s + l)
     for i = 1, #t do
-        term.setBackgroundColor(engine.drawutils.getPixel(term.getCursorPos()))
+        --term.setBackgroundColor(engine.drawutils.getPixel(term.getCursorPos()))
         term.write(t:sub(i, i))
         x = x + 1
         term.setCursorPos(x, y)
@@ -316,9 +326,11 @@ function control:addChild(o)
 	local t = {}
 
 	for i = 1, #self.children do
-		t[i] = self.children[i]
+		--t[i] = self.children[i]
+        table.insert(t, self.children[i])
 	end
-	t[#self.children + 1] = o
+    table.insert(t, o)
+	--t[#self.children + 1] = o
 	self.children = t
     o:add()
 	o.parent = self
@@ -367,13 +379,13 @@ end
 
 function control:toFront()
     if self.parent.children[#self.parent.children] == self then return end
-    utils.pushBottom(self.parent.children, self)
+    engine.utils.pushBottom(self.parent.children, self)
     self:redraw()
 end
 
 function control:toBack()
     if self.parent.children[1] == self then return end
-    utils.pushTop(self.parent.children, self)
+    engine.utils.pushTop(self.parent.children, self)
     self:redraw()
 end
 
@@ -386,11 +398,24 @@ function control:inFocus()
         end
     end
 
-    return false 
+    return false
 end
 
 function control:grabFocus()
     engine.input.grabControlFocus(self)
+end
+
+function control:releaseFocus()
+    engine.input.releaseControlFocus(self)
+end
+
+function control:grabCursorControl()
+    engine.input.setCursorControl(self)
+    self:updateCursor()
+end
+
+function control:releaseCursorControl()
+    engine.input.setCursorControl(nil)
 end
 
 --Signal Functions that should be overwritten
@@ -403,6 +428,7 @@ function control:doublePressed() end
 function control:up() end
 function control:scroll(dir) end
 function control:focusChanged() end
+function control:updateCursor() end
 function control:positionChanged() end
 function control:globalPositionChanged() end
 function control:sizeChanged()  end
