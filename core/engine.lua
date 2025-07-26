@@ -133,7 +133,7 @@ engine.start = function()
     if engine.running then return end
     engine.running = true
     engine.input.addResizeEventListener(onResizeEvent)
-    engine.root:_expandChildren() -- FIXME this should be called automatically 
+    engine.root:_expandChildren() -- HACK this should be called automatically 
 
     redrawScreen()
 

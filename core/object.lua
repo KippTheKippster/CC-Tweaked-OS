@@ -7,9 +7,9 @@ local object = {}
 local function object__index(table, key)
     --if table == A then
         --print("INDEX: " .. tostring(table) .. " key: " .. key)
-        if table["__properties"] then
+        --if table["__properties"] then
             --return
-        end
+        --end
          
     --end
 
@@ -93,6 +93,7 @@ end
 function object:createSignal()
     local signal = {}
     signal.connections = {}
+    --[[
     signal.connect = function (signal, method, ...)
         local connection = {
             method = method,
@@ -106,6 +107,7 @@ function object:createSignal()
             connection.method(table.unpack(connection.binds), ...)
         end
     end
+    ]]
     --table.insert(self.__signals)
     return signal
 end
@@ -121,11 +123,35 @@ function object:connectSignal(signal, method, ...)
     table.insert(self.__connections[signal], connection)
 end
 
+function object:disconnectSignal(signal, method)
+    local connections = self.__connections[signal]
+    if self.__connections[signal] == nil then 
+        return
+    end
+
+    for i = 1, #connections do
+        local connection = connections[i]
+        if connection.method == method then
+            self.__connections[signal][i] = nil
+            return
+        end
+    end
+end
+
 function object:emitSignal(signal, ...)
     local connections = self.__connections[signal]
     if connections ~= nil then
         for i = 1, #connections do
-            connections[i].method(table.unpack(connections[i].binds), ...)
+            local connection = connections[i]
+            local args = {}
+            for j = 1, #connection.binds do
+                table.insert(args, connection.binds[j])
+            end
+            local a = table.pack(...)
+            for j = 1, #a do
+                table.insert(args, a[j])
+            end
+            connections[i].method(table.unpack(args))
         end
     end
 end

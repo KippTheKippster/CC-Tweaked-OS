@@ -27,18 +27,23 @@ Settings menu:
 Shortcuts:
     #alt tab
     #dropdown
-    fullscreen
+    #fullscreen
 
 File explorer functionality:
     #Rename file
     #Create file
     #Remove file
     #Scroll
+    Copy path
+    Disk drive
 
 Oddities:
-    When focus is grabbed after a window is closed the os freezes (see fileExplorer close)
-    If a program is opened in edit mode by fileExplorer and then executed it leads to the native term being used 
+    Scroll up in fileexplorer
+    Open w/ args can crash
     table.insert in addChild leads to stack overflow
+    #If a program is opened in edit mode by fileExplorer and then executed it leads to the native term being used 
+    #When focus is grabbed after a window is closed the os freezes (see fileExplorer close)
+    #Input gets empty data from pullEvent (I think when event is timer)
     #Selecting windows throug toolbar doesn't work
     #Dropdown menu is at wrong position
     #A program that constantly checks for the resize event will constantly trigger redraw

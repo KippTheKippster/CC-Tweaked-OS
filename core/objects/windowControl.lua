@@ -10,6 +10,8 @@ windowControl.minW = 10
 windowControl.minH = 4
 windowControl.oldW = 0
 windowControl.oldH = 0
+windowControl.oldX = 0
+windowControl.oldY = 0
 windowControl.fullscreen = false
 windowControl.closedSignal = windowControl:createSignal()
 windowControl.fullscreenChangedSignal = windowControl:createSignal()
@@ -24,13 +26,14 @@ windowControl:defineProperty('text', {
     end,
     set = function(o, value) 
         if o.label == nil then
-            o._text = value 
+            o._text = value
         else
             o.label._text = value
             o._text = ""
         end
     end 
 }, true)
+
 
 function windowControl:ready()
     self.oldW = self.w
@@ -64,30 +67,20 @@ function windowControl:ready()
     self.scaleButton.propogateFocusUp = true
 
     self.scaleButton.drag = function(o, relativeX, relativeY)
-        local wi = o.parent
-        local w = wi.w
-        local h = wi.h
-        wi.w = wi.w - relativeX
-        wi.h = wi.h - relativeY
-        wi.w = math.max(wi.w, wi.minW)
-        wi.h = math.max(wi.h, wi.minH)
-        local deltaW = w - wi.w
-        local deltaH = h - wi.h
-        wi.x = wi.x + deltaW
-        wi.y = wi.y + deltaH
-
-        wi.oldW = wi.w
-        wi.oldH = wi.h
-
-        if wi.fullscreen == true then
-            wi.fullscreen = false
-            wi:emitSignal(wi.fullscreenChangedSignal)
-        end
+        o.parent:setFullscreen(false, relativeX, relativeY)
     end
 
     self.scaleButton.doublePressed = function(o)
+        o.parent:setFullscreen(true)
+    end
+end
+
+function windowControl:setFullscreen(fullscreen, relativeX, relativeY)
+    if fullscreen == true then
         local w, h = term.getSize()
-        local wi = o.parent
+        local wi = self
+        wi.oldX = wi.x
+        wi.oldY = wi.y
         wi.x = 0
         wi.y = 0
         wi.w = w
@@ -97,6 +90,33 @@ function windowControl:ready()
         if wi.fullscreen == false then
             wi.fullscreen = true
             self:emitSignal(self.fullscreenChangedSignal)
+        end
+    else
+        local wi = self
+        local w = wi.w
+        local h = wi.h
+        if relativeX ~= nil and relativeY ~= nil then
+            wi.w = wi.w - relativeX
+            wi.h = wi.h - relativeY
+            wi.w = math.max(wi.w, wi.minW)
+            wi.h = math.max(wi.h, wi.minH)
+            local deltaW = w - wi.w
+            local deltaH = h - wi.h
+            wi.x = wi.x + deltaW
+            wi.y = wi.y + deltaH
+
+            wi.oldW = wi.w
+            wi.oldH = wi.h
+        else
+            wi.w = wi.oldW
+            wi.h = wi.oldH
+            wi.x = wi.oldX
+            wi.y = wi.oldY
+        end
+
+        if wi.fullscreen == true then
+            wi.fullscreen = false
+            wi:emitSignal(wi.fullscreenChangedSignal)
         end
     end
 end

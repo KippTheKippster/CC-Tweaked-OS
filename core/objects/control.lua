@@ -27,6 +27,9 @@ control.dragSelectable = false
 control.children = {}
 control.parent = nil
 
+control.visibilityChangedSignal = control:createSignal()
+control.focusChangedSignal = control:createSignal()
+
 control:defineProperty('globalX', {
     get = function(o) return o._globalX end,
     set = function(o, value) 
@@ -172,6 +175,17 @@ control:defineProperty('text', {
     end 
 })
 
+local function propogateVisiblity(o)
+    for i = 1, #o.children do
+        local c = o.children[i]
+        if c.visible == true then
+            c:visibilityChanged()
+            c:emitSignal(o.visibilityChangedSignal)
+            propogateVisiblity(c)
+        end
+    end
+end
+
 control:defineProperty('visible', {
     get = function(o) return o._visible end,
     set = function(o, value) 
@@ -179,7 +193,9 @@ control:defineProperty('visible', {
         o._visible = value 
         if same == false then
             --o:syncChildrenKey("visible", o._visible)
-            o:visibilityChanged();
+            o:visibilityChanged()
+            o:emitSignal(o.visibilityChangedSignal)
+            propogateVisiblity(o)
         end
     end
 })
@@ -199,8 +215,11 @@ control:defineProperty('style', {
             o:redraw()
             o:styleChanged();
         end
-    end 
+    end
 })
+
+control.shadow = false -- Change this to style
+control.shadowColor = colors.gray
 
 function control:add()
     self:ready()
@@ -224,6 +243,7 @@ function control:remove()
     end
 
     self.parent:childrenChanged()
+    self:redraw()
     --self = {}
     --object.remove(self)
 end
@@ -233,6 +253,21 @@ function control:redraw()
 end
 
 function control:render() -- Determines how the control object is drawn
+    --SHADOW
+    if self.shadow == true then
+        local startX = self.globalX + self.w + 1
+        local startY = self.globalY + 2
+        local endX = startX
+        local endY = startY + self.h - 1
+
+        paintutils.drawLine(startX, startY, endX, endY, colors.gray)
+
+        startY = endY
+        endX = startX
+        startX = self.globalX + 2
+
+        paintutils.drawLine(startX, startY, endX, endY, colors.gray)
+    end
     --PANEL
     local left = self._globalX + 1
     local up = self._globalY + 1
@@ -278,12 +313,7 @@ function control:drawPanel(left, up, right, down)
     end
 end
 
-
-function control:getTextPosition()
-    return getTextPosition(self._globalX, self._globalY, self._w, self._h, self.centerText, self.text)
-end
-
-function getTextPosition(_x, _y, _w, _h, center, text)
+local function getTextPosition(_x, _y, _w, _h, center, text)
     local x = 0
     local y = 0
     if center == false then
@@ -295,6 +325,10 @@ function getTextPosition(_x, _y, _w, _h, center, text)
     end
 	
     return x + 1, y + 1
+end
+
+function control:getTextPosition()
+    return getTextPosition(self._globalX, self._globalY, self._w, self._h, self.centerText, self.text)
 end
 
 function control:write()
@@ -393,13 +427,20 @@ function control:inFocus()
     if self.focus == true then return true end
 
     for i = 1, #self.children do
-        if self.children[i]:inFocus() then 
+        if self.children[i]:inFocus() then
             return true
         end
     end
 
     return false
 end
+
+function control:isVisible()
+    if self.visible == false then return false end
+    if self.parent == nil then return true end
+    return self.parent:isVisible()
+end
+
 
 function control:grabFocus()
     engine.input.grabControlFocus(self)
@@ -418,7 +459,7 @@ function control:releaseCursorControl()
     engine.input.setCursorControl(nil)
 end
 
---Signal Functions that should be overwritten
+--Event Functions that should be overwritten
 function control:ready() end
 function control:treeEntered() end
 function control:childrenChanged() end

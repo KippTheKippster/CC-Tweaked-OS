@@ -5,7 +5,7 @@ dropdown.h = 1
 dropdown.list = nil
 dropdown.open = false
 dropdown.dragSelectable = true
-dropdown.listQueue = {}
+dropdown.listQueue = nil
 dropdown.shortcutSelection = nil
 
 function dropdown:ready()
@@ -15,9 +15,11 @@ function dropdown:ready()
     self.list.visible = false
     self.list.propogateFocusUp = true
     self.list.dragSelectable = true
+    self.list.shadow = true
 
     input.addRawEventListener(self)
 
+    self.listQueue = self.listQueue or {}
     for i = 1, #self.listQueue do
         self:addToList(self.listQueue[i])
     end
@@ -53,6 +55,7 @@ end
 function dropdown:addToList(text, clickable)
     --sleep(0.1)
     if self.list == nil then
+        self.listQueue = self.listQueue or {}
         table.insert(self.listQueue, text)
         return
     end
@@ -69,6 +72,7 @@ function dropdown:addToList(text, clickable)
     b.h = 1
     b.dragSelectable = true
     b.propogateFocusUp = true
+    b.shadow = true
     b.pressed = function(o)
         for i = 1, #o.parent.children do
             if o.parent.children[i] == o then

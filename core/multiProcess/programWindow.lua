@@ -48,6 +48,23 @@ function programWindow:render()
     local right = self._globalX + self._w
     local down = self._globalY + 1 --draw only the top of the window, the rest is hidden by the program viewport
     self:drawPanel(left, up, right, down)
+
+    --SHADOW
+    --if self:inFocus() == true then
+        local startX = self.globalX + self.w + 1
+        local startY = self.globalY + 2
+        local endX = startX
+        local endY = startY + self.h - 1
+
+        paintutils.drawLine(startX, startY, endX, endY, colors.gray)
+
+        startY = endY
+        endX = startX
+        startX = self.globalX + 2
+
+
+        paintutils.drawLine(startX, startY, endX, endY, colors.gray)
+    --end
     --TEXT
     self:write()
 end

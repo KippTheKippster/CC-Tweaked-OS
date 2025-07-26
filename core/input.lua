@@ -1,5 +1,6 @@
 return function(engine, collision)
 
+local inputConsumed = false
 local mouse = {}
 mouse.current = nil
 mouse.cursorControl = nil
@@ -81,11 +82,13 @@ function mouse.changeFocus(o)
 
     if currentOwner ~= nil then
         currentOwner:focusChanged()
+        currentOwner:emitSignal(currentOwner.focusChangedSignal)
     end
 
     if owner ~= nil then
         focusChangedEvent(owner)
         owner:focusChanged()
+        owner:emitSignal(owner.focusChangedSignal)
     end
 
     mouse.current = o
@@ -201,15 +204,30 @@ local charListeners = {}
 local scrollListeners = {}
 local mouseEventListeners = {}
 
+local function sendEvent(listeners, fun, ...)
+    for i = 1, #listeners do
+        if inputConsumed == true then
+            local a = b.c
+            return
+        end
+        if type(listeners[i]) == "table" then
+            listeners[i][fun](listeners[i], ...)
+        elseif type(listeners[i]) == "function" then
+            listeners[i](...)
+        end
+    end
+end
+
 local function isKey(key)
     return keys[key] == true
 end
 
-local function key(key)
-    keys[key] = true
-    for i = 1, #keyListeners do
-        keyListeners[i]:key(key)
-    end
+local function key(k)
+    keys[k] = true
+    sendEvent(keyListeners, "key", k)
+    --for i = 1, #keyListeners do
+    --    keyListeners[i]:key(k)
+    --end
 end
 
 local function keyUp(key)
@@ -220,10 +238,11 @@ local function addKeyListener(o)
     table.insert(keyListeners, o)
 end
 
-local function char(char)
-    for i = 1, #charListeners do 
-        charListeners[i]:char(char)
-    end
+local function char(c)
+    sendEvent(charListeners, "char", c)
+    --for i = 1, #charListeners do 
+    --    charListeners[i]:char(char)
+    --end
 end
 
 local function addCharListener(o)
@@ -299,8 +318,16 @@ local function rawEvent(data)
     end
 end
 
+local function consumeInput()
+    inputConsumed = true
+end
+
+local function isInputConsumed()
+    return inputConsumed
+end
+
 local function processInput()
-    local data = {os.pullEventRaw()}
+    local data = table.pack(os.pullEventRaw())
     local event = data[1]
 
     if event == 'key' then
@@ -335,6 +362,8 @@ local function processInput()
         )
     elseif event == "term_resize" then
         resizeEvent()
+    elseif event == "terminate" then
+        --term.clear()
     end
 
     rawEvent(data)
@@ -342,6 +371,10 @@ local function processInput()
     if string.find(event, "mouse") ~= nil then
         mouseEvent(event, data)
     end
+
+    inputConsumed = false
+    
+    return event
 end
 
 return {
@@ -358,6 +391,8 @@ return {
     getFocus = getFocus,
     addFocusChangedListener = addFocusChangedListener,
     setCursorControl = setCursorControl,
-    getCursorControl = getCursorControl
+    getCursorControl = getCursorControl,
+    consumeInput = consumeInput,
+    isInputConsumed = isInputConsumed
 }
 end
