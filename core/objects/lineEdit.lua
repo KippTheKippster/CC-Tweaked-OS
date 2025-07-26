@@ -34,7 +34,7 @@ function lineEdit:ready()
     self:redraw()
 end
 
-
+--[[
 function lineEdit:render()
     control.render(self)
     if self.focus then
@@ -51,6 +51,7 @@ function lineEdit:render()
         term.write(char)
     end
 end
+]]--
 
 function lineEdit:updateCursor()
     term.setCursorBlink(true)   

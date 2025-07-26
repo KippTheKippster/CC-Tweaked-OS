@@ -1,165 +1,212 @@
 -- Handles coroutines of multiple programs
 
-local path = ".core."
+local utils = require(".core.utils")
 
 local tProcesses = {}
-local focusIndex = 1
---local parentTerm = term.current()
-local collision = require(path .. "collision")
 
-local function getIndex(p)
-    for i = 1, #tProcesses do
-        if tProcesses[i] == p then
-            return i
-        end
-    end
+
+local function resumeProcess(p, data)
+    term.redirect(p.window)
+    local status = table.pack(coroutine.resume(p.co, table.unpack(data)))
+    term.redirect(p.parentTerm)
+    return table.unpack(status)
 end
 
-local function setFocusIndex(n)
-    focusIndex = n
-end
-
-local function resumeProcess(p, event, ...)
-    --term.redirect(p.window)
-    return coroutine.resume(p.co, event, ...)
-    --p.queueRedraw()
-end
-
-local function resumeProcessAtIndex(i, event, ...)
-    resumeProcess(tProcesses[i], event, ...)
-end
-
-local function resumeProcesses(event, ...)
-    for i = 1, #tProcesses do
-        resumeProcess(tProcesses[i], event, ...)
-    end
-end
-
-local i = 0
-local function launchProcess(parentTerm, fun, x, y, w, h, ...)
+local function launchProcess(parentTerm, process, resume, x, y, w, h, ...)
     local p = {}
     local args = table.pack(...)
     p.window = window.create(parentTerm, x, y, w, h, true)
-    p.co = coroutine.create(function(args)
+    p.parentTerm = parentTerm
+    p.co = coroutine.create(function()
         term.redirect(p.window)
-        fun(p, table.unpack(args, 1, args.n))
+        process(p, table.unpack(args))
         term.redirect(parentTerm)
     end)
-    tProcesses[#tProcesses + 1] = p
-    --p.queueRedraw = function() redraw = true end -- Not sure what this does
-    --p.resumeProcess = function(event, ...) resumeProcess(p, event, ...) end
-    setFocusIndex(#tProcesses)
+    p.resume = resume or function (data)
+        return resumeProcess(p, data)
+    end
+    table.insert(tProcesses, p)
     return p
 end
 
-local function launchProgram(parentTerm, programPath, extraEnv, x, y, w, h, ...)
-    local env = { shell = shell, multishell = multishell }
-    extraEnv = extraEnv or {}
+local function createShellEnviroment(parentTerm)
+    local function shallowcopy(orig)
+        local orig_type = type(orig)
+        local copy
+        if orig_type == 'table' then
+            copy = {}
+            for orig_key, orig_value in pairs(orig) do
+                copy[orig_key] = orig_value
+            end
+        else -- number, string, boolean, etc
+            copy = orig
+        end
+        return copy
+    end
 
+    local function tokenise(...)
+        local sLine = table.concat({ ... }, " ")
+        local tWords = {}
+        local bQuoted = false
+        for match in string.gmatch(sLine .. "\"", "(.-)\"") do
+            if bQuoted then
+                table.insert(tWords, match)
+            else
+                for m in string.gmatch(match, "[^ \t]+") do
+                    table.insert(tWords, m)
+                end
+            end
+            bQuoted = not bQuoted
+        end
+        return tWords
+    end
+
+    local shellCopy = shallowcopy(shell)
+    local ms = require(".os.programs.multishell")(parentTerm)
+    shellCopy.openTab = function (...)
+        --__mos.launchProgram("HEHE", path, 2, 2, 20, 20)
+        local tWords = tokenise(...)
+        local sCommand = tWords[1]
+        if sCommand then
+            local sPath = shell.resolveProgram(sCommand)
+            if sPath == "rom/programs/shell.lua" then
+                return multishell.launch(env, sPath, table.unpack(tWords, 2))
+            elseif sPath ~= nil then
+                return multishell.launch(env, "rom/programs/shell.lua", sCommand, table.unpack(tWords, 2))
+            else
+                printError("No such program")
+            end
+        end
+    end
+    local env = { shell = shellCopy, multishell = ms }
     env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
+
+    return env
+end
+
+--setmetatable(env, {
+--__index = function (t, k)
+--    --print("get: ", k, t)
+--    return _G[k]
+--end})
+--__newindex = function (t, k, v)
+--    --print("set: ", k, v)
+--end})
+
+--[[
+local fnFile, err = loadfile("core/multiProcess/multishellWrapper.lua", nil, tEnv)
+pcall(fnFile)
+]]--
+
+--local co = coroutine.create(function ()
+--local fnFile, err = loadfile("rom/programs/advanced/multishell.lua", nil, tEnv)
+--pcall(fnFile)
+-- end)
+
+
+--coroutine.close(co)
+
+--print(_G.__wrapper.shell.resolve)
+
+local function createMultishellWrapper(env, ...)
+    local args = table.pack(...)
+    _G.__wrapper = {
+        env = env,
+        args = args
+    }
+
+    shell.run("rom/programs/advanced/multishell.lua")
+end
+
+
+local function launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
+    local env = { shell = shell, multishell = multishell }
+    env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
+
+    extraEnv = extraEnv or {}
     for k, v in pairs(extraEnv) do
         env[k] = v
     end
 
-    local programArgs = table.pack(...)
-    return launchProcess(parentTerm, function(p)
-        os.run(env, programPath, table.unpack(programArgs, 1, programArgs.n))
-    end, x, y, w, h)
+    local p = launchProcess(parentTerm, function(p, ...)
+        createMultishellWrapper(env, programPath, ...)
+        --os.run(env, programPath, ...)
+    end, resume, x, y, w, h, ...)
+
+    coroutine.resume(p.co)
+    coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
+    coroutine.resume(p.co, "key", keys.enter)
+
+    return p
+
+    --[[
+    local env = { shell = shell, multishell = multishell }
+    env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
+    extraEnv = extraEnv or {}
+    for k, v in pairs(extraEnv) do
+        env[k] = v
+    end
+
+    return launchProcess(parentTerm, function(p, ...)
+        os.run(env, programPath, ...)
+    end, resume, x, y, w, h, ...)
+    ]]--
 end
 
-local function clearProcess(i, force)
-    local force = force or false
-    local p = tProcesses[i]
-    if coroutine.status(p.co) == "dead" or force == true then
-        table.remove(tProcesses, i)
-        if nCurrentProcess == nil then
-            if i > 1 then
-                setFocusIndex(i - 1)
-            elseif #tProcesses > 0 then
-                setFocusIndex(1)
-            end
-        end
-    end
+--[[
+local co = coroutine.create(function ()
+    shell.run("rom/programs/advanced/multishell.lua")
 end
-
-local function clearProcesses(force)
-    local force = force or false
-    for i = 1, #tProcesses do
-        clearProcess(i, force)
-    end
-end
+)
+--while true do
+    coroutine.resume(co)
+    coroutine.resume(co, "paste", "rom/programs/edit.lua " .. path)
+    coroutine.resume(co, "key", keys.enter)
+]]--
 
 local function endProcess(p)
-    debug.sethook(p.co, function() error("almost dead") end, "l")
-    coroutine.resume(p.co)
-    --print(coroutine.status(p.co))
-end
-
-local function getWindow(x, y)
-    for i = 1, #tProcesses do
-        local p = tProcesses[#tProcesses - i + 1]
-        local window = p.window
-        local x1, y1 = window.getPosition()
-        local w, h = window.getSize()
-        if window.isVisible() and collision.inArea(x, y, x1, y1, w, h) then
-            return p
-        end
-    end
-
-    return nil
-end 
-
---function redrawWindows()
---    for i = 1, #tProcesses do
---        tProcesses[i].window.redraw()
---    end
---end
-
-
---local function getFocusIndex()
---    return focusIndex
---end
-
-local function getProcess(i)
-    return tProcesses[i]
+    --coroutine.close(p.co)
+    --debug.sethook(p.co, function() error("dead") end, "l")
+    --p.resume()
+    local i = utils.find(tProcesses, p.co)
+    table.remove(tProcesses, i)
 end
 
 local running = true
-local function start() -- Note: this goes unused
-    term.clear()
-    while running do 
-        --term.redirect(parentTerm)
-        local data = table.pack(os.pullEventRaw())
-        local event = data[1]
 
-        if event == "mouse_click" then
-            local button, x, y = data[2], data[3], data[4]
-            local p = getWindow(x, y)
-            if p ~= nil then
-                setFocusIndex(getIndex(p))
-            end
-        end
-
-        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_drag" or event == "mouse_up" then
-            --local p = tProcesses[getFocusIndex()]
-            local p = tProcesses[1]
-            local button, x, y = data[2], data[3], data[4]
-            local offsetX, offsetY = p.window.getPosition()
-            resumeProcess(p, event, button, x - offsetX + 1, y - offsetY + 1)
-        else --if event == "timer" then
-            resumeProcesses(event, table.unpack(data, 2, #data))
-        end
-    end
+local function exit()
+    running = false
 end
 
+local function start()
+    term.clear()
+    running = true
+    while running do
+        local data = table.pack(os.pullEventRaw())
+        for k, v in ipairs(tProcesses) do
+            --if coroutine.status(v.co) ~= "dead" then
+            local ok, err = v.resume(data)
+            if ok == false then
+                term.setCursorPos(1, 1)
+                term.setBackgroundColor(colors.black)
+                term.setTextColor(colors.red)
+                printError("MP: " .. err)
+                endProcess(v)
+                exit()
+                return err
+            end
+            --end 
+        end
+    end
+    return nil
+end
+
+
 return {
-    launchProgram = launchProgram, 
-    launchProcess = launchProcess, 
+    launchProgram = launchProgram,
+    launchProcess = launchProcess,
     resumeProcess = resumeProcess,
-    resumeProcesses = resumeProcesses,
-    start = start,
     endProcess = endProcess,
-    resumeProcessAtIndex = resumeProcessAtIndex,
-    getProcess = getProcess,
-    clearProcesses = clearProcesses
+    start = start,
+    exit = exit
 }

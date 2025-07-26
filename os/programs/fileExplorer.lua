@@ -137,9 +137,9 @@ local function scrollToControl(control, center)
     end
 
     if control.globalY <= 0 then
-        vContainer.y = -control.y + 1 + offset
+        vContainer.y = -control.y + 1 - offset
     elseif control.globalY >= h then
-        vContainer.y = -control.y + h - 1 + offset
+        vContainer.y = -control.y + h - 1 - offset
     end
 end
 
@@ -336,6 +336,8 @@ openFolder("")
 
 local toolDropdown = mos.engine.getObject("dropdown"):new{}
 
+local a = 1
+
 local function windowFocusChanged(focus)
     if focus then
         mos.addToToolbar(toolDropdown)
@@ -368,7 +370,7 @@ function toolDropdown:optionPressed(i)
     if text == "Open w/ args" then
         if selection == nil then return end
         if fs.isDir(currentPath .. selection.text) then return end 
-        writeArgs = mos.launchProgram("Write Args", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function (...)
+        mos.launchProgram("Write Args", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function (...)
             if selection == nil then return end
             if isPathValid(currentPath .. selection.text) == false then return end
             callbackFunction(currentPath .. selection.text, selection.text, ...)
@@ -385,11 +387,11 @@ function toolDropdown:optionPressed(i)
         edit.textSubmitted = function (o)
             currentLineEdit:remove()
             currentLineEdit = nil
-            local f,err = io.open(currentPath .. o.text, "w")
-            if err then print(err) return end
-            f:close()
+            if fs.isReadOnly(currentPath .. o.text) then return end
+            if fs.exists(currentPath .. o.text) then return end
+            fs.open(currentPath .. o.text, "w")
             startSelectionFile = o.text
-            openCurrentFolder() 
+            openCurrentFolder()
         end
     elseif text == "New Dir" then
         local edit = vContainer:addLineEdit()
@@ -403,9 +405,10 @@ function toolDropdown:optionPressed(i)
             currentLineEdit:remove()
             currentLineEdit = nil
             if fs.isReadOnly(currentPath .. o.text) then return end
+            if fs.exists(currentPath .. o.text) then return end
             fs.makeDir(currentPath .. o.text)
             startSelectionFile = o.text
-            openCurrentFolder() 
+            openCurrentFolder()
         end
     elseif text == "Remove" then
         removeCurrentSelection()
@@ -437,7 +440,6 @@ function toolDropdown:optionPressed(i)
         end
     elseif text == "Close" then
         __window:close()
-        return
     end
 
     __window:grabFocus()

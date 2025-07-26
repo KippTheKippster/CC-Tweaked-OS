@@ -126,7 +126,7 @@ end
 local function saveTable(tbl,file,compressed)
 
     local f,err = io.open(file,"w")
-    if err then print(err) return end
+    if err or f == nil then print(err) return end
     local indent = 1
 
     -- local functions to make things easier
@@ -181,7 +181,7 @@ end
 
 local function loadTable(file)
     local data,err = loadfile(file)
-    if err then return nil,err else return data() end
+    if err or data == nil then return nil,err else return data() end
 end
 --
 

@@ -1,7 +1,7 @@
 return {
     ["backgroundPath"] = "os/textures/backgrounds/tux.nfp",
-    ["backgroundUpdateTime"] = 0.05,
-    ["programExecptions"] = {
+    ["backgroundUpdateTime"] = 0.001,
+    ["fileExecptions"] = {
         ["txt"] = "/rom/programs/edit.lua",
         ["nfp"] = "/rom/programs/fun/advanced/paint.lua",
     },
