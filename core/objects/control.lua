@@ -7,8 +7,9 @@ control._x = 0
 control._y = 0
 control._w = 13
 control._h = 5
-control.expandW = false
-control.expandH = false
+control._expandW = false
+control._expandH = false
+control._fitToText = false
 control.offsetTextX = 0
 control._text = "Control"
 control._style = style
@@ -26,19 +27,27 @@ control.draggable = false
 control.dragSelectable = false
 control.children = {}
 control.parent = nil
+control.marginL = 0
+control.marginR = 0
+
+control.anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3 }
+
+control._anchorW = control.anchor.LEFT
 
 control.visibilityChangedSignal = control:createSignal()
 control.focusChangedSignal = control:createSignal()
+control.transformChangedSignal = control:createSignal()
 
 control:defineProperty('globalX', {
     get = function(o) return o._globalX end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._globalX == value
-        o._globalX = value 
+        o._globalX = value
         if same == false then
             o:updateGlobalPosition()
             o:transformChanged()
             o:globalPositionChanged()
+            o:emitSignal(o.transformChanged)
         end
     end 
 })
@@ -52,6 +61,7 @@ control:defineProperty('globalY', {
             o:updateGlobalPosition()
             o:transformChanged()
             o:globalPositionChanged()
+            o:emitSignal(o.transformChanged)
         end
     end 
 })
@@ -76,6 +86,7 @@ control:defineProperty('x', {
             o:updatePosition()
             o:transformChanged()
             o:positionChanged()
+            o:emitSignal(o.transformChanged)
         end
     end
 })
@@ -90,6 +101,7 @@ control:defineProperty('y', {
             o:updatePosition()
             o:transformChanged()
             o:positionChanged()
+            o:emitSignal(o.transformChanged)
         end
     end 
 })
@@ -110,6 +122,7 @@ control:defineProperty('w', {
             o:transformChanged()
             o:_expandChildren()
             o:sizeChanged()
+            o:emitSignal(o.transformChanged)
         end
     end
 })
@@ -124,15 +137,16 @@ control:defineProperty('h', {
             o:transformChanged()
             o:_expandChildren()
             o:sizeChanged()
+            o:emitSignal(o.transformChanged)
         end
     end
 })
 
 control:defineProperty('expandW', {
     get = function(o) return o._expandW end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._expandW == value
-        o._expandW = value 
+        o._expandW = value
         if same == false and o._expandW == true then
             if o.parent ~= nil then
                 o.parent:_expandChildren()
@@ -159,20 +173,60 @@ function control:_expandChildren()
             c.h = self.h
         end
         if c.expandW then
-            c.w = self.w
+            c.w = self.w - self.marginR
+        end
+        if c.anchorW == control.anchor.RIGHT then
+            c.x = self.w - c.w
+            --local a = e.e
         end
     end
 end
 
+function control:_resize()
+    self.w, self.h = self:getMinimumSize()
+
+    --[[
+    if self._expandW then
+        self.w = self.parent.w
+    end
+
+    if self._expandH then
+        self.h = self.parent.h
+    end
+    ]]--
+end
+
+function control:getMinimumSize()
+    if self._fitToText then
+        return #self.text + self.marginL + self.marginR, 1
+    else
+        return 0, 0
+    end
+end
+
+control:defineProperty('fitToText', {
+    get = function(o) return o._fitToText end,
+    set = function(o, value)
+        o._fitToText = value
+        if value == true then
+            o.w = #o.text + o.marginL + o.marginR
+        end
+    end
+})
+
+
 control:defineProperty('text', {
     get = function(o) return o._text end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._text == value
-        o._text = value 
+        o._text = value
         if same == false then
+            if o._fitToText == true then
+                o.w = #o.text + o.marginL + o.marginR
+            end
             o:redraw()
         end
-    end 
+    end
 })
 
 local function propogateVisiblity(o)
@@ -196,6 +250,7 @@ control:defineProperty('visible', {
             o:visibilityChanged()
             o:emitSignal(o.visibilityChangedSignal)
             propogateVisiblity(o)
+            o:redraw()
         end
     end
 })
@@ -218,8 +273,42 @@ control:defineProperty('style', {
     end
 })
 
+control:defineProperty('anchorW', {
+    get = function(o) return o._anchorW end,
+    set = function(o, value) 
+        local same = o._anchorW == value
+        o._anchorW = value
+        if same == false then
+            o.parent:_expandChildren()
+        end
+    end
+})
+
+--[[
+control:defineProperty('marginR', {
+    get = function(o) return o._marginR end,
+    set = function(o, value) 
+        local old = o._marginR
+        o._marginR = value
+        if old ~= value then
+            o.w = o.w + (value - old)
+        end
+    end
+})
+
+control:defineProperty('marginL', {
+    get = function(o) return o._marginL end,
+    set = function(o, value) 
+        local old = o._marginL
+        o._marginL = value
+        if old ~= value then
+            o.w = o.w + (value - old)
+        end
+    end
+})
+]]--
+
 control.shadow = false -- Change this to style
-control.shadowColor = colors.gray
 
 function control:add()
     self:ready()
@@ -249,45 +338,62 @@ function control:remove()
 end
 
 function control:redraw()
-    engine.renderQueue[self] = true
+    engine.queueRedraw = true
+    --engine.renderQueue[self] = true
 end
 
 function control:render() -- Determines how the control object is drawn
     --SHADOW
-    if self.shadow == true then
-        local startX = self.globalX + self.w + 1
-        local startY = self.globalY + 2
-        local endX = startX
-        local endY = startY + self.h - 1
-
-        paintutils.drawLine(startX, startY, endX, endY, colors.gray)
-
-        startY = endY
-        endX = startX
-        startX = self.globalX + 2
-
-        paintutils.drawLine(startX, startY, endX, endY, colors.gray)
-    end
+    self:drawShadow()
     --PANEL
     local left = self._globalX + 1
     local up = self._globalY + 1
     local right = self._globalX + self._w
-    local down = self._globalY + self._h
+    local down = self._globalY + self._h    
     self:drawPanel(left, up, right, down)
     --TEXT
     self:write()
 end
 
 function control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'redraw' instead
-    if not engine.running then
-        return
-    end
-
     if self.visible == false or self.rendering == false or self.parent == nil then
         return
     end
 
     self:render()
+end
+
+function control:drawShadow()
+    if self.shadow ~= true then return end
+    if self.w == 0 or self.h == 0 then return end
+
+    local startX = self.globalX + self.w + 1
+    local startY = self.globalY + 2
+    local endX = startX
+    local endY = startY + self.h - 1
+
+    --term.setCursorPos(startX, startY)
+    
+    term.setTextColor(colors.black)
+    term.setBackgroundColor(self._style.shadowColor)
+
+    for i = 2, self.h + 1 do
+        term.setCursorPos(self.globalX + self.w + 1, self.globalY + i)
+        term.write("\127")
+    end
+
+    for i = 2, self.w do
+        term.setCursorPos(self.globalX + i, self.globalY + self.h + 1)
+        term.write("\127")
+    end
+    --term.write(text)
+    --paintutils.drawLine(startX, startY, endX, endY, self._style.shadowColor)
+
+    startY = endY
+    endX = startX - 1
+    startX = self.globalX + 2
+
+    --paintutils.drawLine(startX, startY, endX, endY, self._style.shadowColor)
 end
 
 
@@ -301,7 +407,7 @@ function control:drawPanel(left, up, right, down)
             self._style.backgroundColor
         )
     end
-    
+
     if self._style.border then
         paintutils.drawBox(
             left, 
@@ -323,7 +429,7 @@ local function getTextPosition(_x, _y, _w, _h, center, text)
         x = _x + math.ceil((_w - #text) / 2)
         y = _y + math.floor((_h) / 2)
     end
-	
+
     return x + 1, y + 1
 end
 
@@ -336,13 +442,16 @@ function control:write()
         return
     end
 
-    local l = #self.text
+    local l = #self.text + self.marginR
     if self.clipText == true then
-        l  = math.min(#self.text, self.w - 1)
+        l = math.min(#self.text, self.w - 1 - self.marginR)
     end
     local s = self.offsetTextX + 1
 
-    term.setCursorPos(self:getTextPosition())
+    local _x, _y = self:getTextPosition()
+    _x = _x + self.marginL
+
+    term.setCursorPos(_x, _y)
     term.setTextColor(self._style.textColor)
 
     local x, y = term.getCursorPos()
@@ -374,6 +483,7 @@ function control:addChild(o)
     o.treeEntered(o) -- TODO Maybe make recursive
     self:childrenChanged()
     self:_expandChildren()
+    self:redraw()
     --self:syncChildrenKey("style", self._style)
 end
 
@@ -387,6 +497,7 @@ function control:removeChild(o)
 
     o.parent = nil
     self:childrenChanged()
+    self:redraw()
 end
 
 function control:syncChildrenKey(key, value)

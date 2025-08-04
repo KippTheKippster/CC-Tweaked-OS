@@ -1,0 +1,22 @@
+{
+  palette = {
+    [ 1 ] = 0xfff9fb,
+    [ 4 ] = 0xffc1dc,
+    [ 64 ] = 0xffdfed
+  },
+  shadow = true,
+  toolbarColors = {
+    clickBackground = 4,
+    text = 32768,
+    background = 1,
+    clickText = 32768,
+  },
+  shadowColor = 128,
+  windowColors = {
+    focusBackground = 4,
+    text = 128,
+    background = 1,
+    focusText = 32768,
+  },
+  backgroundColor = 64,
+}

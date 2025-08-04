@@ -66,20 +66,34 @@ function changeBackground:pressed()
         --fileExplorer = nil
         local suffix = ".nfp"
         if path:sub(-#suffix) == suffix then
-            mos.background.texture = paintutils.loadImage(path)
-            mos.profile.backgroundPath = path
-            mos.saveProfile()  
+            mos.backgroundIcon.texture = paintutils.loadImage(path)
+            mos.profile.backgroundIcon = path
+            mos.saveProfile()
         else
             --local w = mos.engine:addWindowControl()
             --mos.addWindow(w)
         end
-    end)
+    end, "os/textures/backgrounds/")
 end
 
 local changeUpdateTime = addSettingsButton("Change Background Update Time")
 
 function changeUpdateTime:pressed()
     mos.profile.backgroundUpdateTime = 1.0
+end
+
+local changeTheme = addSettingsButton("Change Theme")
+
+function changeTheme:pressed()
+    mos.launchProgram("Choose .thm", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (path, name)
+        local suffix = ".thm"
+        if path:sub(-#suffix) == suffix then
+            mos.loadTheme(path)
+            mos.saveProfile()
+            mos.engine.root:redraw()
+        end
+    end, "os/themes/")
+    
 end
 
 engine.start()

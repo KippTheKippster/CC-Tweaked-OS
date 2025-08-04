@@ -3,6 +3,9 @@
         "__window",
         "shell",
         "term",
-        "multishell"
+        "multishell",
+        "textutils",
+        "fs",
+        "colors"
     ]
 }

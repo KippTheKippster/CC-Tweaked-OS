@@ -122,72 +122,27 @@ local function pushBottom(table, object)
 	repeat until pushDown(table, object) == #table
 end
 
--- Salt Taken from https://github.com/VaiN474/salt/tree/master
-local function saveTable(tbl,file,compressed)
-
-    local f,err = io.open(file,"w")
-    if err or f == nil then print(err) return end
-    local indent = 1
-
-    -- local functions to make things easier
-    local function exportstring(s)
-        s=string.format("%q",s)
-        s=s:gsub("\\\n","\\n")
-        s=s:gsub("\r","")
-        s=s:gsub(string.char(26),"\"..string.char(26)..\"")
-        return s
-    end
-    local function serialize(o)
-        if type(o) == "number" then
-            f:write(o)
-        elseif type(o) == "boolean" then
-            if o then f:write("true") else f:write("false") end
-        elseif type(o) == "string" then
-            f:write(exportstring(o))
-        elseif type(o) == "table" then
-            f:write("{" .. (compressed and "" or "\n"))
-            indent = indent + 1
-            local tab = ""
-            for i=1,indent do tab = tab .. "    " end
-            for k,v in pairs(o) do
-                f:write((compressed and "" or tab) .. "[")
-                serialize(k)
-                f:write("]" .. (compressed and "=" or " = "))
-                serialize(v)
-                f:write("," .. (compressed and "" or "\n"))
-            end
-            indent = indent - 1
-            tab = ""
-            for i=1,indent do tab = tab .. "    " end
-            f:write((compressed and "" or tab) .. "}")
-        else
-            print("unable to serialzie data: "..tostring(o))
-            f:write("nil," .. (compressed and "" or " -- ***ERROR: unsupported data type: "..type(o).."!***"))
-        end
-    end
-
-    f:write("return {" .. (compressed and "" or "\n"))
-    local tab = "    "
-    for k,v in pairs(tbl) do
-        f:write((compressed and "" or tab) .. "[")
-        serialize(k)
-        f:write("]" .. (compressed and "=" or " = "))
-        serialize(v)
-        f:write("," .. (compressed and "" or "\n"))
-    end
-    f:write("}")
-    f:close()
+local function saveTable(tbl, file, compact, allowRepetitions)
+    compact = compact or false
+    allowRepetitions = allowRepetitions or true
+    local f = fs.open(file, "w")
+    if f == nil then return false end
+    local data = textutils.serialize(tbl, {compact = compact, allow_repetitions  = allowRepetitions })
+    f.write(data)
+    f.close()
+    return true
 end
 
 local function loadTable(file)
-    local data,err = loadfile(file)
-    if err or data == nil then return nil,err else return data() end
+    local f = fs.open(file, "r")
+    if f == nil then return nil end
+    local data = f.readAll()
+    f.close()
+    return textutils.unserialise(data)
 end
---
 
 
-
-return{
+return {
 	contains = contains,
     find = find,
 	split = split,

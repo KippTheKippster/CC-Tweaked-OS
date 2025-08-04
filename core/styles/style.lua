@@ -6,6 +6,6 @@ style.borderColor = colors.gray
 style.textColor = colors.black
 style.border = false
 --style.shadow = false
---style.shadowColor = colors.gray
+style.shadowColor = colors.gray
 
 return style

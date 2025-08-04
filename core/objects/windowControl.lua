@@ -17,9 +17,9 @@ windowControl.closedSignal = windowControl:createSignal()
 windowControl.fullscreenChangedSignal = windowControl:createSignal()
 
 windowControl:defineProperty('text', {
-    get = function(o) 
+    get = function(o)
         if o.label == nil then
-            return o._text 
+            return o._text
         else
             return o.label.text
         end
@@ -31,9 +31,8 @@ windowControl:defineProperty('text', {
             o.label._text = value
             o._text = ""
         end
-    end 
+    end
 }, true)
-
 
 function windowControl:ready()
     self.oldW = self.w
@@ -45,6 +44,7 @@ function windowControl:ready()
     self.label.h = 1
     self.label.mouseIgnore = true
     self.label.clipText = true
+    self.label.w = self.w - 2
 
     self.exitButton = button:new{}
     self:addChild(self.exitButton)
