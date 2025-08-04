@@ -3,7 +3,7 @@
 local utils = require(".core.utils")
 
 local tProcesses = {}
-
+local endQueue = {}
 
 local function resumeProcess(p, data)
     term.redirect(p.window)
@@ -50,9 +50,10 @@ local function launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w,
 
     local p = launchProcess(parentTerm, function(p, ...)
         createMultishellWrapper(env, programPath, ...)
+        --os.run(env, programPath, ...)
     end, resume, x, y, w, h, ...)
 
-    coroutine.resume(p.co)
+    coroutine.resume(p.co, "")
     coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
     coroutine.resume(p.co, "key", keys.enter)
 
@@ -61,10 +62,10 @@ end
 
 local function endProcess(p)
     --coroutine.close(p.co)
-    --debug.sethook(p.co, function() error("dead") end, "l")
-    --p.resume()
-    local i = utils.find(tProcesses, p.co)
-    table.remove(tProcesses, i)
+    
+    --local i = utils.find(tProcesses, p.co)
+    --table.remove(tProcesses, i)
+    table.insert(endQueue, p)
 end
 
 local running = true
@@ -76,7 +77,7 @@ end
 local function start()
     term.clear()
     running = true
-    while running do
+    while running and #tProcesses > 0 do
         local data = table.pack(os.pullEventRaw())
         for k, v in ipairs(tProcesses) do
             --if coroutine.status(v.co) ~= "dead" then
@@ -85,13 +86,26 @@ local function start()
                 term.setCursorPos(1, 1)
                 term.setBackgroundColor(colors.black)
                 term.setTextColor(colors.red)
-                printError("MP: " .. err)
+                printError("MP: ", err)
                 endProcess(v)
                 exit()
                 return err
             end
             --end 
         end
+
+        for _, p in ipairs(endQueue) do
+            local i = utils.find(tProcesses, p)
+            if i == nil then
+                error("Trying to remove non existent process!")
+            end
+            p.window.setVisible(false)
+            debug.sethook(p.co, function() error("killed") end, "l")
+            p.resume({"kill"})
+            table.remove(tProcesses, i)
+        end
+
+        endQueue = {}
     end
     return nil
 end

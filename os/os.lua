@@ -8,55 +8,185 @@ local multiProgram = require(".core.multiProcess.multiProgram")
 
 local termW, termH = term.getSize()
 
-local style = engine:getDefaultStyle()
-style.backgroundColor = colors.white
-
-local clickedStyle = engine:getDefaultClickedStyle()
-clickedStyle.textColor = colors.black
-clickedStyle.backgroundColor = colors.lightBlue
-
 --MOS
-
 --Profile
-local function validateProfile(profile, defaultProfile)
-    for k, v in pairs(defaultProfile) do
-        if profile[k] == nil then
-            profile[k] = v
-        end
-    end
-end
-
-function mos.loadProfile(defaultProfile)
-    mos.profile = utils.loadTable("os/profiles/profile.sav") or {}
-    validateProfile(mos.profile, defaultProfile)
-end
-
-function mos.saveProfile()
-    utils.saveTable(mos.profile, "os/profiles/profile.sav")
-end
+local defaultTheme = {
+    backgroundColor = colors.yellow,
+    shadow = true,
+    shadowColor = colors.gray,
+    toolbarColors = {
+        text = colors.black,
+        background = colors.white,
+        clickText = colors.black,
+        clickBackground = colors.lightBlue
+    },
+    windowColors = {
+        text = colors.gray,
+        background = colors.white,
+        focusText = colors.white,
+        focusBackground = colors.blue
+    },
+    palette = {}
+}
 
 local defaultProfile = {
+    backgroundIcon = "os/textures/backgrounds/tux.nfp",
     backgroundPath = "os/textures/backgrounds/melvin.nfp",
     backgroundUpdateTime = 0.1,
     fileExecptions = {
         nfp = "/rom/programs/fun/advanced/paint.lua",
         txt = "/rom/programs/edit.lua"
-    }
+    },
+    theme = "",
+    favorites = {
+        ["bruh.lua"] = { name = "Test" },
+        ["os/os.lua"] = { name = "MOS" }
+    },
 }
 
-mos.loadProfile(defaultProfile)
+local function validateTable(tbl, default)
+    for k, v in pairs(default) do
+        if tbl[k] == nil then
+            tbl[k] = v
+        end
+    end
+end
 
+function mos.loadProfile(file)
+    file = file or "os/profiles/profile.sav"
+    local profile = utils.loadTable(file)
+    mos.profile = profile or {}
+    validateTable(mos.profile, defaultProfile)
+    if profile == nil then
+        mos.saveProfile()
+    end
+end
+
+function mos.saveProfile(file)
+    file = file or "os/profiles/profile.sav"
+    utils.saveTable(mos.profile, file)
+end
+
+function mos.isFileFavorite(file, profile)
+    profile = profile or mos.profile
+    return profile.favorites[file] ~= nil
+end
+
+function mos.addFileFavorite(file, settings, profile)
+    profile = profile or mos.profile
+    if profile.favorites[file] ~= nil then return end
+    settings = settings or { name = fs.getName(file) }
+    profile.favorites[file] = settings
+end
+
+function mos.removeFileFavorite(file, profile)
+    profile = profile or mos.profile
+    profile.favorites[file] = nil
+end
+
+function mos.loadTheme(file)
+    local theme = utils.loadTable(file)
+    if theme == nil then
+       mos.theme = defaultTheme
+    else
+        mos.theme = theme
+        mos.profile.theme = file
+        validateTable(theme, defaultTheme)
+    end
+
+    local palette = mos.theme.palette
+    for i = 0, 15 do
+        local color = math.pow(2, i)
+        if palette[color] ~= nil then
+            term.setPaletteColor(color, palette[color])
+        else
+            term.setPaletteColor(color, term.nativePaletteColor(color))
+        end
+    end
+    mos.refreshTheme()
+end
+
+
+local dropdown = engine.getObject("dropdown")
+local programViewport = require(".core.multiProcess.programViewport")(engine.getObject("control"), multiProgram, engine.input)
+local programWindow = require(".core.multiProcess.programWindow")(engine.getObject("windowControl"), programViewport)
+
+local style = engine:getDefaultStyle()
+local clickedStyle = engine:getDefaultClickedStyle()
+local optionNormalStyle = style:new{}
+local optionClickedStyle = clickedStyle:new{}
+local windowStyle = engine:newStyle()
+local unfocusedWindowStyle = windowStyle:new{}
+local focusedWindowStyle = windowStyle:new{}
+local exitButtonClickedStyle = engine:newStyle()
+
+mos.refreshTheme = function ()
+    --Styles
+    local theme = mos.theme
+    --Background
+    engine.backgroundColor = theme.backgroundColor
+    theme.shadowColor = theme.shadowColor or colors.black
+
+    --Toolbar
+    local toolbarColors = theme.toolbarColors
+
+    style.textColor = toolbarColors.text
+    style.backgroundColor = toolbarColors.background
+    style.shadowColor = theme.shadowColor
+    clickedStyle.shadowColor = theme.shadowColor
+
+    clickedStyle.textColor = toolbarColors.clickText
+    clickedStyle.backgroundColor = toolbarColors.clickBackground
+
+    optionNormalStyle.shadowColor = theme.shadowColor
+
+    optionClickedStyle.shadowColor = theme.shadowColor
+
+    dropdown.optionNormalStyle = optionNormalStyle
+    dropdown.optionClickedStyle = optionClickedStyle
+    dropdown.optionShadow = theme.shadow
+    dropdown.optionMargin = true
+
+    --Window
+    local windowColors = theme.windowColors
+
+    programWindow.shadow = theme.shadow
+    windowStyle.shadowColor = theme.shadowColor
+
+    unfocusedWindowStyle.backgroundColor = windowColors.background
+    unfocusedWindowStyle.textColor = windowColors.text
+
+    focusedWindowStyle.backgroundColor = windowColors.focusBackground
+    focusedWindowStyle.textColor = windowColors.focusText
+
+    exitButtonClickedStyle.backgroundColor = colors.red
+    exitButtonClickedStyle.textColor = colors.white
+end
+
+mos.loadProfile()
+mos.loadTheme(mos.profile.theme)
+utils.saveTable(defaultTheme, "os/themes/defaultTheme.thm")
+
+--Objects
 --Background
 local background = engine.getObject("icon"):new{}
 background.text = ""
+background.rendering = false
 
 function background:treeEntered()
     self.texture = paintutils.loadImage(mos.profile.backgroundPath)
 end
 
-engine.root:addChild(background)
-background.y = 1
-background.x = 0
+--engine.root:addChild(background)
+--background.y = 1
+--background.x = 0
+
+local backgroundIcon = engine.getObject("icon"):new{}
+backgroundIcon.text = ""
+backgroundIcon.texture = paintutils.loadImage(mos.profile.backgroundIcon)
+backgroundIcon.centered = true
+backgroundIcon.offsetY = 1
+engine.root:addChild(backgroundIcon)
 
 local focusContainer = engine.root:addControl()
 focusContainer.expandW = true
@@ -83,28 +213,75 @@ toolBar.h = 1
 toolBar.separation = 1
 toolBar.mouseIgnore = true
 
-local dropdown = engine.getObject("dropdown")
+
+local function toolbarChildFocusChanged(c)
+    if c.focus == true then
+        topBar:toFront()
+    end
+end
+
+local function addToToolbar(control)
+    control:connectSignal(control.focusChangedSignal, toolbarChildFocusChanged, control)
+    toolBar:addChild(control)
+end
+
+local function removeFromToolbar(control)
+    toolBar:removeChild(control)
+end
+
+local windowDropdown = dropdown:new{}
+addToToolbar(windowDropdown)
+windowDropdown.text = "="
 
 local mosDropdown = dropdown:new{}
+addToToolbar(mosDropdown)
 mosDropdown.text = "MOS"
-mosDropdown.w = 3
---dropdown:addToList("Test")
-mosDropdown:addToList("File Explorer")
-mosDropdown:addToList("Settings")
-mosDropdown:addToList("Shell")
-mosDropdown:addToList("Exit")
 
+mos.refreshMosDropdown = function ()
+    mosDropdown:clearList()
+    mosDropdown:addToList("File Explorer")
+    mosDropdown:addToList("Settings")
+    mosDropdown:addToList("Shell")
 
-local windowsDropdown = dropdown:new{}
-windowsDropdown.text = "="
-windowsDropdown.w = #windowsDropdown.text
+    local hasFavorites = false
+    for k, v in pairs(mos.profile.favorites) do
+        hasFavorites = true
+        break
+    end
+    if hasFavorites then
+        mosDropdown:addToList("-------------", false)
+        for k, v in pairs(mos.profile.favorites) do
+            local option = mosDropdown:addToList(v.name .. "  ")
+            option.pressed = function (o)
+                mos.launchProgram(v.name, k, 2, 2, 24, 12)
+            end
+            local x = option:addButton()
+            x.text = "\3"
+            x.w = #x.text
+            x.h = 1
+            x.anchorW = x.anchor.RIGHT
+            x.dragSelectable = true
+            x.propogateFocusUp = true
+            x.pressed = function ()
+                mos.removeFileFavorite(k)
+                mos.refreshMosDropdown()
+                os.queueEvent("mos_favorite_remove")
+            end
+        end
+        mosDropdown:addToList("-------------", false)
+    end
 
-local clock = topBar:addControl() -- TODO add to topbar instead
-clock.x = termW - 5
+    mosDropdown:addToList("Exit")
+end
+
+mos.refreshMosDropdown()
+
+local clock = topBar:addControl()
+clock.w = #"00:00"
 clock.h = 1
+clock.anchorW = clock.anchor.RIGHT
 
 local windows = {}
-local windowId = 1
 local customTools = {}
 local currentWindow = nil
 
@@ -139,21 +316,23 @@ local function windowFullscreenChanged(w)
 
 end
 
-local function windowClosed(w, text)
+local function windowClosed(w, b)
     w.fullscreen = false
     if isFullscreen() == false then
         setFullscreenMode(false)
     end
-    windowsDropdown:removeFromList(text)
+    windowDropdown:removeFromList(b)
     if customTools[w] ~= nil then
         customTools[w](false)
     end
-    windows[w] = nil
+
+    table.remove(windows, utils.find(windows, w))
+    --windows[w] = nil
 
     for i = 1, #windowsContainer.children do
         local nextW = windowsContainer.children[i]
         if nextW.visible == true then
-            engine.input.consumeInput()
+            --engine.input.consumeInput()
             nextW.programViewport.skipEvent = true
             nextW:grabFocus()
             break
@@ -164,14 +343,14 @@ end
 local function windowVisibilityChanged(w)
     if currentWindow == w then
         if customTools[w] ~= nil then
-            --customTools[w](w.visible)
+            customTools[w](w.visible)
         end
     end
 end
 
 local function windowFocusChanged(window)
     if window.focus == false then
-        return false
+        return
     end
 
     if currentWindow ~= window then
@@ -192,57 +371,40 @@ end
 
 local function addWindow(w)
     local count = 1
-    for key, _ in pairs(windows) do
-        count = count + 1
+    local text = w.text
+    for k, v in ipairs(windows) do
+        if v.text == w.text then
+            count = count + 1
+            w.text = text .. "(" .. count.. ")"
+        end
+    end
+    w.text = w.text .. " "
+    local b = windowDropdown:addToList(w.text)
+    local x = b:addButton()
+    x.text = "x"
+    x.w = #x.text
+    x.h = 1
+    x.anchorW = x.anchor.RIGHT
+    x.dragSelectable = true
+    x.propogateFocusUp = true
+    x.pressed = function ()
+        w:close()
     end
 
-    local text = w.text
-    text = windowId .. "." .. w.text
+    table.insert(windows, w)
 
-    windows[text] = w
-    w:connectSignal(w.closedSignal, windowClosed, w, text)
+    w:connectSignal(w.closedSignal, windowClosed, w, b)
     w:connectSignal(w.fullscreenChangedSignal, windowFullscreenChanged, w)
     w:connectSignal(w.visibilityChangedSignal, windowVisibilityChanged, w)
     w:connectSignal(w.focusChangedSignal, windowFocusChanged, w)
     w:grabFocus()
 
-    windowsDropdown:addToList(text)
 
-    windowId = windowId + 1
     w:redraw()
 end
 
-local function toolbarChildFocusChanged(c)
-    if c.focus == true then
-        topBar:toFront()
-    end
-end
 
-local function addToToolbar(control)
-    control:connectSignal(control.focusChangedSignal, toolbarChildFocusChanged, control)
-    toolBar:addChild(control)
-end
-
-local function removeFromToolbar(control)
-    toolBar:removeChild(control)
-end
-
-addToToolbar(windowsDropdown)
-addToToolbar(mosDropdown)
 --topBar:addChild(windowsDropdown)
-
-local programViewport = require(".core.multiProcess.programViewport")(engine:getObjects()["control"], multiProgram, engine.input)
-local programWindow = require(".core.multiProcess.programWindow")(engine:getObjects()["windowControl"], programViewport)
-
-local focusedWindowStyle = engine:newStyle()
-focusedWindowStyle.backgroundColor = colors.blue
-focusedWindowStyle.textColor = colors.white
-local unfocusedWindowStyle = engine:newStyle()
-unfocusedWindowStyle.backgroundColor = colors.white
-unfocusedWindowStyle.textColor = colors.black
-local exitButtonClickedStyle = engine:newStyle()
-exitButtonClickedStyle.backgroundColor = colors.red
-exitButtonClickedStyle.textColor = colors.white
 
 local function launchProgram(name, path, x, y, w, h, ...)
     local window = programWindow:new{}
@@ -260,7 +422,9 @@ local function launchProgram(name, path, x, y, w, h, ...)
     end
     if h < window.minH then
         window.minH = h
-    end    window.style = unfocusedWindowStyle
+    end
+
+    window.style = unfocusedWindowStyle
     window.focusedStyle = focusedWindowStyle
     window.unfocusedStyle = unfocusedWindowStyle
     window.exitButton.clickedStyle = exitButtonClickedStyle
@@ -274,10 +438,31 @@ local function launchProgram(name, path, x, y, w, h, ...)
     extraEnv.__window = window
 
     viewport:launchProgram(engine.screenBuffer, path, extraEnv, ...)
+    viewport:unhandledEvent({}) -- Forces program to start
 
     addWindow(window)
 
     return window
+end
+
+mos.createPopup = function (title, text, x, y, w, h)
+    local popup = engine.root:addWindowControl()
+    popup.text = title
+
+    x = x or 16
+    y = y or 7
+    w = w or 20
+    h = h or 2
+
+    popup.x, popup.y, popup.w, popup.h = x, y, w, h
+    popup.minW, popup.minH = math.min(popup.minW, w), math.min(popup.minH, h)
+
+    local label = popup:addControl()
+    label.expandW = true
+    label.y = 1
+    label.h = 1
+    label.text = text
+    label.clipText = true
 end
 
 function mosDropdown:optionPressed(i)
@@ -289,11 +474,9 @@ function mosDropdown:optionPressed(i)
     elseif text == "Exit" then
         multiProgram.exit()
     elseif text == "File Explorer" then
-        --launchProgram("WO", "/os/programs/test.lua", 1, 1, 20, 20)
-        
         launchProgram("File Explorer", "/os/programs/fileExplorer.lua", 7, 2, 35, 15,
-            function(path, name, ...) -- This function is called when the user has chosen a file
-                if engine.input.isKey(keys.leftCtrl) then -- Lctrl
+            function(path, name, ctrl, ...) -- This function is called when the user has chosen a file
+                if ctrl == true then -- Lctrl
                     launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", 1, 1, 24, 12, path)
                 else
                     for k, v in pairs(mos.profile.fileExecptions) do
@@ -313,10 +496,10 @@ function mosDropdown:optionPressed(i)
     end
 end
 
-function windowsDropdown:optionPressed(i)
-    local text = windowsDropdown:getOptionText(i)
-    for name, window in pairs(windows) do
-        if name == text then
+function windowDropdown:optionPressed(i)
+    local text = windowDropdown:getOptionText(i)
+    for _, window in ipairs(windows) do
+        if window.text == text then
             window.visible = true
             window:grabFocus()
             window:toFront()
@@ -326,34 +509,27 @@ end
 
 local function bindTool(window, callbackFunction)
     customTools[window] = callbackFunction
-    --callbackFunction(true)
 end
 
-local clock_timer_id = os.startTimer(mos.profile.backgroundUpdateTime)
+local clock_timer_id
 local root = engine.root
 
-engine.input.addResizeEventListener(clock)
 engine.input.addRawEventListener(root)
 
-function clock:resizeEvent()
-    --windowsDropdown.x = term.getSize() - 2
-    self.x = term.getSize() - 5
-end
-
-clock:resizeEvent()
-
 function clock:update()
-    term.redirect(engine.parentTerm)
     self.text = textutils.formatTime(os.time('local'), true)
-    clock_timer_id = os.startTimer(mos.profile.backgroundUpdateTime)
-    self:redraw() -- Perhaps this shouldn't be a control object
+    clock_timer_id = os.startTimer(1.0)
 end
+
 
 function root:rawEvent(data)
     local event = data[1]
     if event == "timer" and data[2] == clock_timer_id then
         clock:update()
     end
+
+    --HACK, setting color palette seemingly doesn't work at start
+    mos.loadTheme(mos.profile.theme)
 
     if event == "key" then
         if data[2] == keys.w then
@@ -393,12 +569,15 @@ mos.root = engine.root
 mos.addWindow = addWindow
 mos.launchProgram = launchProgram
 mos.background = background
+mos.backgroundIcon = backgroundIcon
 mos.bindTool = bindTool
 mos.addToToolbar = addToToolbar
 mos.removeFromToolbar = removeFromToolbar
 
 multiProgram.launchProcess(engine.screenBuffer, engine.start, nil, 1, 1, term.getSize())
 local err = multiProgram.start()
+
+mos.saveProfile()
 
 if err == nil or err == "Terminated" then
     term.setBackgroundColor(colors.black)

@@ -1,8 +1,18 @@
-return {
-    ["backgroundPath"] = "os/textures/backgrounds/tux.nfp",
-    ["backgroundUpdateTime"] = 0.001,
-    ["fileExecptions"] = {
-        ["txt"] = "/rom/programs/edit.lua",
-        ["nfp"] = "/rom/programs/fun/advanced/paint.lua",
+{
+  backgroundIcon = "os/textures/backgrounds/tux.nfp",
+  favorites = {
+    [ "colors.lua" ] = {
+      name = "colors.lua",
     },
+    sinsus = {
+      name = "sinsus",
+    },
+  },
+  backgroundPath = "os/textures/backgrounds/melvin.nfp",
+  backgroundUpdateTime = 10000000,
+  theme = "os/themes/defaultTheme.thm",
+  fileExecptions = {
+    txt = "/rom/programs/edit.lua",
+    nfp = "/rom/programs/fun/advanced/paint.lua",
+  },
 }

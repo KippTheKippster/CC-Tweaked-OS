@@ -8,7 +8,15 @@ return function(control, multiProgram, input)
     programViewport.parentTerm = nil
     programViewport.terminated = false
     programViewport.skipEvent = false
+    programViewport.oldW = 0
+    programViewport.oldH = 0
+    programViewport.queueResizeEvent = false
     
+    function programViewport:treeEntered()
+        self.oldW = self.w
+        self.oldH = self.h
+    end
+
     function programViewport:draw()
         if self.program == nil then return end
         self:updateWindow()
@@ -20,6 +28,13 @@ return function(control, multiProgram, input)
         end
     end
 
+    function programViewport:transformChanged()
+        if self.oldH ~= self.h or self.oldW ~= self.w then
+            self.queueResizeEvent = true
+        end
+        self.oldW, self.oldH = self.w, self.h
+    end
+
     function programViewport:launchProgram(parentTerm, programPath, extraEnv, ...)
         self.parentTerm = parentTerm
         self.program = multiProgram.launchProgram(parentTerm, programPath, extraEnv, function (data)
@@ -28,7 +43,9 @@ return function(control, multiProgram, input)
     end
 
     function programViewport:endProcess()
+        --term.redirect(self.program.co.window)
         multiProgram.endProcess(self.program)
+        --term.redirect(self.parentTerm)
     end
 
     local function resumeProcess(viewport, data)
@@ -39,7 +56,7 @@ return function(control, multiProgram, input)
         if self.program == nil then return end
         if self.skipEvent == true then
             self.skipEvent = false
-            return
+            return true
         end
 
         local event = data[1]
@@ -72,9 +89,8 @@ return function(control, multiProgram, input)
 
             local button, x, y = data[2], data[3], data[4]
             local offsetX, offsetY = self.program.window.getPosition()
-            
-            result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
 
+            result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
         elseif event == 'key' or event == 'key_up' or event == "char" then
             if self.parent:inFocus()  == false then return end
             if input.isInputConsumed() == true then return end
@@ -82,6 +98,13 @@ return function(control, multiProgram, input)
             result = resumeProcess(self, data)
         else
             result = resumeProcess(self, data)
+        end
+
+        if result[1] == false then
+            term.setBackgroundColor(colors.black)
+            term.setTextColor(colors.red)
+            term.clear()
+            print("VP", table.unpack(result))
         end
 
         return table.unpack(result)
@@ -95,13 +118,18 @@ return function(control, multiProgram, input)
         end
 
         term.redirect(self.program.window)
+
         self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h) --, self.program.window)
-        multiProgram.resumeProcess(self.program, {"term_resize"})
+        if self.queueResizeEvent == true then
+            multiProgram.resumeProcess(self.program, {"term_resize"})
+            self.queueResizeEvent = false
+        end
 
         self.program.window.setVisible(true)
         if self.parent:inFocus() == false then -- This makes it so that only the focused viewport is constantly drawn (unfocused windows have to wait for next redraw)
             self.program.window.setVisible(false)
         end
+
         term.redirect(self.parentTerm)
     end
 

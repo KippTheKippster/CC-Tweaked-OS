@@ -368,12 +368,14 @@ local function processInput()
 
     rawEvent(data)
 
-    if string.find(event, "mouse") ~= nil then
-        mouseEvent(event, data)
+    if event then -- HACK, an empty event should never be sent (problem from multiProgram.launchProgram)
+        if string.find(event, "mouse") ~= nil then
+            mouseEvent(event, data)
+        end
     end
 
     inputConsumed = false
-    
+
     return event
 end
 

@@ -1,5 +1,7 @@
 peripheral.find("modem", rednet.open)
 
+local arg = {...}
+
 local host = arg[1]
 rednet.host("mtp", host)
 print("Lyssnar...")

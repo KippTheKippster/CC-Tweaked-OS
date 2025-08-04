@@ -94,6 +94,8 @@ root.mouseIgnore = true
 root:add()
 
 engine.running = false
+engine.queueRedraw = false
+engine.background = true
 engine.backgroundColor = colors.black
 engine.root = root
 
@@ -103,12 +105,12 @@ local function onResizeEvent()
     engine.root.w, engine.root.h = w, h
 end
 
-local function drawBranch(o)
+local function drawTree(o)
     if o.visible == false then return end
     o:draw()
     local c = o.children
     for i = 1, #c do
-        drawBranch(c[i])
+        drawTree(c[i])
     end
 end
 
@@ -116,8 +118,12 @@ local function redrawScreen()
     term.redirect(screenBuffer)
     screenBuffer.setVisible(false)
 
-    drawBranch(engine.root)
+    if engine.background == true then
+        term.setBackgroundColor(engine.backgroundColor)
+        term.clear()
+    end
 
+    drawTree(engine.root)
 
     if input.getCursorControl() == nil then
         term.setCursorBlink(false)
@@ -129,6 +135,7 @@ local function redrawScreen()
     term.redirect(parentTerm)
 end
 
+engine.drawCount = 0
 engine.start = function()
     if engine.running then return end
     engine.running = true
@@ -137,17 +144,64 @@ engine.start = function()
 
     redrawScreen()
 
-    local drawCount = 0
+    --[[
+    while engine.running do
+        input.processInput()
+        redrawScreen()
+    end
+    ]]--
+    --[[    
+    local exception = dofile("rom/modules/main/cc/internal/tiny_require.lua")("cc.internal.exception")
+    local barrier_ctx = { co = coroutine.running() }
+
+    local fnDraw = function ()
+        while engine.running do
+            --if engine.queueRedraw == true then
+                engine.drawing = true
+                engine.drawCount = engine.drawCount + 1
+                redrawScreen()
+                engine.queueRedraw = false
+                engine.drawing = false
+            --end
+
+            coroutine.yield()
+        end
+    end
+
+    local fnInput = function ()
+        while engine.running do
+            input.processInput()
+            --os.queueEvent("engine_redraw")
+        end
+    end
+
+    local coDraw = coroutine.create(function() return exception.try_barrier(barrier_ctx, fnDraw) end)
+    local coInput = coroutine.create(function() return exception.try_barrier(barrier_ctx, fnInput) end)
+
+    local data = { "engine_redraw" }
+    while engine.running do
+        local event = data[1]
+        --print(event)
+        if engine.queueRedraw then
+            coroutine.resume(coDraw)
+        end
+
+        coroutine.resume(coInput, table.unpack(data))
+
+        data = table.pack(os.pullEventRaw())
+    end
+    ]]--
+
     parallel.waitForAny(
         function ()
             while engine.running do
-                for key, value in pairs(engine.renderQueue) do
-                    drawCount = drawCount + 1
+                if engine.queueRedraw == true then
+                    engine.drawCount = engine.drawCount + 1
                     redrawScreen()
-                    engine.renderQueue = {}
-                    break
+                    engine.queueRedraw = false
                 end
-                sleep(0.0001)
+
+                os.sleep(0.05)
             end
         end,
         function ()
@@ -156,8 +210,20 @@ engine.start = function()
             end
         end
     )
-end
 
+
+    engine.stop()
+end
+            --[[
+            while engine.running do
+                if engine.queueRedraw == true then
+                    engine.drawCount = engine.drawCount + 1
+                    redrawScreen()
+                    engine.queueRedraw = false
+                end
+                os.sleep(0.05)
+            end
+            ]]--
 engine.stop = function()
     engine.running = false
 end
