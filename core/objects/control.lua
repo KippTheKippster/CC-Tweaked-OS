@@ -31,7 +31,7 @@ control.parent = nil
 control.marginL = 0
 control.marginR = 0
 
-control.anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3 }
+control.anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3, CENTER = 4 }
 
 control._anchorW = control.anchor.LEFT
 control._anchorH = control.anchor.UP
@@ -178,11 +178,16 @@ function control:_expandChildren()
         if c.anchorW == control.anchor.RIGHT then
             c.x = self.w - c.w
             --local a = e.e
+        elseif c.anchorW == control.anchor.CENTER then
+            c.x = math.floor(self.w / 2 + 0.5) -  math.floor(c.w / 2 + 0.5)
         end
 
         if c.anchorH == control.anchor.DOWN then
             c.y = self.h - c.h
+        elseif c.anchorH == control.anchor.CENTER then
+            c.y = math.floor(self.h / 2 + 0.5) - math.floor(c.w / 2 + 0.5)
         end
+        
     end
 end
 

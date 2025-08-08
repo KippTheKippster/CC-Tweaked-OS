@@ -186,9 +186,11 @@ end
 local backgroundIcon = engine.getObject("icon"):new{}
 backgroundIcon.text = ""
 backgroundIcon.texture = paintutils.loadImage(mos.profile.backgroundIcon)
-backgroundIcon.centered = true
-backgroundIcon.offsetY = 1
+backgroundIcon.offsetY = 2
 engine.root:addChild(backgroundIcon)
+backgroundIcon.anchorW = backgroundIcon.anchor.CENTER
+backgroundIcon.anchorH = backgroundIcon.anchor.CENTER
+
 
 local focusContainer = engine.root:addControl()
 focusContainer.expandW = true
@@ -529,7 +531,7 @@ engine.input.addRawEventListener(root)
 
 function clock:update()
     self.text = textutils.formatTime(os.time('local'), true)
-    clock_timer_id = os.startTimer(10000.0)
+    clock_timer_id = os.startTimer(1.0)
 end
 
 function root:rawEvent(data)
