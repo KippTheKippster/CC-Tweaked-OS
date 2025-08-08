@@ -73,15 +73,23 @@ local screenBuffer = window.create(parentTerm, 1, 1, initialW, initialH)
 engine.parentTerm = parentTerm
 engine.screenBuffer = screenBuffer
 
-if __Global == nil then
-    __Global = {}
-end
+local globalRoot = false
 
-__Global.initial = parentTerm
-__Global.buffer = screenBuffer
-__Global.print = function ()
-    printError("Initial: " .. tostring(__Global.initial))
-    printError("Buffer : " .. tostring(__Global.buffer))
+if __Global == nil then
+    globalRoot = true
+    __Global = {}
+    __Global.logFile = fs.open("core/logs/" .. tostring(os.epoch("utc")) .. ".log", "w")
+    __Global.log = function (...)
+        local line = ""
+        local data = table.pack(...)
+        for k, v in ipairs(data) do
+            line = line .. tostring(v) .. " "
+        end
+        line = line .. '\n'
+
+        __Global.logFile.write(line)
+        __Global.logFile.flush()
+    end
 end
 
 local root = control:new{}
@@ -245,6 +253,10 @@ end
             ]]--
 engine.stop = function()
     engine.running = false
+
+    if globalRoot then
+        __Global.logFile.close()
+    end
 end
 
 engine.getObjects = function()

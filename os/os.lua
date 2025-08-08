@@ -245,7 +245,6 @@ mos.refreshMosDropdown = function ()
     mosDropdown:addToList("Settings")
     mosDropdown:addToList("Shell")
 
-    local hasFavorites = false
     local l = -1
     for k, v in pairs(mos.profile.favorites) do
         l = #k
@@ -433,6 +432,7 @@ local function launchProgram(name, path, x, y, w, h, ...)
 
     extraEnv.__mos = mos
     extraEnv.__window = window
+    extraEnv.__Global = __Global
 
     viewport:launchProgram(engine.screenBuffer, path, extraEnv, ...)
     viewport:unhandledEvent({}) -- Forces program to start
@@ -585,8 +585,11 @@ mos.bindTool = bindTool
 mos.addToToolbar = addToToolbar
 mos.removeFromToolbar = removeFromToolbar
 
+__Global.log("Launching MOS")
 multiProgram.launchProcess(engine.screenBuffer, engine.start, nil, 1, 1, term.getSize())
 local err = multiProgram.start()
+__Global.log("MOS Terminated")
+
 
 mos.saveProfile()
 
