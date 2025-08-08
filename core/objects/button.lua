@@ -1,5 +1,7 @@
 return function(control, style, clickedStyle)
 local button = control:new{}
+button.type = "Button"
+
 button.normalStyle = style
 button.clickedStyle = clickedStyle
 button.text = "Button"

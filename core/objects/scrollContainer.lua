@@ -1,5 +1,7 @@
-return function(container)
+return function(container, input)
 local scrollContainer = container:new{}
+scrollContainer.type = "ScrollContainer"
+
 scrollContainer.scrollY = 0
 
 function scrollContainer:ready()
@@ -8,7 +10,7 @@ end
 
 function scrollContainer:scroll(dir, x, y)
     self.scrollY = self.scrollY -  dir
-    
+
     if self.scrollY > 0 then
         self.scrollY = 0
         return

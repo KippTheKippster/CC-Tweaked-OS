@@ -9,6 +9,16 @@ mouse.doublePressed = false
 mouse.dragX = 0
 mouse.dragY = 0
 
+local function isValid(o)
+    if o == nil then
+        return false
+    elseif o.isValid == nil or o:isValid() == true then
+        return true
+    else
+        return false
+    end
+end
+
 local function isControlInArea(c, x, y)
     return collision.inArea(
         x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
@@ -49,7 +59,11 @@ function mouse.getControl(x, y)
 end
 
 function mouse.getFocusOwner(o)
-    if o == nil or o.propogateFocusUp == false then
+    if o == nil then
+        return nil
+    elseif o:isValid() == false then
+        return nil
+    elseif o.propogateFocusUp == false then
         return o
     else
         return mouse.getFocusOwner(o.parent)
@@ -60,6 +74,22 @@ function mouse.propogateInput(o, method, ...)
     method(o, ...)
     if o.propogateInputUp == true then
         mouse.propogateInput(o.parent)
+    end
+end
+
+local focusChangedListeners = {}
+
+local function addFocusChangedListener(o)
+    table.insert(focusChangedListeners, o)
+end
+
+local function focusChangedEvent(o)
+    for i = 1, #focusChangedListeners do 
+        if type(focusChangedListeners[i]) == "table" then
+            focusChangedListeners[i]:focusChangedEvent(o)
+        elseif type(focusChangedListeners[i]) == "function" then
+            focusChangedListeners[i](o)
+        end
     end
 end
 
@@ -108,7 +138,7 @@ function mouse.click(button, x, y)
         if mouse.current ~= nil then
             mouse.current:up()
         end
-        mouse.changeFocus(c, true)
+        mouse.changeFocus(c)
     elseif c ~= nil then -- If user clicks on the same control
 		local time = os.clock()
 		local delta = time - mouse.clickTime
@@ -122,7 +152,7 @@ function mouse.click(button, x, y)
        return
     end
 
-    c:click()
+    c:click(x - c.globalX, y - c.globalY, button)
 end
 
 local function grabControlFocus(c)
@@ -138,28 +168,32 @@ local function setCursorControl(c)
 end
 
 local function getCursorControl()
-    return mouse.cursorControl
+    if isValid(mouse.cursorControl) then
+        return mouse.cursorControl
+    else
+        return nil
+    end
 end
 
 function mouse.up(button, x, y)
-    if mouse.current == nil then return end
-    mouse.current:up()
-    mouse.current:pressed()
+    if isValid(mouse.current) == false then return end
+    mouse.current:up(x, y, button)
+    mouse.current:pressed(x, y, button)
 end
 
 function mouse.drag(button, x, y) 
-    if mouse.current == nil then return end
+    if isValid(mouse.current) == false then return end
     local relativeX = x - mouse.dragX
     local relativeY = y - mouse.dragY
     local c = mouse.getControl(x, y)
     if c ~= nil and c ~= mouse.current and c.dragSelectable == true and mouse.current.dragSelectable == true then
         mouse.current:up()
-        mouse.changeFocus(c, true)
-        c:click()
+        mouse.changeFocus(c)
+        c:click(x - c.globalX, y - c.globalY, button)
     end
     mouse.dragX = x
     mouse.dragY = y
-    mouse.current:drag(relativeX, relativeY)
+    mouse.current:drag(relativeX, relativeY, x - mouse.current.globalX, y - mouse.current.globalY, button)
 end
 
 function mouse.scroll(dir, x, y)
@@ -182,22 +216,6 @@ local function getFocus()
     return mouse.getFocusOwner(mouse.current)
 end
 
-local focusChangedListeners = {}
-
-local function addFocusChangedListener(o)
-    table.insert(focusChangedListeners, o)
-end
-
-function focusChangedEvent(o)
-    for i = 1, #focusChangedListeners do 
-        if type(focusChangedListeners[i]) == "table" then
-            focusChangedListeners[i]:focusChangedEvent(o)
-        elseif type(focusChangedListeners[i]) == "function" then
-            focusChangedListeners[i](o)
-        end 
-    end
-end
-
 local keys = {}
 local keyListeners = {}
 local charListeners = {}
@@ -206,14 +224,18 @@ local mouseEventListeners = {}
 
 local function sendEvent(listeners, fun, ...)
     for i = 1, #listeners do
-        if inputConsumed == true then
-            local a = b.c
+        if inputConsumed == true then -- This doesn't seem to work
             return
         end
-        if type(listeners[i]) == "table" then
-            listeners[i][fun](listeners[i], ...)
-        elseif type(listeners[i]) == "function" then
-            listeners[i](...)
+
+        if isValid(listeners[i]) == false then
+            --table.remove(listeners, i) -- I have no idea if this is safe
+        else
+            if type(listeners[i]) == "table" then
+                listeners[i][fun](listeners[i], ...)
+            elseif type(listeners[i]) == "function" then
+                listeners[i](...)
+            end
         end
     end
 end
@@ -329,6 +351,14 @@ end
 local function processInput()
     local data = table.pack(os.pullEventRaw())
     local event = data[1]
+
+    if isValid(mouse.current) == false then
+        mouse.current = nil
+    end
+
+    if isValid(mouse.cursorControl) == false then
+        mouse.cursorControl = nil
+    end
 
     if event == 'key' then
         key(data[2])

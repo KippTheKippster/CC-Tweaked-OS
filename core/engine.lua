@@ -10,9 +10,7 @@ local utils = require(path .. "utils")
 engine.input = input
 engine.utils = utils
 
-local renderQueue = {}
-
-engine.renderQueue = renderQueue
+engine.freeQueue = {}
 
 local style = object:new{}
 style.backgroundColor = colors.lightGray
@@ -27,6 +25,7 @@ local objectList = {}
 local function requireObject(name, ...)
     local o = require(path .. "objects." .. name)(...)
     objectList[name] = o
+    engine[name] = o
     return o
 end
 
@@ -42,7 +41,7 @@ local container = requireObject("container", control)
 local vContainer = requireObject("vContainer", container)
 local hContainer = requireObject("hContainer", container)
 local flowContainer = requireObject("flowContainer", container)
-local scrollContainer = requireObject("scrollContainer", container)
+local scrollContainer = requireObject("scrollContainer", container, input)
 local windowControl = requireObject("windowControl", control, button)
 
 local editStyle = style:new{}
@@ -127,6 +126,7 @@ local function redrawScreen()
 
     if input.getCursorControl() == nil then
         term.setCursorBlink(false)
+        term.setCursorPos(1, 1) -- Forces error messages to display at correct position
     else
         input.getCursorControl():updateCursor()
     end
@@ -144,26 +144,45 @@ engine.start = function()
 
     redrawScreen()
 
+    local function freeControl(c)
+        for i, child in ipairs(c.children) do
+            freeControl(child)
+        end
+        c:free()
+    end
+
+    local function freeQueue()
+        for i, c in ipairs(engine.freeQueue) do
+            if c.parent then
+                c.parent:removeChild(c)
+            end
+            freeControl(c)
+        end
+
+        engine.freeQueue = {}
+    end
+
     --[[
     while engine.running do
         input.processInput()
         redrawScreen()
     end
     ]]--
-    --[[    
+  
     local exception = dofile("rom/modules/main/cc/internal/tiny_require.lua")("cc.internal.exception")
     local barrier_ctx = { co = coroutine.running() }
 
+    local drawTimerID = 0
+
     local fnDraw = function ()
         while engine.running do
-            --if engine.queueRedraw == true then
-                engine.drawing = true
+            if engine.queueRedraw == true then
                 engine.drawCount = engine.drawCount + 1
                 redrawScreen()
                 engine.queueRedraw = false
-                engine.drawing = false
-            --end
+            end
 
+            drawTimerID = os.startTimer(0.05)
             coroutine.yield()
         end
     end
@@ -178,39 +197,39 @@ engine.start = function()
     local coDraw = coroutine.create(function() return exception.try_barrier(barrier_ctx, fnDraw) end)
     local coInput = coroutine.create(function() return exception.try_barrier(barrier_ctx, fnInput) end)
 
-    local data = { "engine_redraw" }
+    coroutine.resume(coDraw)
     while engine.running do
-        local event = data[1]
-        --print(event)
-        if engine.queueRedraw then
-            coroutine.resume(coDraw)
+        freeQueue()
+        local data = table.pack(os.pullEventRaw())
+        if data[1] == "timer" and data[2] == drawTimerID then
+            coroutine.resume(coDraw, table.unpack(data))
+        else
+            coroutine.resume(coInput, table.unpack(data))
         end
-
-        coroutine.resume(coInput, table.unpack(data))
-
-        data = table.pack(os.pullEventRaw())
     end
-    ]]--
 
+    --[[
     parallel.waitForAny(
         function ()
             while engine.running do
+                freeQueue()
                 if engine.queueRedraw == true then
                     engine.drawCount = engine.drawCount + 1
                     redrawScreen()
                     engine.queueRedraw = false
                 end
 
-                os.sleep(0.05)
+                sleep(0.05)
             end
         end,
         function ()
             while engine.running do
+                freeQueue()
                 input.processInput()
             end
         end
     )
-
+    ]]--
 
     engine.stop()
 end

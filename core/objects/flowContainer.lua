@@ -1,5 +1,6 @@
 return function(container)
 local flowContainer = container:new{}
+flowContainer.type = "FlowContainer"
 
 function flowContainer:sort()
 	local w = 0

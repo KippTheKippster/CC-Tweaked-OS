@@ -1,5 +1,7 @@
 return function(container)
 local vContainer = container:new{}
+vContainer.type = "VContainer"
+
 vContainer.center = false
 
 function vContainer:sort()

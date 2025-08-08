@@ -6,6 +6,16 @@
         "multishell",
         "textutils",
         "fs",
-        "colors"
+        "colors",
+        "keys",
+        "paintutils",
+        "__mos",
+        "printError",
+        "disk",
+        "sleep",
+        "parallel",
+        "rednet",
+        "window",
+        "__wrapper"
     ]
 }
