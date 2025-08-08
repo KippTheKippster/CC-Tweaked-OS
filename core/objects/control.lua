@@ -81,9 +81,8 @@ end
 control:defineProperty('x', {
     get = function(o) return o._x end,
     set = function(o, value)
-        local value = value
         local same = o._x == value
-        o._x = value 
+        o._x = value
         if same == false then
             o:updatePosition()
             o:transformChanged()
@@ -96,7 +95,6 @@ control:defineProperty('x', {
 control:defineProperty('y', {
     get = function(o) return o._y end,
     set = function(o, value) 
-        local value = value 
         local same = o._y == value
         o._y = value 
         if same == false then
@@ -105,7 +103,7 @@ control:defineProperty('y', {
             o:positionChanged()
             o:emitSignal(o.transformChanged)
         end
-    end 
+    end
 })
 
 function control:updatePosition()
