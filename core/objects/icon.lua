@@ -1,5 +1,7 @@
 return function(control)
 local icon = control:new{}
+icon.type = "Icon"
+
 icon._texture = nil
 icon._centered = false
 icon.offsetX = 0

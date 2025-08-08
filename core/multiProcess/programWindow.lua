@@ -2,6 +2,8 @@
 
 return function(windowControl, programViewport)
 local programWindow = windowControl:new{}
+programWindow.type = "ProgramWindow"
+
 programWindow.programViewport = nil
 programWindow.minimizeButton = nil
 programWindow.focusedStyle = nil
@@ -35,9 +37,7 @@ end
 function programWindow:close()
     self.programViewport.terminated = true
     self.programViewport:endProcess()
-    self:closed()
-    self:emitSignal(self.closedSignal)
-    self:remove()
+    windowControl.close(self)
 end
 
 

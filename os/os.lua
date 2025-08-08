@@ -34,13 +34,15 @@ local defaultProfile = {
     backgroundPath = "os/textures/backgrounds/melvin.nfp",
     backgroundUpdateTime = 0.1,
     fileExecptions = {
-        nfp = "/rom/programs/fun/advanced/paint.lua",
-        txt = "/rom/programs/edit.lua"
+        [".nfp"] = {
+            program = "/rom/programs/fun/advanced/paint.lua",
+            fullscreen = true
+        },
+        [".txt"] = { program = "/rom/programs/edit.lua" }
     },
     theme = "",
     favorites = {
-        ["bruh.lua"] = { name = "Test" },
-        ["os/os.lua"] = { name = "MOS" }
+
     },
 }
 
@@ -96,7 +98,7 @@ function mos.loadTheme(file)
 
     local palette = mos.theme.palette
     for i = 0, 15 do
-        local color = math.pow(2, i)
+        local color = 2 ^ i
         if palette[color] ~= nil then
             term.setPaletteColor(color, palette[color])
         else
@@ -124,7 +126,7 @@ mos.refreshTheme = function ()
     --Styles
     local theme = mos.theme
     --Background
-    engine.backgroundColor = theme.backgroundColor
+    engine.backgroundColor = mos.profile.backgroundColor or theme.backgroundColor
     theme.shadowColor = theme.shadowColor or colors.black
 
     --Toolbar
@@ -193,9 +195,9 @@ focusContainer.expandW = true
 focusContainer.mouseIgnore = true
 focusContainer.rendering = false
 
-local windowsContainer = focusContainer:addControl()
-windowsContainer.mouseIgnore = true
-windowsContainer.rendering = false
+local windowContainer = focusContainer:addControl()
+windowContainer.mouseIgnore = true
+windowContainer.rendering = false
 -- windowsContainer.y = 1
 
 --Top Bar
@@ -244,16 +246,17 @@ mos.refreshMosDropdown = function ()
     mosDropdown:addToList("Shell")
 
     local hasFavorites = false
+    local l = -1
     for k, v in pairs(mos.profile.favorites) do
-        hasFavorites = true
-        break
+        l = #k
     end
-    if hasFavorites then
+    if l > -1 then
         mosDropdown:addToList("-------------", false)
         for k, v in pairs(mos.profile.favorites) do
             local option = mosDropdown:addToList(v.name .. "  ")
             option.pressed = function (o)
-                mos.launchProgram(v.name, k, 2, 2, 24, 12)
+                mos.openProgram(v.name, k, false)
+                --mos.launchProgram(v.name, k, 2, 2, 24, 12)
             end
             local x = option:addButton()
             x.text = "\3"
@@ -301,7 +304,7 @@ local function setFullscreenMode(fullscreen)
     if fullscreen == true then
         topBar:toFront()
     else
-        windowsContainer:toFront()
+        windowContainer:toFront()
     end
 end
 
@@ -329,8 +332,8 @@ local function windowClosed(w, b)
     table.remove(windows, utils.find(windows, w))
     --windows[w] = nil
 
-    for i = 1, #windowsContainer.children do
-        local nextW = windowsContainer.children[i]
+    for i = 1, #windowContainer.children do
+        local nextW = windowContainer.children[i]
         if nextW.visible == true then
             --engine.input.consumeInput()
             nextW.programViewport.skipEvent = true
@@ -364,7 +367,7 @@ local function windowFocusChanged(window)
 
     currentWindow = window
     if isFullscreen() == false then
-        windowsContainer:toFront()
+        windowContainer:toFront()
     end
     window:redraw()
 end
@@ -399,7 +402,6 @@ local function addWindow(w)
     w:connectSignal(w.focusChangedSignal, windowFocusChanged, w)
     w:grabFocus()
 
-
     w:redraw()
 end
 
@@ -408,7 +410,7 @@ end
 
 local function launchProgram(name, path, x, y, w, h, ...)
     local window = programWindow:new{}
-    windowsContainer:addChild(window)
+    windowContainer:addChild(window)
 
     local viewport = programViewport:new{}
     window:addViewport(viewport)
@@ -417,12 +419,7 @@ local function launchProgram(name, path, x, y, w, h, ...)
     window.y = y
     window.w = w
     window.h = h
-    if w < window.minW then
-        window.minW = w
-    end
-    if h < window.minH then
-        window.minH = h
-    end
+    window:refreshMinSize()
 
     window.style = unfocusedWindowStyle
     window.focusedStyle = focusedWindowStyle
@@ -445,8 +442,36 @@ local function launchProgram(name, path, x, y, w, h, ...)
     return window
 end
 
-mos.createPopup = function (title, text, x, y, w, h)
-    local popup = engine.root:addWindowControl()
+local function openProgram(name, path, edit, ...)
+    if edit == true then -- Lctrl
+        return launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", 1, 1, 24, 12, path)
+    else
+        local x, y, w, h = 1, 1, 24, 12
+        for k, v in pairs(mos.profile.fileExecptions) do
+            local suffix = k
+            if name:sub(-#suffix) == suffix then
+                local program = v.program or path
+                if v.fullscreen then
+                    x, y = 0, 0
+                    w, h = engine.root.w, engine.root.h
+                end
+
+                local wi = launchProgram(name, program, x, y, w, h, path, ...)
+                if v.fullscreen then
+                    wi:setFullscreen(true)
+                end
+                return wi
+            end
+        end
+
+        return launchProgram(name, path, x, y, w, h, ...)
+    end
+end
+
+mos.createPopup = function (title, text, x, y, w, h, parent)
+    parent = parent or engine.root
+
+    local popup = parent:addWindowControl()
     popup.text = title
 
     x = x or 16
@@ -455,7 +480,7 @@ mos.createPopup = function (title, text, x, y, w, h)
     h = h or 2
 
     popup.x, popup.y, popup.w, popup.h = x, y, w, h
-    popup.minW, popup.minH = math.min(popup.minW, w), math.min(popup.minH, h)
+    popup:refreshMinSize()
 
     local label = popup:addControl()
     label.expandW = true
@@ -463,6 +488,8 @@ mos.createPopup = function (title, text, x, y, w, h)
     label.h = 1
     label.text = text
     label.clipText = true
+
+    --addWindow(popup)
 end
 
 function mosDropdown:optionPressed(i)
@@ -474,25 +501,9 @@ function mosDropdown:optionPressed(i)
     elseif text == "Exit" then
         multiProgram.exit()
     elseif text == "File Explorer" then
-        launchProgram("File Explorer", "/os/programs/fileExplorer.lua", 7, 2, 35, 15,
-            function(path, name, ctrl, ...) -- This function is called when the user has chosen a file
-                if ctrl == true then -- Lctrl
-                    launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", 1, 1, 24, 12, path)
-                else
-                    for k, v in pairs(mos.profile.fileExecptions) do
-                        local suffix = "." .. k
-                        if name:sub(-#suffix) == suffix then
-                            launchProgram(name, v, 1, 1, 24, 12, path, ...)
-                            return
-                        end
-                    end
-                    
-                    launchProgram(name, path, 1, 1, 24, 12, ...)
-                end
-            end
-        , mos)
+        launchProgram("File Explorer", "/os/programs/fileExplorer.lua", 7, 2, 35, 15, openProgram)
     elseif text == "Settings" then
-        launchProgram("Settings", "/os/programs/settings.lua", 20, 5, 30, 13, mos)
+        launchProgram("Settings", "/os/programs/settings.lua", 20, 5, 30, 13)
     end
 end
 
@@ -518,9 +529,8 @@ engine.input.addRawEventListener(root)
 
 function clock:update()
     self.text = textutils.formatTime(os.time('local'), true)
-    clock_timer_id = os.startTimer(1.0)
+    clock_timer_id = os.startTimer(10000.0)
 end
-
 
 function root:rawEvent(data)
     local event = data[1]
@@ -568,6 +578,7 @@ mos.engine = engine
 mos.root = engine.root
 mos.addWindow = addWindow
 mos.launchProgram = launchProgram
+mos.openProgram = openProgram
 mos.background = background
 mos.backgroundIcon = backgroundIcon
 mos.bindTool = bindTool
@@ -589,9 +600,9 @@ if err == nil or err == "Terminated" then
 else
     term.setBackgroundColor(colors.blue)
     term.setTextColor(colors.white)
-    term.setCursorPos(1, 1)
+    --term.setCursorPos(1, 1)
     term.setCursorBlink(true)
-    term.clear()
+    --term.clear()
     print("Something Went Wrong :(")
     print(err)
 end

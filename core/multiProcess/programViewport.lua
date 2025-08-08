@@ -2,6 +2,8 @@
 
 return function(control, multiProgram, input)
     local programViewport = control:new{}
+    programViewport.type = "ProgramViewport"
+
     programViewport.rendering = false
     programViewport.mouseIgnore = false
     programViewport.program = nil
@@ -38,6 +40,7 @@ return function(control, multiProgram, input)
     function programViewport:launchProgram(parentTerm, programPath, extraEnv, ...)
         self.parentTerm = parentTerm
         self.program = multiProgram.launchProgram(parentTerm, programPath, extraEnv, function (data)
+            --if self:isValid() == false then return nil end
             return self:unhandledEvent(data)
         end, self.globalX + 1, self.globalY + 1, self.w, self.h, ...)
     end
@@ -48,8 +51,16 @@ return function(control, multiProgram, input)
         --term.redirect(self.parentTerm)
     end
 
+    local function drawChildren(viewport)
+        for i = 1, #viewport.children do
+            viewport.children[i]:draw()
+        end
+    end
+
     local function resumeProcess(viewport, data)
-        return table.pack(multiProgram.resumeProcess(viewport.program, data))
+        local result = table.pack(multiProgram.resumeProcess(viewport.program, data))
+        --drawChildren(viewport)
+        return result
     end
 
     function programViewport:unhandledEvent(data)
@@ -83,7 +94,7 @@ return function(control, multiProgram, input)
             return true
         end
 
-        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" or event == "mouse_scroll" then
+        if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
             if self.parent:inFocus() == false then return end
             if input.isInputConsumed() == true then return end
 
@@ -91,6 +102,14 @@ return function(control, multiProgram, input)
             local offsetX, offsetY = self.program.window.getPosition()
 
             result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
+        elseif event == "mouse_scroll" then
+            if input.isInputConsumed() == true then return end
+
+            local button, x, y = data[2], data[3], data[4]
+            local offsetX, offsetY = self.program.window.getPosition()
+
+            result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
+            self:redraw()
         elseif event == 'key' or event == 'key_up' or event == "char" then
             if self.parent:inFocus()  == false then return end
             if input.isInputConsumed() == true then return end
@@ -100,11 +119,9 @@ return function(control, multiProgram, input)
             result = resumeProcess(self, data)
         end
 
-        if result[1] == false then
-            term.setBackgroundColor(colors.black)
-            term.setTextColor(colors.red)
-            term.clear()
-            print("VP", table.unpack(result))
+        local ok = result[1]
+        if ok == false then
+            print("Viewport: ", table.unpack(result))
         end
 
         return table.unpack(result)
@@ -126,6 +143,8 @@ return function(control, multiProgram, input)
         end
 
         self.program.window.setVisible(true)
+        drawChildren(self)
+
         if self.parent:inFocus() == false then -- This makes it so that only the focused viewport is constantly drawn (unfocused windows have to wait for next redraw)
             self.program.window.setVisible(false)
         end

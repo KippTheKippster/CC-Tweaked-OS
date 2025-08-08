@@ -1,5 +1,7 @@
 return function(control, button)
 local windowControl = control:new{}
+windowControl.type = "WindowControl"
+
 windowControl.draggable = true
 windowControl.clipText = true
 windowControl.text = "Window"
@@ -35,8 +37,7 @@ windowControl:defineProperty('text', {
 }, true)
 
 function windowControl:ready()
-    self.oldW = self.w
-    self.oldH = self.h
+    self:refreshMinSize()
 
     self.label = self:addControl()
     self.label.x = 2
@@ -55,8 +56,7 @@ function windowControl:ready()
     self.exitButton.propogateFocusUp = true
 
     self.exitButton.pressed = function(o)
-        o.parent:emitSignal(o.parent.closedSignal)
-        o.parent:remove()
+        self:close()
     end
 
     self.scaleButton = control:new{}
@@ -73,6 +73,14 @@ function windowControl:ready()
     self.scaleButton.doublePressed = function(o)
         o.parent:setFullscreen(true)
     end
+end
+
+function windowControl:close()
+    self:closed()
+    self:emitSignal(self.closedSignal)
+    --self.parent:removeChild(self)
+    --self:remove()
+    self:queueFree() --TODO Re-add
 end
 
 function windowControl:setFullscreen(fullscreen, relativeX, relativeY)
@@ -139,5 +147,13 @@ function windowControl:sizeChanged()
     self.exitButton.x = self.w - 1
     self.label.w = self.w - 2
 end
+
+function windowControl:refreshMinSize()
+    self.minW, self.minH = math.min(self.minW, self.w), math.min(self.minH, self.h)
+    self.oldW, self.oldH = self.w, self.h
+end
+
+function windowControl:closed() end
+
 return windowControl
 end

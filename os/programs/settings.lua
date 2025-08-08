@@ -1,6 +1,11 @@
 local engine = require(".core.engine")
 local args = {...}
-local mos = args[1]
+local mos = __mos
+
+if mos == nil then
+    printError("Settings must be opened with MOS!")
+    return
+end
 
 term.setTextColor(colors.white)
 
@@ -56,23 +61,17 @@ local changeBackground = addSettingsButton("Change Background Texture")
 
 
 function changeBackground:pressed()
-    if fileExplorer ~= nil then
-        --fileExplorer:remove()
-        --fileExplorer = nil
-    end
-
-    fileExplorer = mos.launchProgram("Choose .nfp", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (path, name)
+    fileExplorer = mos.launchProgram("Choose .nfp", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
         --fileExplorer:close()
         --fileExplorer = nil
-        local suffix = ".nfp"
-        if path:sub(-#suffix) == suffix then
-            mos.backgroundIcon.texture = paintutils.loadImage(path)
-            mos.profile.backgroundIcon = path
-            mos.saveProfile()
-        else
+        --local suffix = ".nfp"
+        --if path:sub(-#suffix) == suffix then
+        mos.backgroundIcon.texture = paintutils.loadImage(path)
+        mos.profile.backgroundIcon = path
+        --else
             --local w = mos.engine:addWindowControl()
             --mos.addWindow(w)
-        end
+        --end
     end, "os/textures/backgrounds/")
 end
 
@@ -85,15 +84,13 @@ end
 local changeTheme = addSettingsButton("Change Theme")
 
 function changeTheme:pressed()
-    mos.launchProgram("Choose .thm", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (path, name)
+    mos.launchProgram("Choose .thm", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
         local suffix = ".thm"
         if path:sub(-#suffix) == suffix then
             mos.loadTheme(path)
-            mos.saveProfile()
             mos.engine.root:redraw()
         end
     end, "os/themes/")
-    
 end
 
 engine.start()

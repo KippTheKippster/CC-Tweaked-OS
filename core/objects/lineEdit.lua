@@ -1,5 +1,7 @@
 return function(control, editStyle, editFocusStyle, input)
 local lineEdit = control:new()
+lineEdit.type = "LineEdit"
+
 lineEdit.normalStyle = editStyle
 lineEdit.focusStyle = editFocusStyle
 
@@ -8,6 +10,7 @@ lineEdit.w = 12
 lineEdit.text = ""
 lineEdit.cursorOffset = 0
 lineEdit._trueText = ""
+lineEdit.inheritStyle = false
 control:defineProperty('trueText', {
     get = function(o) return o._trueText end,
     set = function(o, value) 
@@ -31,7 +34,6 @@ function lineEdit:ready()
     --self.cursor.text = "a"
     --self.cursor.visible = false
     self.style = self.normalStyle
-    self:redraw()
 end
 
 --[[

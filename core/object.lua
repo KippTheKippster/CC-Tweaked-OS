@@ -2,6 +2,7 @@ local path = ".core."
 local utils = require(".core.utils")
 
 local object = {}
+object.type = "Object"
 object.__properties = {}
 
 --Get key from object
@@ -61,6 +62,20 @@ local function properties__newindex(o, key, value)
     rawset(o, key, value)
 end
 
+local function free__index(o, key)
+    if key == "isValid" then
+        return function ()
+            return false
+        end
+    end
+
+    error("\nAttempting to access value from the previously freed object: " .. tostring(o), 2)
+end
+
+local function free__newindex(o, key, value)
+    error("Attempting to assign value to the previously freed object: " .. tostring(o), 2)
+end
+
 --Creates a new object, copying properties and signals to the new object
 function object:new(o)
     o = o or {}
@@ -71,7 +86,7 @@ function object:new(o)
     }
 
     setmetatable(o, mt)
-    
+
     o.__properties = {}
     mt = {
         base = self.__properties,
@@ -92,6 +107,27 @@ function object:remove()
     end
 
     self = nil
+end
+
+function object:isValid()
+    return true
+end
+
+function object:free()
+    for k, v in pairs(self.__connections) do
+        self:disconnectSignal(k, v.method)
+    end
+
+    for k in pairs (self) do
+        self[k] = nil
+    end
+
+    local mt = {
+        __index = free__index,
+        __newindex = free__newindex
+    }
+
+    setmetatable(self, mt)
 end
 
 --Defines a new property

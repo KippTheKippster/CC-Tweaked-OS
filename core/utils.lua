@@ -46,7 +46,7 @@ local function split(s, c)
 end
 
 local function hasTag(data, tag)
-	tags = data["tags"]
+	local tags = data["tags"]
 	if tags[tag] == true then
 		return true
 	else

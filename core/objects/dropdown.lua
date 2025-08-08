@@ -1,5 +1,7 @@
 return function(button, input, utils)
 local dropdown = button:new{}
+dropdown.type = "Dropdown"
+
 dropdown.text = "Drop-down"
 dropdown.h = 1
 dropdown._fitToText = true
@@ -128,7 +130,8 @@ function dropdown:removeFromList(o)
     if type(o) == "string" then
         for i = 1, #self.list.children do
             if self.list.children[i].text == o then
-                self.list:removeChild(self.list.children[i])
+                self.list.children[i]:queueFree()
+                --self.list:removeChild(self.list.children[i])
                 --self.list.children[i]:remove() TODO Reimplement? (Or is this automatically removed by garbage collection?)
                 break
             end

@@ -1,18 +1,28 @@
 {
-  backgroundIcon = "os/textures/backgrounds/tux.nfp",
+  backgroundIcon = "parallel.lua",
   favorites = {
-    [ "colors.lua" ] = {
-      name = "colors.lua",
+    [ "freeTest.lua" ] = {
+      name = "freeTest.lua",
     },
-    sinsus = {
-      name = "sinsus",
+    [ "os/programs/paint.lua" ] = {
+      name = "paint.lua",
+    },
+    [ "os/textures/backgrounds/melvin.nfp" ] = {
+      name = "melvin.nfp",
+    },
+    [ ".gitattributes" ] = {
+      name = ".gitattributes",
     },
   },
   backgroundPath = "os/textures/backgrounds/melvin.nfp",
-  backgroundUpdateTime = 10000000,
-  theme = "os/themes/defaultTheme.thm",
+  backgroundUpdateTime = 0.1,
+  theme = "os/themes/pinkTheme.thm",
   fileExecptions = {
-    txt = "/rom/programs/edit.lua",
-    nfp = "/rom/programs/fun/advanced/paint.lua",
+    [ ".nfp" ] = {
+      program = "/os/programs/paint.lua",
+    },
+    [ ".txt" ] = {
+      program = "/rom/programs/edit.lua",
+    },
   },
 }

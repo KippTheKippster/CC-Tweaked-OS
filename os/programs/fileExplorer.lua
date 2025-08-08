@@ -1,4 +1,5 @@
 local engine = require(".core.engine")
+engine.A = 2
 local utils = require(".core.utils")
 local currentPath = ""
 local paths = {}
@@ -6,13 +7,14 @@ local paths = {}
 local args = {...}
 local callbackFunction = args[1]
 local startPath = args[2]
+local saveMode = args[3]
 local mos = __mos
 local fileExplorer = {}
 local selectedFiles = {}
 local copiedFiles = {}
 
-local function popupError(err, ...)
-    mos.createPopup("Error", err, ...)
+local function popupError(err)
+    mos.createPopup("Error", " " .. err, nil, nil, nil, nil, __window)
 end
 
 local function pPopupError(f, ...)
@@ -20,8 +22,13 @@ local function pPopupError(f, ...)
     if ok == false then
         for i = 1, 3 do
             local idx = err:find(":")
-            err = err:sub(idx + 1)
+            if idx ~= nil then
+                err = err:sub(idx + 1)
+            end
         end
+
+        err = err:sub(2)
+
         popupError(err)
     end
     return ok, err
@@ -91,6 +98,9 @@ copyButton.h = 1
 copyButton.normalStyle = toolsStyle
 copyButton.anchorW = copyButton.anchor.RIGHT
 
+local marginU = 1
+local marginD = 0
+
 --files
 local vContainer = engine.root:addVContainer()
 vContainer:toBack()
@@ -102,6 +112,57 @@ vContainer.x = 0
 vContainer.y = 0
 vContainer.expandW = true
 vContainer.expandH = true
+
+local saveEdit = nil
+local currentLineEdit = nil
+
+if saveMode == true then
+    local saveContainer = engine.root:addHContainer()
+    saveContainer.style = toolsStyle
+    saveContainer.h = 1
+    saveContainer.expandW = true
+    saveContainer.anchorH = saveContainer.anchor.DOWN
+    --saveContainer.rendering = true
+
+    saveContainer.label = saveContainer:addControl()
+    saveContainer.label.h = 1
+    saveContainer.label.fitToText = true
+    saveContainer.label.text = "Name: "
+
+    saveContainer.edit = saveContainer:addLineEdit()
+    saveContainer.edit.x = saveContainer.label.w
+    saveContainer.edit.h = 1
+    saveContainer.edit.expandW = true
+
+    saveContainer.ok = saveContainer:addButton()
+    saveContainer.ok.fitToText = true
+    saveContainer.ok.h = 1
+    saveContainer.ok.text = "Save"
+    saveContainer.ok.normalStyle = toolsStyle
+    saveContainer.ok.pressed = function (o)
+        callbackFunction("", currentPath .. saveContainer.edit.text, false)
+    end
+
+    saveEdit = saveContainer.edit
+
+    function saveEdit:focusChanged()
+        engine.getObject("lineEdit").focusChanged(self)
+        if self.focus then
+           currentLineEdit = self 
+        else
+            if currentLineEdit == self then
+                currentLineEdit = nil
+            end
+        end
+    end
+
+    saveEdit:grabFocus()
+
+    saveContainer.sortOnTransformChanged = true
+    saveContainer:sort()
+
+    marginD = 1
+end
 
 local style = engine:newStyle()
 style.backgroundColor = colors.black
@@ -130,7 +191,6 @@ fileButton.selectedStyle = selectedStyle
 local selection = nil
 local startSelectionFile = ""
 local startSelectedFiles = {}
-local currentLineEdit = nil
 
 function fileButton:click()
     button.click(self)
@@ -161,6 +221,12 @@ function fileButton:up()
     end
 end
 
+function fileButton:pressed()
+    if saveEdit ~= nil then
+        saveEdit.trueText = self.text
+    end
+end
+
 local dirStyle = style:new{}
 dirStyle.textColor = colors.green
 
@@ -172,11 +238,11 @@ dirButton.normalStyle = dirStyle
 dirButton.selectedStyle = dirSelectedStyle
 
 local function scrollToBottom()
-    vContainer.y = -#vContainer.children
+    vContainer.y = -#vContainer.children - marginD
 end
 
 local function scrollToTop()
-    vContainer.y = 1
+    vContainer.y = marginU
 end
 
 local function scrollToControl(control, center)
@@ -192,9 +258,9 @@ local function scrollToControl(control, center)
     if control.globalY <= 0 then
         --error(control.globalY .. " : " .. tostring(vContainer.globalY) .. " : " .. tostring(h))
 
-        vContainer.globalY = vContainer.globalY - control.globalY + 1 - offset--h - control.globalY--  - offset
+        vContainer.globalY = vContainer.globalY - control.globalY + marginU - offset--h - control.globalY--  - offset
     elseif control.globalY >= h then
-        vContainer.globalY = -control.globalY + h - offset
+        vContainer.globalY = -control.globalY + h - offset - marginD
     end
 end
 
@@ -254,7 +320,8 @@ local function openFolder(path)
     vContainer.y = 1
     tools.text = "  /" .. path
     for i = 1, #vContainer.children do
-        vContainer:removeChild(vContainer.children[1])
+        --vContainer:removeChild(vContainer.children[1])
+        vContainer.children[i]:queueFree()
     end
     --for i = 1, #vContainer.children do
     --    vContainer.children[1]:remove()
@@ -337,6 +404,7 @@ local searchEdit = tools:addLineEdit()
 searchEdit.inheritStyle = false
 searchEdit.expandW = true
 searchEdit.visible = false
+
 local editStyle = engine.newStyle()
 editStyle.backgroundColor = colors.white
 editStyle.textColor = colors.black
@@ -367,7 +435,7 @@ end
 
 function inputReader:scroll(dir)
     local newY = vContainer.y - dir
-    local h = engine.root.h
+    local h = engine.root.h - marginD
     --local w, h = term.getSize()
     term.setTextColour(colors.white)
     if #vContainer.children - h < 0 then
@@ -403,7 +471,7 @@ function inputReader:char(char)
     end
 end
 
-local function createEditFile(startText, f, parent, scroll)
+local function createEditFile(startText, fn, parent, scroll)
     parent = parent or vContainer
     local edit = parent:addLineEdit()
     edit.trueText = startText
@@ -415,9 +483,10 @@ local function createEditFile(startText, f, parent, scroll)
     edit.expandW = true
     currentLineEdit = edit
     edit.textSubmitted = function (o)
+        local ok = fn(o)
+        currentLineEdit.parent:removeChild(currentLineEdit)
         currentLineEdit:remove()
         currentLineEdit = nil
-        local ok = f(o)
         if ok then
             startSelectionFile = o.text
             startSelectedFiles = { o.text }
@@ -486,7 +555,7 @@ local function createDiskDropdown(name)
             end)
         elseif text == "Install Here" then
             if fs.isReadOnly(currentPath) then
-                os.createPopup("Warning", "Folder is read only!")
+                mos.createPopup("Warning", "Folder is read only!")
                 return
             end
             --fs.makeDir(currentPath .. o.text)
@@ -590,6 +659,11 @@ local function traverse(dir)
     end
 end
 
+local function getPath(c)
+    return currentPath .. c.text
+end
+
+
 local function getTitle(c)
     local title = c.text
     if title:sub(-4) == ".lua" then
@@ -600,7 +674,7 @@ end
 
 
 function fileButton:doublePressed()
-    callbackFunction(currentPath .. self.text, getTitle(self), engine.input.isKey(keys.leftCtrl))--Left CTRL
+    callbackFunction(getTitle(self), getPath(self), engine.input.isKey(keys.leftCtrl))
 end
 
 function dirButton:doublePressed()
@@ -634,16 +708,6 @@ local function windowFocusChanged(focus)
 end
 
 mos.bindTool(__window, windowFocusChanged)
-
-local function isPathValid(path, createPopup)
-    createPopup = createPopup or true
-    if fs.exists(path) == false then return false end
-    if fs.isReadOnly(path) == true then 
-        mos.createPopup("Warning", "Folder is read only!")
-        return false 
-    end
-    return true
-end
 
 local function removeSelectedFiles()
     if #selectedFiles == 0 then return end
@@ -712,16 +776,16 @@ function fileDropdown:optionPressed(i)
     local text = fileDropdown:getOptionText(i)
     if text == "New File" then
         createEditFile("", function (o)
-            --[[
             if fs.isReadOnly(currentPath .. o.text) then 
-                mos.createPopup("Warning", "Folder is read only!")
+                popupError("Dir is read-only")
                 return false
             end
-            if fs.exists(currentPath .. o.text) then                 
-                mos.createPopup("Warning", "File already exists!")
+
+            if fs.exists(currentPath .. o.text) == true then
+                popupError("File exists" .. currentPath .. o.text)
                 return false
             end
-            ]]--
+
             local ok = pPopupError(fs.open, currentPath .. o.text, "w")
             if ok then
                 startSelectedFiles = {o.text}
@@ -730,16 +794,16 @@ function fileDropdown:optionPressed(i)
         end, nil, true)
     elseif text == "New Dir" then
         createEditFile("", function (o)
-            --[[
             if fs.isReadOnly(currentPath .. o.text) then 
-                mos.createPopup("Warning", "Folder is read only!")
+                popupError("Dir is read-only")
                 return false
             end
-            if fs.exists(currentPath .. o.text) then                 
-                mos.createPopup("Warning", "Dir already exists!")
+
+            if fs.exists(currentPath .. o.text) then
+                popupError("Dir exists")
                 return false
             end
-            ]]--
+
             local ok = pPopupError(fs.makeDir, currentPath .. o.text)
             if ok then
                 startSelectedFiles = {o.text}
@@ -759,15 +823,15 @@ function fileDropdown:optionPressed(i)
         if fs.isDir(currentPath .. selection.text) then return end
         mos.launchProgram("Write Args", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function (...)
             if selection == nil then return end
-            if isPathValid(currentPath .. selection.text) == false then return end
-            callbackFunction(currentPath .. selection.text, getTitle(self), false, ...)
+            if fs.exists(currentPath .. selection.text) == false then return end
+            callbackFunction(getTitle(self), currentPath .. selection.text, false, ...)
         end)
         return
     elseif text == "Edit" then
         if selection == nil then return end
         local isDir = fs.isDir(currentPath .. selection.text)
         if isDir == false then
-            callbackFunction(currentPath .. selection.text, getTitle(self), true)
+            callbackFunction(getTitle(self), currentPath .. selection.text, true)
             return
         end
     elseif text == "Close" then

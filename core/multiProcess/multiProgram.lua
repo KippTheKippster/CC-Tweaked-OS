@@ -25,6 +25,7 @@ local function launchProcess(parentTerm, process, resume, x, y, w, h, ...)
     p.resume = resume or function (data)
         return resumeProcess(p, data)
     end
+    p.dead = false
     table.insert(tProcesses, p)
     return p
 end
@@ -53,7 +54,7 @@ local function launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w,
         --os.run(env, programPath, ...)
     end, resume, x, y, w, h, ...)
 
-    coroutine.resume(p.co, "")
+    coroutine.resume(p.co, "start")
     coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
     coroutine.resume(p.co, "key", keys.enter)
 
@@ -62,9 +63,9 @@ end
 
 local function endProcess(p)
     --coroutine.close(p.co)
-    
     --local i = utils.find(tProcesses, p.co)
     --table.remove(tProcesses, i)
+    p.dead = true
     table.insert(endQueue, p)
 end
 
@@ -77,31 +78,36 @@ end
 local function start()
     term.clear()
     running = true
+    local parentTerm = term.current()
     while running and #tProcesses > 0 do
         local data = table.pack(os.pullEventRaw())
-        for k, v in ipairs(tProcesses) do
+        local n = #tProcesses
+        for i = 1, n do
+            local p = tProcesses[i]
             --if coroutine.status(v.co) ~= "dead" then
-            local ok, err = v.resume(data)
-            if ok == false then
-                term.setCursorPos(1, 1)
-                term.setBackgroundColor(colors.black)
-                term.setTextColor(colors.red)
-                printError("MP: ", err)
-                endProcess(v)
-                exit()
-                return err
+            if p.dead == false then
+                local ok, err = p.resume(data)
+                if ok == false then
+                    term.redirect(parentTerm)
+                    term.setCursorPos(1, 1)
+                    term.setBackgroundColor(colors.black)
+                    term.setTextColor(colors.red)
+                    printError("MP: ", err)
+                    endProcess(p)
+                    --exit()
+                    --return err
+                end
             end
-            --end 
         end
 
         for _, p in ipairs(endQueue) do
             local i = utils.find(tProcesses, p)
             if i == nil then
-                error("Trying to remove non existent process!")
+                error("Trying to remove non existent process!", 2)
             end
             p.window.setVisible(false)
             debug.sethook(p.co, function() error("killed") end, "l")
-            p.resume({"kill"})
+            resumeProcess(p, {"kill"})
             table.remove(tProcesses, i)
         end
 

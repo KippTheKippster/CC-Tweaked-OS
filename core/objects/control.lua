@@ -1,5 +1,6 @@
 return function(object, engine, style)
 local control = object:new{}
+control.type = "Control"
 
 control._globalX = 0
 control._globalY = 0
@@ -33,6 +34,7 @@ control.marginR = 0
 control.anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3 }
 
 control._anchorW = control.anchor.LEFT
+control._anchorH = control.anchor.UP
 
 control.visibilityChangedSignal = control:createSignal()
 control.focusChangedSignal = control:createSignal()
@@ -170,14 +172,18 @@ function control:_expandChildren()
     for i = 1, #self.children do
         local c = self.children[i]
         if c.expandH then
-            c.h = self.h
+            c.h = self.h - c.y
         end
         if c.expandW then
-            c.w = self.w - self.marginR
+            c.w = self.w - self.marginR - c.x
         end
         if c.anchorW == control.anchor.RIGHT then
             c.x = self.w - c.w
             --local a = e.e
+        end
+
+        if c.anchorH == control.anchor.DOWN then
+            c.y = self.h - c.h
         end
     end
 end
@@ -284,6 +290,17 @@ control:defineProperty('anchorW', {
     end
 })
 
+control:defineProperty('anchorH', {
+    get = function(o) return o._anchorH end,
+    set = function(o, value) 
+        local same = o._anchorH == value
+        o._anchorH = value
+        if same == false then
+            o.parent:_expandChildren()
+        end
+    end
+})
+
 --[[
 control:defineProperty('marginR', {
     get = function(o) return o._marginR end,
@@ -317,24 +334,33 @@ function control:add()
 end
 
 function control:remove()
+    --[[
     --for i = 1, #self.children do
     --    self.children[i]:remove()
     --end
 
-    for i = 1, #self.parent.children do
-	    if self.parent.children[i] == self then
-            table.remove(self.parent.children, i)
-		end
-	end
-
+    if self.parent then
+        for i = 1, #self.parent.children do
+            if self.parent.children[i] == self then
+                table.remove(self.parent.children, i)
+            end
+	    end
+    end
+    
     if engine.input.getCursorControl() == self then
         self:releaseCursorControl()
     end
 
-    self.parent:childrenChanged()
-    self:redraw()
+    --self.parent:childrenChanged()
+    --self:redraw()
     --self = {}
-    --object.remove(self)
+    object.remove(self)
+    ]]--
+    self:queueFree()
+end
+
+function control:queueFree()
+    table.insert(engine.freeQueue, self)
 end
 
 function control:redraw()
@@ -516,7 +542,7 @@ function control:syncChildrenFunction(key)
     end
 end
 
-function control:drag(x, y)
+function control:drag(x, y, button)
     if not self.draggable then return end
     self.x = self.x + x
     self.y = self.y + y
@@ -574,8 +600,8 @@ end
 function control:ready() end
 function control:treeEntered() end
 function control:childrenChanged() end
-function control:click() end
-function control:pressed() end
+function control:click(button, x, y) end
+function control:pressed(button, x, y) end
 function control:doublePressed() end
 function control:up() end
 function control:scroll(dir) end
