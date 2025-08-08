@@ -1,5 +1,5 @@
 {
-  backgroundIcon = "parallel.lua",
+  backgroundIcon = "os/textures/backgrounds/tux.nfp",
   favorites = {
     [ "freeTest.lua" ] = {
       name = "freeTest.lua",

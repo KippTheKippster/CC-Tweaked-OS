@@ -38,7 +38,7 @@ end
 
 function icon:render()
     if self.texture == nil then return end
-	paintutils.drawImage(self.texture, self.globalX + 1, self.globalY + 1)
+	paintutils.drawImage(self.texture, self.globalX + 1 + self.offsetX, self.globalY + 1 + self.offsetY)
 end
 
 function icon:getTextureSize()
@@ -62,7 +62,9 @@ function icon:centerPosition()
 end
 
 function icon:transformChanged()
-    self:centerPosition()
+    if self.centered  == true then
+        self:centerPosition()
+    end
 end
 
 return icon
