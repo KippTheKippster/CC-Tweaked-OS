@@ -1,5 +1,4 @@
 local engine = require(".core.engine")
-engine.A = 2
 local utils = require(".core.utils")
 local currentPath = ""
 local paths = {}
@@ -10,7 +9,7 @@ local startPath = args[2]
 local saveMode = args[3]
 local mos = __mos
 local fileExplorer = {}
-local selectedFiles = {}
+local selectedFileButtons = {}
 local copiedFiles = {}
 
 local function popupError(err)
@@ -43,9 +42,6 @@ end
 
 local filter = ""
 
---local main = engine.root:addControl()
---main.expandW = true
---main.expandH = true
 local inputReader = {}
 
 local diskNames = {
@@ -58,19 +54,10 @@ local diskNames = {
 }
 
 
---engine.input.addScrollListener(inputReader)
 engine.input.addResizeEventListener(inputReader)
 engine.input.addCharListener(inputReader)
 engine.input.addKeyListener(inputReader)
 engine.input.addRawEventListener(inputReader)
-
---background
---[[
-local background = engine.root:addControl()
-background.text = ""
-background.expandW = true
-background.expandH = true
-]]--
 
 --tools
 local toolsStyle = engine:newStyle() 
@@ -122,7 +109,6 @@ if saveMode == true then
     saveContainer.h = 1
     saveContainer.expandW = true
     saveContainer.anchorH = saveContainer.anchor.DOWN
-    --saveContainer.rendering = true
 
     saveContainer.label = saveContainer:addControl()
     saveContainer.label.h = 1
@@ -176,11 +162,8 @@ local selectedStyle = engine:newStyle()
 selectedStyle.backgroundColor = colors.gray
 selectedStyle.textColor = colors.white
 
-local button = engine.getObject("button")
-
-local fileButton = button:new{}
+local fileButton = engine.getObject("button"):new{}
 fileButton.h = 1
---fileButton.w = 52
 fileButton.w = 1
 fileButton.expandW = true
 fileButton.selected = false
@@ -189,29 +172,24 @@ fileButton.clickedStyle = clickedStyle
 fileButton.selectedStyle = selectedStyle
 
 local selection = nil
-local startSelectionFile = ""
 local startSelectedFiles = {}
 
 function fileButton:click()
-    button.click(self)
+    engine.getObject("button").click(self)
     if engine.input.isKey(keys.leftCtrl) == false then
-        for k, v in ipairs(selectedFiles) do
+        for k, v in ipairs(selectedFileButtons) do
             v.style = v.normalStyle
             v.selected = false
-            --selectedFiles[k] = nil
         end
 
-        selectedFiles = {}
+        selectedFileButtons = {}
     end
 
     if self.selected == false then
-        table.insert(selectedFiles, self)
+        table.insert(selectedFileButtons, self)
         self.selected = true
     end
-    --if selection ~= nil and selection ~= self then
-    --    selection.style = selection.normalStyle
-    --    selection = nil
-    --end
+
     selection = self
 end
 
@@ -246,30 +224,17 @@ local function scrollToTop()
 end
 
 local function scrollToControl(control, center)
-    --local w, h = term.getSize()
     local h = engine.root.h
     local offset = 0
     if center == true then
         offset = h / 2
     end
 
-    --error(control.globalY .. " : " .. tostring(vContainer.globalY) .. " : " .. tostring(h))
-
     if control.globalY <= 0 then
-        --error(control.globalY .. " : " .. tostring(vContainer.globalY) .. " : " .. tostring(h))
-
         vContainer.globalY = vContainer.globalY - control.globalY + marginU - offset--h - control.globalY--  - offset
     elseif control.globalY >= h then
         vContainer.globalY = -control.globalY + h - offset - marginD
     end
-end
-
-local function isControlOnScreen(c)
-    local w, h = term.getSize()
-    if c.globalY <= 0 or c.globalY >= h then
-        return false
-    end
-    return true
 end
 
 fileExplorer.addHeart = function (o, file)
@@ -308,8 +273,9 @@ fileExplorer.removeFavorite = function (o, file)
 end
 
 local function openFolder(path)
+    currentPath = path
     selection = nil
-    selectedFiles = {}
+    selectedFileButtons = {}
 
     if fs.exists(path) == false then
         currentPath = ""
@@ -320,84 +286,73 @@ local function openFolder(path)
     vContainer.y = 1
     tools.text = "  /" .. path
     for i = 1, #vContainer.children do
-        --vContainer:removeChild(vContainer.children[1])
         vContainer.children[i]:queueFree()
     end
-    --for i = 1, #vContainer.children do
-    --    vContainer.children[1]:remove()
-    --end
+
     vContainer.children = {}
 
     local names = fs.list(path, "r")
     local files = {}
     local dirs = {}
-    for i = 1, #names do
-        if filter == "" or names[i]:find(filter) ~= nil then
-            --local drive = fs.getDrive(path .. names[i])
-            --if utils.find(driveNames, drive) ~= nil then
-            --    local diskName = disk.getLabel(drive) or disk.getMountPath(drive)
-            --    table.insert(dirs, "[" .. diskName .. "]")
-            if fs.isDir(path .. names[i]) then
-                table.insert(dirs, names[i])
+    local selectedButtons = {}
+    for i, name in ipairs(names) do
+        if filter == "" or name:find(filter) ~= nil then
+            if fs.isDir(fs.combine(path, name)) then
+                table.insert(dirs, name)
             else
-                table.insert(files, names[i])
+                table.insert(files, name)
+            end
+
+            if utils.find(startSelectedFiles, name) ~= nil then
+                selectedButtons[name] = true
             end
         end
     end
 
-    local w, h = term.getSize()
+    for i, name in ipairs(dirs) do
+        local button = dirButton:new{}
+        button.text = name
+        vContainer:addChild(button)
+        button.style = dirStyle
 
-    for i = 1, #dirs do
-        local b = dirButton:new{}
-        b.text = dirs[i]
-        vContainer:addChild(b)
-        b.style = dirStyle
-
-        if utils.find(startSelectedFiles, dirs[i]) ~= nil then--b.text == startSelectionFile then
-            b:click()
-            b:up()
-            scrollToControl(b, true)
+        if selectedButtons[name] == true then
+            button:click()
+            button:up()
         end
     end
 
-    for i = 1, #files do
-        local b = fileButton:new{}
-        b.text = files[i]
-        vContainer:addChild(b)
-        b.style = style
+    for i, name in ipairs(files) do
+        local button = fileButton:new{}
+        button.text = name
+        vContainer:addChild(button)
+        button.style = style
 
-        if mos.isFileFavorite(path .. files[i]) then
-            fileExplorer.addHeart(b, path .. files[i])
+        local file = fs.combine(path, name)
+        if mos.isFileFavorite(file) then
+            fileExplorer.addHeart(button, file)
         end
 
-        if utils.find(startSelectedFiles, files[i]) ~= nil then-- b.text == startSelectionFile then
-            b:click()
-            b:up()
-            scrollToControl(b, true)
+        if selectedButtons[name] == true then
+            button:click()
+            button:up()
         end
+    end
+
+    if #startSelectedFiles > 0 then -- TODO FIXME1
+        --local last = startSelectedFiles[#startSelectedFiles - 1]
+        --scrollToControl(last)
     end
 
     inputReader:scroll(0)
-    startSelectionFile = ""
     startSelectedFiles = {}
 end
 
-local function openCurrentFolder()
-    currentPath = ""
-    for i = 1, #paths do
-        currentPath = currentPath .. paths[i] .. "/"
-    end
+local function refreshFiles()
     openFolder(currentPath)
 end
 
 function backButton:pressed()
-    if (#paths <= 0) then 
-        filter = ""
-        openCurrentFolder()
-    else
-        table.remove(paths, #paths)
-        openCurrentFolder()
-    end
+    openFolder(fs.getDir(currentPath))
 end
 
 local searchEdit = tools:addLineEdit()
@@ -430,7 +385,7 @@ function searchEdit:trueTextChanged()
         self:releaseFocus()
     end
     filter = self.text
-    openCurrentFolder()
+    refreshFiles()
 end
 
 function inputReader:scroll(dir)
@@ -488,9 +443,8 @@ local function createEditFile(startText, fn, parent, scroll)
         currentLineEdit:remove()
         currentLineEdit = nil
         if ok then
-            startSelectionFile = o.text
             startSelectedFiles = { o.text }
-            openCurrentFolder()
+            refreshFiles()
         end
     end
     return edit
@@ -575,7 +529,7 @@ local function createDiskDropdown(name)
                 fs.copy(path, dest)
             end
 
-            openCurrentFolder()
+            refreshFiles()
         elseif text == "Eject" then
             ejectDisk(name)
         end
@@ -621,14 +575,10 @@ function inputReader:rawEvent(data)
     local event = data[1]
     if event == "disk" then
         scanDisks()
-        --addDisk(data[2])
-        --openCurrentFolder()
     elseif event == "disk_eject" then
         clearDisks()
-        --removeDisk(data[2])
-        --openCurrentFolder()
     elseif event == "mos_favorite_remove" then
-        openCurrentFolder()
+        refreshFiles()
     elseif event == "paste" then
         fileExplorer.pasteCopiedFiles()
     end
@@ -660,7 +610,11 @@ local function traverse(dir)
 end
 
 local function getPath(c)
-    return currentPath .. c.text
+    if c == nil or c:isValid() == false then -- NOTE Somewhere selection is freed but not set to nil
+        return ""
+    else
+        return fs.combine(currentPath, c.text)
+    end
 end
 
 
@@ -679,14 +633,10 @@ end
 
 function dirButton:doublePressed()
     filter = ""
-    table.insert(paths, self.text)
-    openCurrentFolder()
+    openFolder(fs.combine(currentPath, self.text))
 end
 
 if type(startPath) == "string" then
-    --local e = e.e
-    --currentPath = startPath
-    currentPath = startPath
     openFolder(startPath)
 else
     openFolder("")
@@ -710,31 +660,28 @@ end
 mos.bindTool(__window, windowFocusChanged)
 
 local function removeSelectedFiles()
-    if #selectedFiles == 0 then return end
-    for k, v in ipairs(selectedFiles) do
-        local file = currentPath .. v.text
+    if #selectedFileButtons == 0 then return end
+    for k, v in ipairs(selectedFileButtons) do
+        local file = getPath(v)
         local ok = pPopupError(fs.delete, file)
         if ok then
             v:remove()
         end
     end
-
+    selectedFileButtons = {}
+    selection = nil
 end
 
 local function renameCurrentSelection()
     if selection == nil then return end
     local target = selection
     local name = target.text
-    local edit = createEditFile(name, function (o)
-        local file = currentPath .. name
-        local dest = currentPath .. o.text
+    createEditFile(name, function (o)
+        local file = fs.combine(currentPath, name)
+        local dest = fs.combine(currentPath, o.text)
         local ok = pPopupError(fs.move, file, dest)
         if ok == false then return end
-        --if name == o.text then return false end
-        --if isPathValid(file) == false then return false end
-        --fs.move(file, dest)
         target.text = o.text
-        --startSelectionFile = edit.text
         target:click()
         target:up()
         if mos.isFileFavorite(file) then
@@ -749,23 +696,20 @@ end
 
 fileExplorer.copySelectedFiles = function()
     copiedFiles = {}
-    for k, v in ipairs(selectedFiles) do
-        table.insert(copiedFiles, currentPath .. v.text)
+    for _, v in ipairs(selectedFileButtons) do
+        table.insert(copiedFiles, getPath(v))
     end
 end
 
 fileExplorer.pasteCopiedFiles = function()
-    for k, file in ipairs(copiedFiles) do
-        local dest = currentPath .. fs.getName(file)
-        --if fs.exists(file) == false then goto continue end
-        --if isPathValid(dest) == false then goto continue end -- FIXME add checking
-        --if fs.exists(dest) == true then goto continue end
+    for _, file in ipairs(copiedFiles) do
+        local dest = fs.combine(currentPath, fs.getName(file))
         local ok, err = pcall(fs.copy, file, dest)
         if ok then
             table.insert(startSelectedFiles, fs.getName(file))
         end
     end
-    openCurrentFolder()
+    refreshFiles()
 end
 
 function fileDropdown:optionPressed(i)
@@ -774,71 +718,72 @@ function fileDropdown:optionPressed(i)
     end
 
     local text = fileDropdown:getOptionText(i)
+    local selectedPath = getPath(selection)
+    __Global.log(selectedPath)
     if text == "New File" then
         createEditFile("", function (o)
-            if fs.isReadOnly(currentPath .. o.text) then 
+            local file = getPath(o)
+            if fs.isReadOnly(file) then 
                 popupError("Dir is read-only")
                 return false
             end
 
-            if fs.exists(currentPath .. o.text) == true then
-                popupError("File exists" .. currentPath .. o.text)
+            if fs.exists(file) == true then
+                popupError("File exists" .. file)
                 return false
             end
 
-            local ok = pPopupError(fs.open, currentPath .. o.text, "w")
+            local ok = pPopupError(fs.open, file, "w")
             if ok then
                 startSelectedFiles = {o.text}
             end
             return true
         end, nil, true)
+        __window:grabFocus()
     elseif text == "New Dir" then
         createEditFile("", function (o)
-            if fs.isReadOnly(currentPath .. o.text) then 
+            local file = getPath(o)
+            if fs.isReadOnly(file) then
                 popupError("Dir is read-only")
                 return false
             end
 
-            if fs.exists(currentPath .. o.text) then
+            if fs.exists(file) then
                 popupError("Dir exists")
                 return false
             end
 
-            local ok = pPopupError(fs.makeDir, currentPath .. o.text)
+            local ok = pPopupError(fs.makeDir, file)
             if ok then
                 startSelectedFiles = {o.text}
             end
-            --startSelectionFile = o.text
             return true
         end, nil, true)
+        __window:grabFocus()
     elseif text == "Open" then
         if selection == nil then return end
-        local isDir = fs.isDir(currentPath .. selection.text)
+        local isDir = fs.isDir(selectedPath)
         selection:doublePressed()
-        if isDir == false then
-            return
+        if isDir == true then
+            __window:grabFocus()
         end
     elseif text == "Open w/ args" then
         if selection == nil then return end
-        if fs.isDir(currentPath .. selection.text) then return end
+        if fs.isDir(selectedPath) then return end
         mos.launchProgram("Write Args", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function (...)
             if selection == nil then return end
-            if fs.exists(currentPath .. selection.text) == false then return end
-            callbackFunction(getTitle(self), currentPath .. selection.text, false, ...)
+            if fs.exists(selectedPath) == false then return end
+            callbackFunction(getTitle(self), selectedPath, false, ...)
         end)
-        return
     elseif text == "Edit" then
         if selection == nil then return end
-        local isDir = fs.isDir(currentPath .. selection.text)
+        local isDir = fs.isDir(selectedPath)
         if isDir == false then
-            callbackFunction(getTitle(self), currentPath .. selection.text, true)
-            return
+            callbackFunction(getTitle(self), selectedPath, true)
         end
     elseif text == "Close" then
         __window:close()
     end
-
-    __window:grabFocus()
 end
 
 function editDropdown:optionPressed(i)
@@ -847,20 +792,22 @@ function editDropdown:optionPressed(i)
     end
 
     local text = editDropdown:getOptionText(i)
+    local selectedPath = getPath(selection)
+
     if text == "Copy" then
         fileExplorer.copySelectedFiles()
     elseif text == "Paste" then
         fileExplorer.pasteCopiedFiles()
     elseif text == "Favorite" then
         if selection == nil then return end
-        if fs.isDir(currentPath .. selection.text) then return end
-        if mos.isFileFavorite(currentPath .. selection.text) then
-            for k, v in ipairs(selectedFiles) do
-                fileExplorer.removeFavorite(v, currentPath .. v.text)
+        if fs.isDir(selectedPath) then return end
+        if mos.isFileFavorite(selectedPath) then
+            for k, v in ipairs(selectedFileButtons) do
+                fileExplorer.removeFavorite(v, getPath(v))
             end
         else
-            for k, v in ipairs(selectedFiles) do
-                fileExplorer.addFavorite(v, currentPath .. v.text)
+            for k, v in ipairs(selectedFileButtons) do
+                fileExplorer.addFavorite(v, getPath(v))
             end
         end
     elseif text == "Delete" then
