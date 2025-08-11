@@ -12,12 +12,8 @@ engine.utils = utils
 
 engine.freeQueue = {}
 
-local style = object:new{}
-style.backgroundColor = colors.lightGray
-style.borderColor = colors.gray
-style.textColor = colors.black
-style.border = false
-
+local style = require(path .. "styles.style")(object)
+local clickedStyle = require(path .. "styles.style")(style)
 
 --Objects
 local objectList = {}
@@ -30,10 +26,6 @@ local function requireObject(name, ...)
 end
 
 local control = requireObject("control", object, engine, style) -- Should it only be engine as argument?
-
-local clickedStyle = style:new{}
-clickedStyle.backgroundColor = colors.white
-clickedStyle.textColor = colors.orange
 
 local button = requireObject("button", control, style, clickedStyle)
 local dropdown = requireObject("dropdown", button, input, utils)
@@ -91,10 +83,6 @@ if __Global == nil then
         __Global.logFile.write(line)
         __Global.logFile.flush()
     end
-
-    __Global.log = function ()
-        
-    end
 end
 
 local root = control:new{}
@@ -111,13 +99,13 @@ engine.background = true
 engine.backgroundColor = colors.black
 engine.root = root
 
-local function onResizeEvent()
+local function onResizeEvent ()
     local w, h = parentTerm.getSize()
     screenBuffer.reposition(1, 1, w, h)
     engine.root.w, engine.root.h = w, h
 end
 
-local function drawTree(o)
+local function drawTree (o)
     if o.visible == false then return end
     o:draw()
     local c = o.children
@@ -126,7 +114,7 @@ local function drawTree(o)
     end
 end
 
-local function redrawScreen()
+local function redrawScreen ()
     term.redirect(screenBuffer)
     screenBuffer.setVisible(false)
 
@@ -149,7 +137,7 @@ local function redrawScreen()
 end
 
 engine.drawCount = 0
-engine.start = function()
+engine.start = function ()
     if engine.running then return end
     engine.running = true
     engine.input.addResizeEventListener(onResizeEvent)
@@ -232,33 +220,10 @@ engine.start = function()
         end
     end
 
-    --[[
-    parallel.waitForAny(
-        function ()
-            while engine.running do
-                freeQueue()
-                if engine.queueRedraw == true then
-                    engine.drawCount = engine.drawCount + 1
-                    redrawScreen()
-                    engine.queueRedraw = false
-                end
-
-                sleep(0.05)
-            end
-        end,
-        function ()
-            while engine.running do
-                freeQueue()
-                input.processInput()
-            end
-        end
-    )
-    ]]--
-
     engine.stop()
 end
 
-engine.stop = function()
+engine.stop = function ()
     engine.running = false
 
     if globalRoot then
@@ -266,24 +231,28 @@ engine.stop = function()
     end
 end
 
-engine.getObjects = function()
+engine.getObjects = function ()
 	return objectList
 end
 
-engine.getObject = function(name)
+engine.getObject = function (name)
 	return objectList[name]
 end
 
-engine.newStyle = function()
+engine.newStyle = function ()
     return style:new{}
 end
 
-engine.getDefaultStyle = function()
+engine.getDefaultStyle = function ()
     return style
 end
 
-engine.getDefaultClickedStyle = function()
+engine.getDefaultClickedStyle = function ()
     return clickedStyle
+end
+
+engine.getFocus = function ()
+    return input.getFocus()
 end
 
 return engine
