@@ -41,7 +41,7 @@ Oddities:
     Scroll up in fileexplorer
     Open w/ args can crash
     table.insert in addChild leads to stack overflow
-    Positions with decimal values sometimes ignore clicks 
+    #Positions with decimal values sometimes ignore clicks 
     #If a program is opened in edit mode by fileExplorer and then executed it leads to the native term being used 
     #When focus is grabbed after a window is closed the os freezes (see fileExplorer close)
     #Input gets empty data from pullEvent (I think when event is timer)

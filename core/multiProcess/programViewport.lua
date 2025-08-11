@@ -123,7 +123,9 @@ return function(control, multiProgram, input)
         if ok == false then
             term.redirect(self.program.window)
             term.setCursorPos(1, 1)
-            printError("Viewport Result: ", err)
+            term.setTextColor(colors.red)
+            term.setBackgroundColor(colors.black)
+            print("Viewport Result: ", err)
             __Global.log("Viewport Error: ", err)
             term.redirect(self.parentTerm)
             return true

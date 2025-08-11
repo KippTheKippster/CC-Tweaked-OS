@@ -16,7 +16,6 @@ control._text = "Control"
 control._style = style
 control.inheritStyle = true
 control.centerText = false
-control.background = true
 control.focus = false
 control.propogateFocusUp = false
 control.propogateInputUp = true
@@ -427,9 +426,9 @@ end
 
 
 function control:drawPanel(left, up, right, down)
-    if self.background == true then
+    if self._style.background == true or self._style.background == nil then
         paintutils.drawFilledBox(
-            left, 
+            left,
             up,
             right,
             down,
