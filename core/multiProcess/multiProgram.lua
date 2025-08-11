@@ -77,14 +77,14 @@ mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w,
     end
 
     local p = mp.launchProcess(parentTerm, function(p, ...)
-        createMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
+        --createMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
         --os.run(env, programPath, ...)
-        --mp.runProgram(env, programPath, ...)
+        mp.runProgram(env, programPath, ...)
     end, resume, x, y, w, h, ...)
 
     coroutine.resume(p.co, "start")
-    coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
-    coroutine.resume(p.co, "key", keys.enter)
+    ----coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
+    --coroutine.resume(p.co, "key", keys.enter)
 
     return p
 end

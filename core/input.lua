@@ -136,7 +136,7 @@ function mouse.click(button, x, y)
     if mouse.current ~= c then -- If user clicks on a new control (or nothing)
         mouse.clickTime = os.clock()
         if mouse.current ~= nil then
-            mouse.current:up()
+            --mouse.current:up()
         end
         mouse.changeFocus(c)
     elseif c ~= nil then -- If user clicks on the same control
