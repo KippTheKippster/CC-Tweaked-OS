@@ -2,17 +2,18 @@
 
 local utils = require(".core.utils")
 
+local mp = {}
 local tProcesses = {}
 local endQueue = {}
 
-local function resumeProcess(p, data)
+mp.resumeProcess = function (p, data)
     term.redirect(p.window)
     local status = table.pack(coroutine.resume(p.co, table.unpack(data)))
     term.redirect(p.parentTerm)
     return table.unpack(status)
 end
 
-local function launchProcess(parentTerm, process, resume, x, y, w, h, ...)
+mp.launchProcess = function (parentTerm, process, resume, x, y, w, h, ...)
     local p = {}
     local args = table.pack(...)
     p.window = window.create(parentTerm, x, y, w, h, true)
@@ -23,24 +24,50 @@ local function launchProcess(parentTerm, process, resume, x, y, w, h, ...)
         term.redirect(parentTerm)
     end)
     p.resume = resume or function (data)
-        return resumeProcess(p, data)
+        return mp.resumeProcess(p, data)
     end
     p.dead = false
     table.insert(tProcesses, p)
     return p
 end
 
-local function createMultishellWrapper(env, ...)
+mp.runProgram = function (env, programPath, ...)
+    setmetatable(env, { __index = _G })
+
+    if settings.get("bios.strict_globals", false) then
+        -- load will attempt to set _ENV on this environment, which
+        -- throws an error with this protection enabled. Thus we set it here first.
+        env._ENV = env
+        getmetatable(env).__newindex = function(_, name)
+          error("Attempt to create global " .. tostring(name), 2)
+        end
+    end
+
+    local fnFile, ok, err = nil, false, nil
+    fnFile, err = loadfile(programPath, nil, env)
+    if fnFile then
+        ok, err = fnFile(...)--pcall(fnFile, ...)
+    end
+
+    return ok, err
+end
+
+local function createMultishellWrapper(p, env, ...)
     local args = table.pack(...)
     _G.__wrapper = {
         env = env,
-        args = args
+        args = args,
+        mp = mp,
     }
 
-    shell.run("rom/programs/advanced/multishell.lua")
+    mp.runProgram(env, "rom/programs/advanced/multishell.lua")
+    --runProgram(env, table.unpack(args))
+    --shell.run("rom/programs/advanced/multishell.lua")
 end
 
-local function launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
+
+
+mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
     local env = { shell = shell, multishell = multishell }
     env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
 
@@ -49,9 +76,10 @@ local function launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w,
         env[k] = v
     end
 
-    local p = launchProcess(parentTerm, function(p, ...)
-        createMultishellWrapper(env, programPath, ...)
+    local p = mp.launchProcess(parentTerm, function(p, ...)
+        createMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
         --os.run(env, programPath, ...)
+        --mp.runProgram(env, programPath, ...)
     end, resume, x, y, w, h, ...)
 
     coroutine.resume(p.co, "start")
@@ -61,7 +89,7 @@ local function launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w,
     return p
 end
 
-local function endProcess(p)
+mp.endProcess = function (p)
     --coroutine.close(p.co)
     --local i = utils.find(tProcesses, p.co)
     --table.remove(tProcesses, i)
@@ -69,13 +97,19 @@ local function endProcess(p)
     table.insert(endQueue, p)
 end
 
+mp.forceError = function (p, err)
+    --term.redirect(p.window)
+    debug.sethook(p.co, function() error(err) end, "l")
+    mp.resumeProcess(p, {"force_error"})
+end
+
 local running = true
 
-local function exit()
+mp.exit = function ()
     running = false
 end
 
-local function start()
+mp.start = function ()
     term.clear()
     running = true
     local parentTerm = term.current()
@@ -88,14 +122,17 @@ local function start()
             if p.dead == false then
                 local ok, err = p.resume(data)
                 if ok == false then
+                    if __Global and type(__Global.log) == "function" then
+                        __Global.log("MP Error", err)                    
+                    end
                     term.redirect(parentTerm)
                     term.setCursorPos(1, 1)
                     term.setBackgroundColor(colors.black)
                     term.setTextColor(colors.red)
                     printError("MP: ", err)
-                    endProcess(p)
-                    --exit()
-                    --return err
+                    mp.endProcess(p)
+                    mp.exit()
+                    return err
                 end
             end
         end
@@ -107,7 +144,7 @@ local function start()
             end
             p.window.setVisible(false)
             debug.sethook(p.co, function() error("killed") end, "l")
-            resumeProcess(p, {"kill"})
+            mp.resumeProcess(p, {"kill"})
             table.remove(tProcesses, i)
         end
 
@@ -116,11 +153,4 @@ local function start()
     return nil
 end
 
-return {
-    launchProgram = launchProgram,
-    launchProcess = launchProcess,
-    resumeProcess = resumeProcess,
-    endProcess = endProcess,
-    start = start,
-    exit = exit
-}
+return mp

@@ -78,7 +78,8 @@ local globalRoot = false
 if __Global == nil then
     globalRoot = true
     __Global = {}
-    __Global.logFile = fs.open("core/logs/" .. tostring(os.epoch("utc")) .. ".log", "w")
+    __Global.nextID = 0
+    __Global.logFile = fs.open(".logs/" .. tostring(os.epoch("utc")) .. ".log", "w")
     __Global.log = function (...)
         local line = ""
         local data = table.pack(...)
@@ -89,6 +90,10 @@ if __Global == nil then
 
         __Global.logFile.write(line)
         __Global.logFile.flush()
+    end
+
+    __Global.log = function ()
+        
     end
 end
 
@@ -176,11 +181,13 @@ engine.start = function()
         redrawScreen()
     end
     ]]--
-  
+
     local exception = dofile("rom/modules/main/cc/internal/tiny_require.lua")("cc.internal.exception")
     local barrier_ctx = { co = coroutine.running() }
 
     local drawTimerID = 0
+    local id = __Global.nextID
+    __Global.nextID = __Global.nextID + 1
 
     local fnDraw = function ()
         while engine.running do
@@ -198,7 +205,6 @@ engine.start = function()
     local fnInput = function ()
         while engine.running do
             input.processInput()
-            --os.queueEvent("engine_redraw")
         end
     end
 
@@ -209,10 +215,20 @@ engine.start = function()
     while engine.running do
         freeQueue()
         local data = table.pack(os.pullEventRaw())
+        local ok, err = false, nil
         if data[1] == "timer" and data[2] == drawTimerID then
-            coroutine.resume(coDraw, table.unpack(data))
+            ok, err = coroutine.resume(coDraw, table.unpack(data))
         else
-            coroutine.resume(coInput, table.unpack(data))
+            ok, err = coroutine.resume(coInput, table.unpack(data))
+        end
+
+        if ok == false then
+            local current = term.current()
+            term.redirect(engine.screenBuffer)
+            term.setCursorPos(1, 1)
+            engine.stop()
+            term.redirect(current)
+            error("Engine: " .. tostring(err), 0)
         end
     end
 
@@ -241,16 +257,7 @@ engine.start = function()
 
     engine.stop()
 end
-            --[[
-            while engine.running do
-                if engine.queueRedraw == true then
-                    engine.drawCount = engine.drawCount + 1
-                    redrawScreen()
-                    engine.queueRedraw = false
-                end
-                os.sleep(0.05)
-            end
-            ]]--
+
 engine.stop = function()
     engine.running = false
 
