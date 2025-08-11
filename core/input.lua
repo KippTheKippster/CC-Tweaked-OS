@@ -21,11 +21,11 @@ end
 
 local function isControlInArea(c, x, y)
     return collision.inArea(
-        x, y, c.globalX + 1, c.globalY + 1, c.w - 1, c.h - 1
+        x, y, math.floor(c.globalX) + 1, math.floor(c.globalY) + 1, math.floor(c.w) - 1, math.floor(c.h) - 1
         )
 end
 
-local function controlInArea(c, x, y) 
+local function controlInArea(c, x, y)
     if isControlInArea(c, x, y)
         and c.mouseIgnore == false
         and c.visible == true
