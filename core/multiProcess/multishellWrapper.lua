@@ -4,6 +4,8 @@ env.multishell = multishell
 
 local args = __wrapper.args
 
+local mp = __wrapper.mp
+
 __wrapper = nil
 
 local n = multishell.getFocus()
@@ -37,6 +39,10 @@ end
 term.clear()
 term.setCursorPos(1, 1)
 
-os.run(env, table.unpack(args))
-
 shell.exit()
+
+local ok, err = pcall(mp.runProgram, env, table.unpack(args))
+
+if ok == false then
+    error(err, 3)
+end

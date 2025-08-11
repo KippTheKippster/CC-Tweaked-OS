@@ -65,13 +65,14 @@ return function(control, multiProgram, input)
 
     function programViewport:unhandledEvent(data)
         if self.program == nil then return end
-        if self.skipEvent == true then
-            self.skipEvent = false
-            return true
-        end
 
         local event = data[1]
         local result = nil
+
+        if self.skipEvent == true and event ~= "timer" then -- TODO add a more robust way of skipping input
+            self.skipEvent = false
+            return true
+        end
 
         if self.terminated == true then
             term.setTextColor(colors.white)
@@ -88,7 +89,6 @@ return function(control, multiProgram, input)
             print("Press any key to close window.")
 
             self.terminated = true
-            --self:endProcess()
 
             term.redirect(self.parentTerm)
             return true
@@ -119,9 +119,14 @@ return function(control, multiProgram, input)
             result = resumeProcess(self, data)
         end
 
-        local ok = result[1]
+        local ok, err = result[1], result[2]
         if ok == false then
-            print("Viewport: ", table.unpack(result))
+            term.redirect(self.program.window)
+            term.setCursorPos(1, 1)
+            printError("Viewport Result: ", err)
+            __Global.log("Viewport Error: ", err)
+            term.redirect(self.parentTerm)
+            return true
         end
 
         return table.unpack(result)

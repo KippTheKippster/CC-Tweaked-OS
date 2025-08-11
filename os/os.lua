@@ -24,7 +24,9 @@ local defaultTheme = {
         text = colors.gray,
         background = colors.white,
         focusText = colors.white,
-        focusBackground = colors.blue
+        focusBackground = colors.blue,
+        clickBackground = colors.white,
+        clickText = colors.black,
     },
     palette = {}
 }
@@ -113,14 +115,15 @@ local dropdown = engine.getObject("dropdown")
 local programViewport = require(".core.multiProcess.programViewport")(engine.getObject("control"), multiProgram, engine.input)
 local programWindow = require(".core.multiProcess.programWindow")(engine.getObject("windowControl"), programViewport)
 
-local style = engine:getDefaultStyle()
-local clickedStyle = engine:getDefaultClickedStyle()
+local style = engine.getDefaultStyle()
+local clickStyle = engine.getDefaultClickedStyle()
 local optionNormalStyle = style:new{}
-local optionClickedStyle = clickedStyle:new{}
-local windowStyle = engine:newStyle()
-local unfocusedWindowStyle = windowStyle:new{}
-local focusedWindowStyle = windowStyle:new{}
-local exitButtonClickedStyle = engine:newStyle()
+local optionClickStyle = clickStyle:new{}
+local windowStyle = engine.newStyle()
+local normalWindowStyle = windowStyle:new{}
+local focusWindowStyle = windowStyle:new{}
+local clickWindowStyle = engine.newStyle()
+local exitButtonClickStyle = engine.newStyle()
 
 mos.refreshTheme = function ()
     --Styles
@@ -135,17 +138,17 @@ mos.refreshTheme = function ()
     style.textColor = toolbarColors.text
     style.backgroundColor = toolbarColors.background
     style.shadowColor = theme.shadowColor
-    clickedStyle.shadowColor = theme.shadowColor
+    clickStyle.shadowColor = theme.shadowColor
 
-    clickedStyle.textColor = toolbarColors.clickText
-    clickedStyle.backgroundColor = toolbarColors.clickBackground
+    clickStyle.textColor = toolbarColors.clickText
+    clickStyle.backgroundColor = toolbarColors.clickBackground
 
     optionNormalStyle.shadowColor = theme.shadowColor
 
-    optionClickedStyle.shadowColor = theme.shadowColor
+    optionClickStyle.shadowColor = theme.shadowColor
 
     dropdown.optionNormalStyle = optionNormalStyle
-    dropdown.optionClickedStyle = optionClickedStyle
+    dropdown.optionClickedStyle = optionClickStyle
     dropdown.optionShadow = theme.shadow
     dropdown.optionMargin = true
 
@@ -155,14 +158,17 @@ mos.refreshTheme = function ()
     programWindow.shadow = theme.shadow
     windowStyle.shadowColor = theme.shadowColor
 
-    unfocusedWindowStyle.backgroundColor = windowColors.background
-    unfocusedWindowStyle.textColor = windowColors.text
+    normalWindowStyle.backgroundColor = windowColors.background
+    normalWindowStyle.textColor = windowColors.text
 
-    focusedWindowStyle.backgroundColor = windowColors.focusBackground
-    focusedWindowStyle.textColor = windowColors.focusText
+    focusWindowStyle.backgroundColor = windowColors.focusBackground
+    focusWindowStyle.textColor = windowColors.focusText
 
-    exitButtonClickedStyle.backgroundColor = colors.red
-    exitButtonClickedStyle.textColor = colors.white
+    clickWindowStyle.backgroundColor = windowColors.clickBackground
+    clickWindowStyle.textColor = windowColors.clickText
+
+    exitButtonClickStyle.backgroundColor = colors.red
+    exitButtonClickStyle.textColor = colors.white
 end
 
 mos.loadProfile()
@@ -422,10 +428,11 @@ local function launchProgram(name, path, x, y, w, h, ...)
     window.h = h
     window:refreshMinSize()
 
-    window.style = unfocusedWindowStyle
-    window.focusedStyle = focusedWindowStyle
-    window.unfocusedStyle = unfocusedWindowStyle
-    window.exitButton.clickedStyle = exitButtonClickedStyle
+    window.style = normalWindowStyle
+    window.focusedStyle = focusWindowStyle
+    window.unfocusedStyle = normalWindowStyle
+    window.exitButton.clickedStyle = exitButtonClickStyle
+    window.clickedStyle = clickWindowStyle
     window.oldW = w --Fixes bug so that the window doesn't resize to default size
     window.oldH = h
     window.text = name

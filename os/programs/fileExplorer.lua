@@ -12,8 +12,30 @@ local fileExplorer = {}
 local selectedFileButtons = {}
 local copiedFiles = {}
 
+local popupStyle = engine.newStyle()
+popupStyle.backgroundColor = colors.white
+popupStyle.textColor = colors.black
+
 local function popupError(err)
-    mos.createPopup("Error", " " .. err, nil, nil, nil, nil, __window)
+    err = " " .. err .. " "
+
+    local w, h = engine.root.w, engine.root.h
+    local window = engine.root:addWindowControl()
+    window.text = "Error"
+    window.style = popupStyle
+    window.w = math.min(24, #err)
+    window.h = 2
+    window.x = math.floor((w - window.w) / 2)
+    window.y = math.floor((h - window.h) / 2)
+    window:refreshMinSize()
+
+    local message = window:addControl()
+    message.y = 1
+    message.expandW = true
+    message.expandH = true
+
+    message.text = err
+    message.centerText = true
 end
 
 local function pPopupError(f, ...)
@@ -126,7 +148,7 @@ if saveMode == true then
     saveContainer.ok.text = "Save"
     saveContainer.ok.normalStyle = toolsStyle
     saveContainer.ok.pressed = function (o)
-        callbackFunction("", currentPath .. saveContainer.edit.text, false)
+        callbackFunction("", fs.combine(currentPath, saveContainer.edit.text), false)
     end
 
     saveEdit = saveContainer.edit
@@ -215,6 +237,24 @@ local dirButton = fileButton:new{}
 dirButton.normalStyle = dirStyle
 dirButton.selectedStyle = dirSelectedStyle
 
+local function getPath(c)
+    if c == nil or c:isValid() == false then -- NOTE Somewhere selection is freed but not set to nil
+        return ""
+    else
+        return fs.combine(currentPath, c.text)
+    end
+end
+
+
+local function getTitle(c)
+    local title = c.text
+    if title:sub(-4) == ".lua" then
+        title = title:sub(1, -5)
+    end
+    return title
+end
+
+
 local function scrollToBottom()
     vContainer.y = -#vContainer.children - marginD
 end
@@ -273,6 +313,7 @@ fileExplorer.removeFavorite = function (o, file)
 end
 
 local function openFolder(path)
+    path = fs.combine(path)
     currentPath = path
     selection = nil
     selectedFileButtons = {}
@@ -502,9 +543,10 @@ local function createDiskDropdown(name)
         local text = o:getOptionText(idx)
         if text == "Install To Folder" then
             createEditFile("", function (edit)
-                if fs.isReadOnly(currentPath .. edit.text) then return false end
-                if fs.exists(currentPath .. edit.text) then return false end
-                fs.copy(disk.getMountPath(name), currentPath .. edit.text)
+                local dest = getPath(edit)
+                if fs.isReadOnly(dest) then return false end
+                if fs.exists(dest) then return false end
+                pPopupError(fs.copy, disk.getMountPath(name), dest)
                 return true
             end)
         elseif text == "Install Here" then
@@ -512,21 +554,20 @@ local function createDiskDropdown(name)
                 mos.createPopup("Warning", "Folder is read only!")
                 return
             end
-            --fs.makeDir(currentPath .. o.text)
             
             local mountPath = disk.getMountPath(name)
             local names = fs.list(mountPath, "r")
             for i = 1, #names do
-                local path = mountPath .. "/" .. names[i]
-                local dest = currentPath .. names[i]
+                local path = fs.combine(mountPath, names[i])
+                local dest = fs.combine(currentPath, names[i])
                 if path == dest then
                     break
                 end
 
                 if fs.exists(dest) then
-                    fs.delete(dest)
+                    pPopupError(fs.delete, dest)
                 end
-                fs.copy(path, dest)
+                pPopupError(fs.copy, path, dest)
             end
 
             refreshFiles()
@@ -609,22 +650,6 @@ local function traverse(dir)
     end
 end
 
-local function getPath(c)
-    if c == nil or c:isValid() == false then -- NOTE Somewhere selection is freed but not set to nil
-        return ""
-    else
-        return fs.combine(currentPath, c.text)
-    end
-end
-
-
-local function getTitle(c)
-    local title = c.text
-    if title:sub(-4) == ".lua" then
-        title = title:sub(1, -5)
-    end
-    return title
-end
 
 
 function fileButton:doublePressed()
