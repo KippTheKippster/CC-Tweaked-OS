@@ -9,10 +9,12 @@
   },
   shadowColor = 128,
   windowColors = {
+    clickText = 32768,
+    focusText = 1,
     focusBackground = 2048,
     text = 128,
     background = 1,
-    focusText = 1,
+    clickBackground = 1,
   },
   backgroundColor = 16,
 }
