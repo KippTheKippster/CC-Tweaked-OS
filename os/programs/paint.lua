@@ -6,6 +6,7 @@ local args = {...}
 local background = nil
 local sprite = nil
 local selectionBox = nil
+local coords = nil
 
 --#region Paint
 local paint = {}
@@ -357,6 +358,11 @@ end
 local ui = {}
 ui.fileExplorer = nil
 
+ui.new = function ()
+    paint.newImage(16, 10)
+    __window:grabFocus()
+end
+
 ui.open = function ()
     ui.fileExplorer = mos.openProgram("Open File", "/os/programs/fileExplorer.lua", false, function (name, path)
         paint.openImage(path)
@@ -479,6 +485,10 @@ function sprite:rawEvent(data)
     end
 end
 
+function sprite:transformChanged()
+    coords.text = sprite.x .. " " .. sprite.y
+end
+
 local function fillArea(char, x, y, w, h)
     for i = 1, h do
         for j = 1, w do
@@ -545,10 +555,10 @@ function sprite:click(x, y, button)
             { x = -1, y =  0},
             { x =  0, y = -1}
         }
-        
+
         local function fill (canvas, colorFrom, colorTo, queue)
-            local point = queue[1]
-            table.remove(queue, 1)
+            local point = queue[#queue]
+            table.remove(queue, #queue)
             paint.setCanvasPixel(paint.canvas, point.x, point.y, colorTo)
             for _, dir in pairs(dirs) do
                 local next = { x = point.x + dir.x, y = point.y + dir.y }
@@ -562,10 +572,14 @@ function sprite:click(x, y, button)
             end
         end
 
+        local fillColor = paint.colorR
+        if button == 1 then
+            fillColor = paint.colorL
+        end
         local queue = { { x = x, y = y } }
         local color = paint.getCanvasPixel(paint.canvas, x, y)
-        if color ~= paint.colorL then    
-            pcall(fill, paint.canvas, color, paint.colorL, queue)
+        if color ~= fillColor then    
+            pcall(fill, paint.canvas, color, fillColor, queue)
             self:redraw()
         end
     end
@@ -729,6 +743,16 @@ for i = 0, 16 do
     end
 end
 
+local coordsStyle = engine.newStyle()
+coordsStyle.textColor = colors.white
+coordsStyle.backgroundColor = colors.black
+
+coords = engine.root:addControl()
+coords.anchorH = coords.anchor.DOWN
+coords.fitToText = true
+coords.h = 1
+coords.style = coordsStyle
+
 local windowStyle = engine.newStyle()
 windowStyle.backgroundColor = colors.white
 
@@ -818,7 +842,7 @@ if mos then
     function fileDropdown:optionPressed(i)
         local text = fileDropdown:getOptionText(i)
         if text == "New  Image" then
-            paint.newImage(16, 10)
+            ui.new()
         elseif text == "Open Image" then
             ui.open()
         elseif text == "Save" then
