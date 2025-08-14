@@ -1,18 +1,20 @@
+---@return Button
 return function(control, style, clickedStyle)
-local button = control:new{}
-button.type = "Button"
+---@class Button : Control 
+local Button = control:new{}
+Button.type = "Button"
 
-button.normalStyle = style
-button.clickedStyle = clickedStyle
-button.text = "Button"
+Button.normalStyle = style
+Button.clickedStyle = clickedStyle
+Button.text = "Button"
 
-function button:click()
+function Button:click()
     self.style = self.clickedStyle
 end
 
-function button:up()
+function Button:up()
     self.style = self.normalStyle
 end
 
-return button
+return Button
 end

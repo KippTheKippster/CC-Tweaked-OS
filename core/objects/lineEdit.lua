@@ -1,16 +1,18 @@
+---@return LineEdit
 return function(control, editStyle, editFocusStyle, input)
-local lineEdit = control:new()
-lineEdit.type = "LineEdit"
+---@class LineEdit : Control
+local LineEdit = control:new()
+LineEdit.type = "LineEdit"
 
-lineEdit.normalStyle = editStyle
-lineEdit.focusStyle = editFocusStyle
+LineEdit.normalStyle = editStyle
+LineEdit.focusStyle = editFocusStyle
 
-lineEdit.h = 1
-lineEdit.w = 12
-lineEdit.text = ""
-lineEdit.cursorOffset = 0
-lineEdit._trueText = ""
-lineEdit.inheritStyle = false
+LineEdit.h = 1
+LineEdit.w = 12
+LineEdit.text = ""
+LineEdit.cursorOffset = 0
+LineEdit._trueText = ""
+LineEdit.inheritStyle = false
 control:defineProperty('trueText', {
     get = function(o) return o._trueText end,
     set = function(o, value) 
@@ -21,11 +23,11 @@ control:defineProperty('trueText', {
         end
     end 
 })
-lineEdit.clipText = true
+LineEdit.clipText = true
 --lineEdit.offsetTextX = 0
-lineEdit.lineScroll = 0
+LineEdit.lineScroll = 0
 
-function lineEdit:ready()
+function LineEdit:ready()
     input.addCharListener(self)
 	input.addKeyListener(self)
     --self.cursor = self:addControl()
@@ -55,21 +57,21 @@ function lineEdit:render()
 end
 ]]--
 
-function lineEdit:updateCursor()
+function LineEdit:updateCursor()
     term.setCursorBlink(true)   
     term.setCursorPos(self.globalX + #self.text + self.cursorOffset + 1, self.globalY + 1)
     term.setTextColor(self.style.textColor)
     term.setBackgroundColor(self.style.backgroundColor)
 end
 
-function lineEdit:trueTextChanged()
+function LineEdit:trueTextChanged()
 	local w = #self.trueText - self.w + 1
 	w = math.max(0, w)
 	self.text = self.trueText:sub(w + 1, #self.trueText)
     self:redraw()
 end
 
-function lineEdit:char(char)
+function LineEdit:char(char)
     if self.focus == false then return end
     self.trueText = (
         self.trueText:sub(0, #self.trueText + self.cursorOffset) .. 
@@ -78,9 +80,9 @@ function lineEdit:char(char)
     ) 
 end
 
-lineEdit.co = nil
+LineEdit.co = nil
 
-function lineEdit:key(key)
+function LineEdit:key(key)
     if self.focus == false then return end
 	if key == 259 then --Backspace
         if input.isKey(keys.leftCtrl) then
@@ -109,7 +111,7 @@ function lineEdit:key(key)
 	end
 end
 
-function lineEdit:focusChanged()
+function LineEdit:focusChanged()
     if self.focus then
         self.style = self.focusStyle
         self:grabCursorControl()
@@ -133,7 +135,7 @@ end
 
 
 
-function lineEdit:textSubmitted() end
+function LineEdit:textSubmitted() end
 
-return lineEdit
+return LineEdit
 end

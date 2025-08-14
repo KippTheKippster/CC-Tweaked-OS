@@ -1,10 +1,12 @@
+---@return VContainer
 return function(container)
-local vContainer = container:new{}
-vContainer.type = "VContainer"
+---@class VContainer : Container
+local VContainer = container:new{}
+VContainer.type = "VContainer"
 
-vContainer.center = false
+VContainer.center = false
 
-function vContainer:sort()
+function VContainer:sort()
 	local w = self.w
 	if self.expandW == false then
 		w = 0
@@ -38,5 +40,5 @@ end
 
 
 
-return vContainer
+return VContainer
 end

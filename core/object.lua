@@ -1,9 +1,11 @@
 local path = ".core."
 local utils = require(".core.utils")
 
-local object = {}
-object.type = "Object"
-object.__properties = {}
+---@class Object
+local Object = {}
+Object.type = "Object"
+Object.__properties = {}
+Object.__connections = {}
 
 --Get key from object
 local function object__index(o, key)
@@ -77,7 +79,8 @@ local function free__newindex(o, key, value)
 end
 
 --Creates a new object, copying properties and signals to the new object
-function object:new(o)
+---@return Object
+function Object:new(o)
     o = o or {}
     local mt = {
         base = self,
@@ -97,11 +100,10 @@ function object:new(o)
     setmetatable(o.__properties, mt)
 
     o.__connections = {}
-    --o.__signals = {}
     return o
 end
 
-function object:remove()
+function Object:remove()
     for k in pairs (self) do
         self[k] = nil
     end
@@ -109,11 +111,11 @@ function object:remove()
     self = nil
 end
 
-function object:isValid()
+function Object:isValid()
     return true
 end
 
-function object:free()
+function Object:free()
     for k, v in pairs(self.__connections) do
         self:disconnectSignal(k, v.method)
     end
@@ -131,7 +133,7 @@ function object:free()
 end
 
 --Defines a new property
-function object:defineProperty(key, methods, redefine)
+function Object:defineProperty(key, methods, redefine)
     if self.__properties[key] ~= nil and redefine ~= true then
         error("Attempting to define an already defined property: " .. key .. " " .. tostring(self) .. " . " .. tostring(redefine) , 2)
     end
@@ -143,29 +145,17 @@ function object:defineProperty(key, methods, redefine)
     self.__properties[key] = methods
 end
 
-function object:createSignal()
+---@return Signal
+function Object:createSignal()
+    ---@class Signal
     local signal = {}
-    signal.connections = {}
-    --[[
-    signal.connect = function (signal, method, ...)
-        local connection = {
-            method = method,
-            binds = table.pack(...)
-        }
-        table.insert(signal.connections, connection)
-    end
-    signal.emit = function (signal, ...)
-        for i = 1, #signal.connections do
-            local connection = signal.connections[i]
-            connection.method(table.unpack(connection.binds), ...)
-        end
-    end
-    ]]
-    --table.insert(self.__signals)
     return signal
 end
 
-function object:connectSignal(signal, method, ...)
+---@param signal Signal
+---@param method function
+---@param ... any
+function Object:connectSignal(signal, method, ...)
     if self.__connections[signal] == nil then
         self.__connections[signal] = {}
     end
@@ -176,7 +166,9 @@ function object:connectSignal(signal, method, ...)
     table.insert(self.__connections[signal], connection)
 end
 
-function object:disconnectSignal(signal, method)
+---@param signal Signal
+---@param method function
+function Object:disconnectSignal(signal, method)
     local connections = self.__connections[signal]
     if self.__connections[signal] == nil then 
         return
@@ -191,7 +183,9 @@ function object:disconnectSignal(signal, method)
     end
 end
 
-function object:emitSignal(signal, ...)
+---@param signal Signal
+---@param ... any
+function Object:emitSignal(signal, ...)
     local connections = self.__connections[signal]
     if connections ~= nil then
         for i = 1, #connections do
@@ -209,68 +203,5 @@ function object:emitSignal(signal, ...)
     end
 end
 
---Defines a new signal
---[[
-function object:defineSignal(key)
-    if self.__signals[key] ~= nil then
-        error("Attempting to define an already defined signal: " .. key .. " " .. tostring(self), 2)
-    end
-
-    if key == nil then
-        error("Attemting to define signal with key nil " .. tostring(self), 2)
-    end
-    
-    self.__signals[key] = 
-    {
-        objects = {}
-    }
-end
-
-
---Connect a signal to method
-function object:connectSignal(key, o, method)
-    if self.__signals[key] == nil then
-        error("Attempting to connect a signal that does not exist: " .. key .. " " .. tostring(self), 2)
-    end
-    
-    local signal = self.__signals[key]
-    local objects = signal.objects
-    if objects[o] == nil then
-        objects[o] = {}
-    end
-    if objects[o][key] == nil then
-        objects[o][key] = {}
-    end
-    table.insert(objects[o][key], method)
-    --table.insert(signal.methods, 
-end
-
-function object:emitSignal(key)
-    local signal = self.__signals[key]
-    if signal == nil then
-        error("Attempting to emit a signal that does not exist: " .. key .. " " .. tostring(self), 2)
-    end
-
-    for object, signals in pairs(signal.objects) do
-        for _, method in pairs(signals[key]) do
-            object[method](object)
-        end
-    end
-end
-]]--
-
---Returns the base object
-function object:base()
-    --Double base since
-    return getmetatable(getmetatable(self).base).base 
-end
-
-local function new_object()
-    return object:new{}
-end
-
-local function getObject()
-    return object
-end
-
-return object
+---@return Object
+return Object

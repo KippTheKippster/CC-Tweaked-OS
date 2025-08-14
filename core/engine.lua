@@ -1,5 +1,6 @@
 local path = ".core."
 
+---@class Engine
 local engine = {}
 
 local object = require(path .. "object")
@@ -12,7 +13,9 @@ engine.utils = utils
 
 engine.freeQueue = {}
 
+---@type Style
 local style = require(path .. "styles.style")(object)
+---@type Style
 local clickedStyle = require(path .. "styles.style")(style)
 
 --Objects
@@ -21,20 +24,30 @@ local objectList = {}
 local function requireObject(name, ...)
     local o = require(path .. "objects." .. name)(...)
     objectList[name] = o
-    engine[name] = o
+    --engine[name] = o
     return o
 end
 
-local control = requireObject("control", object, engine, style) -- Should it only be engine as argument?
-
-local button = requireObject("button", control, style, clickedStyle)
-local dropdown = requireObject("dropdown", button, input, utils)
-local container = requireObject("container", control)
-local vContainer = requireObject("vContainer", container)
-local hContainer = requireObject("hContainer", container)
-local flowContainer = requireObject("flowContainer", container)
-local scrollContainer = requireObject("scrollContainer", container, input)
-local windowControl = requireObject("windowControl", control, button)
+---@type Control
+engine.Control = requireObject("control", object, engine, style) -- Should it only be engine as argument?
+---@type Button
+engine.Button = requireObject("button", engine.Control, style, clickedStyle)
+---@type Dropdown
+engine.Dropdown = requireObject("dropdown", engine.Button, input, utils)
+-----@type ColorPicker
+--engine.colorPicker = requireObject("dropdown", engine.dropdown, style)
+---@type Container
+engine.Container = requireObject("container", engine.Control)
+---@type VContainer
+engine.VContainer = requireObject("vContainer", engine.Container)
+---@type HContainer
+engine.HContainer = requireObject("hContainer", engine.Container)
+---@type FlowContainer
+engine.FlowContainer = requireObject("flowContainer", engine.Container)
+---@type ScrollContainer
+engine.ScrollContainer = requireObject("scrollContainer", engine.Container, input)
+---@type WindowControl
+engine.WindowControl = requireObject("windowControl", engine.Control, engine.Button)
 
 local editStyle = style:new{}
 editStyle.backgroundColor = colors.gray
@@ -43,17 +56,19 @@ editStyle.centerText = false
 local editFocusStyle = editStyle:new()
 editFocusStyle.backgroundColor = colors.lightGray
 
-local lineEdit = requireObject("lineEdit", control, editStyle, editFocusStyle, input)
-local icon = requireObject("icon", control)
+---@type Control
+engine.LineEdit = requireObject("lineEdit", engine.Control, editStyle, editFocusStyle, input)
+---@type Control
+engine.Icon = requireObject("icon", engine.Control)
 
 --Engine
 --Adds 'add' functions for all control objects Example: control:addButton()
 for k, v in pairs(objectList) do
-    control["add" .. utils.capitaliseFirst(k)] = function(o)
-        local c = objectList[k]:new{}
-        o:addChild(c)
-        return c
-    end
+    --engine.Control["add" .. utils.capitaliseFirst(k)] = function(o)
+    --    local c = objectList[k]:new{}
+    --    o:addChild(c)
+    --    return c
+    --end
 end
 
 local parentTerm = term.current()
@@ -71,7 +86,13 @@ if __Global == nil then
     globalRoot = true
     __Global = {}
     __Global.nextID = 0
-    __Global.logFile = fs.open(".logs/" .. tostring(os.epoch("utc")) .. ".log", "w")
+    local dest = ".logs/"
+    local logs = fs.list(dest)
+    for i = 1, #logs - 4 do
+        fs.delete(fs.combine(dest, logs[i]))
+    end
+
+    __Global.logFile = fs.open(fs.combine(dest, tostring(os.epoch("utc")) .. ".log"), "w")
     __Global.log = function (...)
         local line = ""
         local data = table.pack(...)
@@ -85,7 +106,7 @@ if __Global == nil then
     end
 end
 
-local root = control:new{}
+local root = engine.Control:new{}
 root.rendering = false
 root.text = "root"
 root.w = initialW
@@ -255,4 +276,5 @@ engine.getFocus = function ()
     return input.getFocus()
 end
 
+---@return Engine
 return engine

@@ -1,20 +1,22 @@
+---@return Dropdown
 return function(button, input, utils)
-local dropdown = button:new{}
-dropdown.type = "Dropdown"
+---@class Dropdown : Button
+local Dropdown = button:new{}
+Dropdown.type = "Dropdown"
 
-dropdown.text = "Drop-down"
-dropdown.h = 1
-dropdown._fitToText = true
-dropdown.list = nil
-dropdown.open = false
-dropdown.dragSelectable = true
-dropdown.listQueue = nil
-dropdown.shortcutSelection = nil
-dropdown.optionNormalStyle = dropdown.normalStyle
-dropdown.optionClickedStyle = dropdown.clickedStyle
-dropdown.optionShadow = dropdown.clickedStyle
+Dropdown.text = "Drop-down"
+Dropdown.h = 1
+Dropdown._fitToText = true
+Dropdown.list = nil
+Dropdown.open = false
+Dropdown.dragSelectable = true
+Dropdown.listQueue = nil
+Dropdown.shortcutSelection = nil
+Dropdown.optionNormalStyle = Dropdown.normalStyle
+Dropdown.optionClickedStyle = Dropdown.clickedStyle
+Dropdown.optionShadow = Dropdown.clickedStyle
 
-function dropdown:ready()
+function Dropdown:ready()
     self.list = self:addVContainer()
     self.list.inheritStyle = false
     self.list.style = self.normalStyle
@@ -48,23 +50,23 @@ function dropdown:ready()
     self.listQueue = {}
 end
 
-function dropdown:isOpened()
+function Dropdown:isOpened()
    return self.list.visible == true
 end
 
-function dropdown:close()
+function Dropdown:close()
     self.list.visible = false
     self.shortcutSelection = nil
 end
 
-function dropdown:rawEvent(data)
+function Dropdown:rawEvent(data)
     local event = data[1]
     if event == "mouse_up" then
         self:close()
     end
 end
 
-function dropdown:focusChanged()
+function Dropdown:focusChanged()
     if self.focus == false then
         self:up()
         if self.shortcutSelection ~= nil then
@@ -74,7 +76,7 @@ function dropdown:focusChanged()
     end
 end
 
-function dropdown:addToList(text, clickable)
+function Dropdown:addToList(text, clickable)
     --sleep(0.1)
     if clickable == nil then
         clickable = true
@@ -109,6 +111,9 @@ function dropdown:addToList(text, clickable)
     b.expandW = true
     local click = b.click
     b.click = function(o)
+        if self.shortcutSelection then
+            self.shortcutSelection:up()
+        end
         click(o)
         self.shortcutSelection = o
     end
@@ -126,13 +131,11 @@ function dropdown:addToList(text, clickable)
     return b
 end
 
-function dropdown:removeFromList(o)
+function Dropdown:removeFromList(o)
     if type(o) == "string" then
         for i = 1, #self.list.children do
             if self.list.children[i].text == o then
                 self.list.children[i]:queueFree()
-                --self.list:removeChild(self.list.children[i])
-                --self.list.children[i]:remove() TODO Reimplement? (Or is this automatically removed by garbage collection?)
                 break
             end
         end
@@ -142,44 +145,32 @@ function dropdown:removeFromList(o)
     end
 end
 
-function dropdown:clearList()
+function Dropdown:clearList()
     if self.list == nil then return end
     for i = 1, #self.list.children do
         self.list:removeChild(self.list.children[1])
     end
 end
 
---[[
-function dropdown.list:childrenChanged()
-    if self.list == nil then return end
-    local maxLength = self.w
-    for i = 1, #self.list.children do
-        maxLength = math.max(#self.list.children[i].text, maxLength)
-    end
-
-    for i = 1, #self.list.children do
-        self.list.children[i].w = maxLength
-    end
-
-    self.list.w = maxLength
-end
-]]--
-
-function dropdown:click()
+function Dropdown:click()
     button.click(self)
     self.list.visible = true
+    if self.shortcutSelection and self.shortcutSelection ~= self then
+        self.shortcutSelection:up()
+    end
+
     self.shortcutSelection = self
 end
 
-function dropdown:getOptionText(i)
+function Dropdown:getOptionText(i)
     return self.list.children[i].text
 end
 
-function dropdown:getOption(i)
+function Dropdown:getOption(i)
     return self.list.children[i]
 end
 
-function dropdown:getOptionsTextList()
+function Dropdown:getOptionsTextList()
     local textList = {}
     for i = 1, #self.list.children do
         table.insert(textList, self.list.children[i].text)
@@ -187,7 +178,7 @@ function dropdown:getOptionsTextList()
     return textList
 end
 
-function dropdown:next()
+function Dropdown:next()
     self.list.visible = true
     if self:isOpened() == false then
         if self.shortcutSelection ~= nil then
@@ -222,7 +213,7 @@ function dropdown:next()
     self.shortcutSelection:grabFocus()
 end
 
-function dropdown:release()
+function Dropdown:release()
     if self:isOpened() == true then
         if self.shortcutSelection ~= nil then
             self.shortcutSelection:up()
@@ -234,7 +225,7 @@ function dropdown:release()
     self.shortcutSelection = nil
 end
 
-function dropdown:optionPressed(i) end
+function Dropdown:optionPressed(i) end
 
-return dropdown
+return Dropdown
 end

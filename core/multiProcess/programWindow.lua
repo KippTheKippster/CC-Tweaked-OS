@@ -1,15 +1,16 @@
 -- Extends windowControl, attaches a programViewport to a window.
+---@return ProgramWindow
+return function(windowControl)
+---@class ProgramWindow : WindowControl
+local ProgramWindow = windowControl:new{}
+ProgramWindow.type = "ProgramWindow"
 
-return function(windowControl, programViewport)
-local programWindow = windowControl:new{}
-programWindow.type = "ProgramWindow"
-
-programWindow.programViewport = nil
-programWindow.minimizeButton = nil
-programWindow.focusedStyle = nil
-programWindow.unfocusedStyle = nil
-programWindow._clickedStyle = nil
-programWindow:defineProperty('clickedStyle', {
+ProgramWindow.programViewport = nil
+ProgramWindow.minimizeButton = nil
+ProgramWindow.focusedStyle = nil
+ProgramWindow.unfocusedStyle = nil
+ProgramWindow._clickedStyle = nil
+ProgramWindow:defineProperty('clickedStyle', {
     get = function(o) return o._clickedStyle end,
     set = function(o, value)
         o._clickedStyle = value
@@ -22,7 +23,7 @@ programWindow:defineProperty('clickedStyle', {
     end
 })
 
-programWindow.showShadow = true
+ProgramWindow.showShadow = true
 
 local function addButton (w)
     local b = w:addButton()
@@ -30,7 +31,7 @@ local function addButton (w)
     return b
 end
 
-function programWindow:ready()
+function ProgramWindow:ready()
     windowControl.ready(self)
 
     self.minimizeButton = addButton(self)
@@ -73,9 +74,14 @@ function programWindow:ready()
     self.scaleButton.up = function(o)
         o.parent:redraw()
     end
+
+    self.minimizeButton.dragSelectable = true
+    self.exitButton.dragSelectable = true
+    self.splitLeftButton.dragSelectable = true
+    self.splitRightButton.dragSelectable = true
 end
 
-function programWindow:enableLeftSplitScreen()
+function ProgramWindow:enableLeftSplitScreen()
     local w, h = term.getSize()
     self.x = 0
     self.y = 1
@@ -86,7 +92,7 @@ function programWindow:enableLeftSplitScreen()
     self:grabFocus()
 end
 
-function programWindow:enableRightSplitScreen()
+function ProgramWindow:enableRightSplitScreen()
     local w, h = term.getSize()
     self.x = math.ceil(w/2)
     self.y = 1
@@ -98,14 +104,14 @@ function programWindow:enableRightSplitScreen()
 end
 
 
-function programWindow:close()
+function ProgramWindow:close()
     self.programViewport.terminated = true
     self.programViewport:endProcess()
     windowControl.close(self)
 end
 
 
-function programWindow:render()
+function ProgramWindow:render()
     --SHADOW
     if self.showShadow == true then
         self:drawShadow()
@@ -121,7 +127,7 @@ function programWindow:render()
     self:write()
 end
 
-function programWindow:addViewport(pv)
+function ProgramWindow:addViewport(pv)
     self.programViewport = pv
     self:addChild(pv)
     pv.y = 1
@@ -136,7 +142,7 @@ function programWindow:addViewport(pv)
     --end
 end
 
-function programWindow:click()
+function ProgramWindow:click()
     windowControl.click(self)
     self:toFront()
 end
@@ -145,7 +151,7 @@ end
 --    self.programViewport:launchProgram(path, ...)
 --end
 
-function programWindow:sizeChanged()
+function ProgramWindow:sizeChanged()
     windowControl.sizeChanged(self)
     self.minimizeButton.x = self.w - 2
     self.programViewport.w = self.w
@@ -155,11 +161,11 @@ function programWindow:sizeChanged()
     self.showShadow = true
 end
 
-function programWindow:focusChanged()
+function ProgramWindow:focusChanged()
     self:updateFocus()
 end
 
-function programWindow:updateFocus()
+function ProgramWindow:updateFocus()
     if self:inFocus() then -- or (self.programViewport ~= nil and self.programViewport:inFocus()) then
         self.style = self.focusedStyle
         --term.setCursorBlink(true)
@@ -172,7 +178,7 @@ function programWindow:updateFocus()
     end
 end
 
-function programWindow:updateCursor()
+function ProgramWindow:updateCursor()
     local window = self.programViewport.program.window
     local parentTerm = term.current()
     term.redirect(window)
@@ -182,7 +188,7 @@ function programWindow:updateCursor()
     term.redirect(parentTerm)
 end
 
-function programWindow:closed() end
+function ProgramWindow:closed() end
 
-return programWindow
+return ProgramWindow
 end
