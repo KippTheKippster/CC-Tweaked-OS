@@ -61,8 +61,6 @@ local function createMultishellWrapper(p, env, ...)
     }
 
     mp.runProgram(env, "rom/programs/advanced/multishell.lua")
-    --runProgram(env, table.unpack(args))
-    --shell.run("rom/programs/advanced/multishell.lua")
 end
 
 
@@ -77,28 +75,24 @@ mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w,
     end
 
     local p = mp.launchProcess(parentTerm, function(p, ...)
-        --createMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
+        createMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
         --os.run(env, programPath, ...)
-        mp.runProgram(env, programPath, ...)
+        --mp.runProgram(env, programPath, ...)
     end, resume, x, y, w, h, ...)
 
     coroutine.resume(p.co, "start")
-    ----coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
-    --coroutine.resume(p.co, "key", keys.enter)
+    coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
+    coroutine.resume(p.co, "key", keys.enter)
 
     return p
 end
 
 mp.endProcess = function (p)
-    --coroutine.close(p.co)
-    --local i = utils.find(tProcesses, p.co)
-    --table.remove(tProcesses, i)
     p.dead = true
     table.insert(endQueue, p)
 end
 
 mp.forceError = function (p, err)
-    --term.redirect(p.window)
     debug.sethook(p.co, function() error(err) end, "l")
     mp.resumeProcess(p, {"force_error"})
 end
@@ -118,7 +112,6 @@ mp.start = function ()
         local n = #tProcesses
         for i = 1, n do
             local p = tProcesses[i]
-            --if coroutine.status(v.co) ~= "dead" then
             if p.dead == false then
                 local ok, err = p.resume(data)
                 if ok == false then

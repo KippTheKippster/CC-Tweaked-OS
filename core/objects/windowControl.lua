@@ -1,24 +1,26 @@
+---@return WindowControl
 return function(control, button)
-local windowControl = control:new{}
-windowControl.type = "WindowControl"
+---@class WindowControl : Control
+local WindowControl = control:new{}
+WindowControl.type = "WindowControl"
 
-windowControl.draggable = true
-windowControl.clipText = true
-windowControl.text = "Window"
-windowControl.label = nil
-windowControl.exitButton = nil
-windowControl.scaleButton = nil
-windowControl.minW = 10
-windowControl.minH = 4
-windowControl.oldW = 0
-windowControl.oldH = 0
-windowControl.oldX = 0
-windowControl.oldY = 0
-windowControl.fullscreen = false
-windowControl.closedSignal = windowControl:createSignal()
-windowControl.fullscreenChangedSignal = windowControl:createSignal()
+WindowControl.draggable = true
+WindowControl.clipText = true
+WindowControl.text = "Window"
+WindowControl.label = nil
+WindowControl.exitButton = nil
+WindowControl.scaleButton = nil
+WindowControl.minW = 10
+WindowControl.minH = 4
+WindowControl.oldW = 0
+WindowControl.oldH = 0
+WindowControl.oldX = 0
+WindowControl.oldY = 0
+WindowControl.fullscreen = false
+WindowControl.closedSignal = WindowControl:createSignal()
+WindowControl.fullscreenChangedSignal = WindowControl:createSignal()
 
-windowControl:defineProperty('text', {
+WindowControl:defineProperty('text', {
     get = function(o)
         if o.label == nil then
             return o._text
@@ -36,7 +38,7 @@ windowControl:defineProperty('text', {
     end
 }, true)
 
-function windowControl:ready()
+function WindowControl:ready()
     self:refreshMinSize()
 
     self.label = self:addControl()
@@ -75,7 +77,7 @@ function windowControl:ready()
     end
 end
 
-function windowControl:close()
+function WindowControl:close()
     self:closed()
     self:emitSignal(self.closedSignal)
     --self.parent:removeChild(self)
@@ -83,7 +85,7 @@ function windowControl:close()
     self:queueFree() --TODO Re-add
 end
 
-function windowControl:setFullscreen(fullscreen, relativeX, relativeY, x, y)
+function WindowControl:setFullscreen(fullscreen, relativeX, relativeY, x, y)
     if fullscreen == true then
         local w, h = term.getSize()
         local wi = self
@@ -129,11 +131,11 @@ function windowControl:setFullscreen(fullscreen, relativeX, relativeY, x, y)
     end
 end
 
-function windowControl:click()
+function WindowControl:click()
     --self:toFront()
 end
 
-function windowControl:drag(x, y)
+function WindowControl:drag(x, y)
     control.drag(self, x, y)
     self.w = self.oldW
     self.h = self.oldH
@@ -143,17 +145,17 @@ function windowControl:drag(x, y)
     end
 end
 
-function windowControl:sizeChanged()
+function WindowControl:sizeChanged()
     self.exitButton.x = self.w - 1
     self.label.w = self.w - 2
 end
 
-function windowControl:refreshMinSize()
+function WindowControl:refreshMinSize()
     self.minW, self.minH = math.min(self.minW, self.w), math.min(self.minH, self.h)
     self.oldW, self.oldH = self.w, self.h
 end
 
-function windowControl:closed() end
+function WindowControl:closed() end
 
-return windowControl
+return WindowControl
 end

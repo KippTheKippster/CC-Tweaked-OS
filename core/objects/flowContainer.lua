@@ -1,8 +1,10 @@
+---@return FlowContainer
 return function(container)
-local flowContainer = container:new{}
-flowContainer.type = "FlowContainer"
+---@class FlowContainer : Container 
+local FlowContainer = container:new{}
+FlowContainer.type = "FlowContainer"
 
-function flowContainer:sort()
+function FlowContainer:sort()
 	local w = 0
 	local h = 0
 	local nextH = 0
@@ -19,5 +21,5 @@ function flowContainer:sort()
 	end
 end
 
-return flowContainer
+return FlowContainer
 end

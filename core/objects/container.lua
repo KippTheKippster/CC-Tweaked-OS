@@ -1,25 +1,27 @@
+---@return Container
 return function(control)
-local container = control:new{}
-container.type = "Container"
+---@class Container : Control
+local Container = control:new{}
+Container.type = "Container"
 
-container.mouseIgnore = false
-container.text = ""
-container.visible = true
+Container.mouseIgnore = false
+Container.text = ""
+Container.visible = true
 --container.background = false
-container.rendering = false
-container.sortOnTransformChanged = false
+Container.rendering = false
+Container.sortOnTransformChanged = false
 
-function container:childrenChanged()
+function Container:childrenChanged()
 	self:sort()
 end
 
-function container:transformChanged()
+function Container:transformChanged()
 	if self.sortOnTransformChanged == true then
 		self:sort()
 	end
 end
 
-function container:sort() end
+function Container:sort() end
 
-return container
+return Container
 end

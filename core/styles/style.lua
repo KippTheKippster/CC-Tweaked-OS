@@ -1,4 +1,6 @@
+---@return Style
 return function(object)
+---@class Style : Object
 local style = object:new{}
 style.backgroundColor = colors.lightGray
 style.borderColor = colors.gray

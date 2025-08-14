@@ -1,14 +1,16 @@
+---@return ScrollContainer
 return function(container, input)
-local scrollContainer = container:new{}
-scrollContainer.type = "ScrollContainer"
+---@class ScrollContainer : Container
+local ScrollContainer = container:new{}
+ScrollContainer.type = "ScrollContainer"
 
-scrollContainer.scrollY = 0
+ScrollContainer.scrollY = 0
 
-function scrollContainer:ready()
+function ScrollContainer:ready()
 	input.addScrollListener(self)
 end
 
-function scrollContainer:scroll(dir, x, y)
+function ScrollContainer:scroll(dir, x, y)
     self.scrollY = self.scrollY -  dir
 
     if self.scrollY > 0 then
@@ -23,5 +25,5 @@ function scrollContainer:scroll(dir, x, y)
 
     self.children[1].y = self.scrollY
 end
-return scrollContainer
+return ScrollContainer
 end

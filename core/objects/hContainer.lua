@@ -1,11 +1,13 @@
+---@class HContainer
 return function(container)
-local hContainer = container:new{}
-hContainer.type = "HContainer"
+---@class HContainer : Container
+local HContainer = container:new{}
+HContainer.type = "HContainer"
 
-hContainer.center = false
-hContainer.separation = 0
+HContainer.center = false
+HContainer.separation = 0
 
-function hContainer:sort()
+function HContainer:sort()
 	self:_expandChildren()
 
 	local w = 0
@@ -23,7 +25,7 @@ function hContainer:sort()
 	end
 end
 
-function hContainer:_expandChildren()
+function HContainer:_expandChildren()
 	local minW = 0
 	local expandCount = 0
 	for i, c in ipairs(self.children) do
@@ -47,5 +49,5 @@ function hContainer:_expandChildren()
 	end
 end
 
-return hContainer
+return HContainer
 end

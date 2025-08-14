@@ -1,45 +1,107 @@
+---@return Control
+---@param object Object
+---@param engine Engine
+---@param style Style
 return function(object, engine, style)
-local control = object:new{}
-control.type = "Control"
+---@class Control : Object
+local Control = object:new{}
+Control.type = "Control"
 
-control._globalX = 0
-control._globalY = 0
-control._x = 0
-control._y = 0
-control._w = 13
-control._h = 5
-control._expandW = false
-control._expandH = false
-control._fitToText = false
-control.offsetTextX = 0
-control._text = "Control"
-control._style = style
-control.inheritStyle = true
-control.centerText = false
-control.focus = false
-control.propogateFocusUp = false
-control.propogateInputUp = true
-control.clipText = true
-control.mouseIgnore = false
-control._visible = true
-control.rendering = true
-control.draggable = false
-control.dragSelectable = false
-control.children = {}
-control.parent = nil
-control.marginL = 0
-control.marginR = 0
+---@name globalX
+---@type number
+Control.globalX = nil
+Control._globalX = 0
 
-control.anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3, CENTER = 4 }
+---@name globalY
+---@type number
+Control.globalY = nil
+Control._globalY = 0
 
-control._anchorW = control.anchor.LEFT
-control._anchorH = control.anchor.UP
+---@name x
+---@type number
+Control.x = nil
+Control._x = 0
 
-control.visibilityChangedSignal = control:createSignal()
-control.focusChangedSignal = control:createSignal()
-control.transformChangedSignal = control:createSignal()
+---@name y
+---@type number
+Control.y = nil
+Control._y = 0
 
-control:defineProperty('globalX', {
+---@name w
+---@type number
+Control.w = nil
+Control._w = 13
+
+---@name h
+---@type number
+Control.h = nil
+Control._h = 5
+
+---@name expandW
+---@type boolean
+Control.expandW = nil
+Control._expandW = false
+
+---@name expandH
+---@type boolean
+Control.expandH = nil
+Control._expandH = false
+
+---@name fitToText
+---@type boolean
+Control.fitToText = nil
+Control._fitToText = false
+
+---@name text
+---@type string
+Control.text = nil
+Control._text = "Control"
+
+---@name style
+---@type Style
+Control.style = nil
+Control._style = style
+
+---@name visible
+---@type boolean
+Control.visible = nil
+Control._visible = true
+
+Control.inheritStyle = true
+Control.centerText = false
+Control.focus = false
+Control.propogateFocusUp = false
+Control.propogateInputUp = true
+Control.clipText = true
+Control.mouseIgnore = false
+Control.rendering = true
+Control.draggable = false
+Control.dragSelectable = false
+Control.children = {}
+---@type Control
+Control.parent = nil
+Control.marginL = 0
+Control.marginR = 0
+Control.offsetTextX = 0
+
+---@enum Anchor
+Control.anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3, CENTER = 4 }
+
+---@type Anchor
+Control.anchorW = nil
+---@type Anchor
+Control.anchorH = nil
+
+---@type Anchor
+Control._anchorW = Control.anchor.LEFT
+---@type Anchor
+Control._anchorH = Control.anchor.UP
+
+Control.visibilityChangedSignal = Control:createSignal()
+Control.focusChangedSignal = Control:createSignal()
+Control.transformChangedSignal = Control:createSignal()
+
+Control:defineProperty('globalX', {
     get = function(o) return o._globalX end,
     set = function(o, value)
         local same = o._globalX == value
@@ -53,7 +115,7 @@ control:defineProperty('globalX', {
     end 
 })
 
-control:defineProperty('globalY', {
+Control:defineProperty('globalY', {
     get = function(o) return o._globalY end,
     set = function(o, value) 
         local same = o._globalY == value
@@ -67,7 +129,7 @@ control:defineProperty('globalY', {
     end 
 })
 
-function control:updateGlobalPosition()
+function Control:updateGlobalPosition()
     for i = 1, #self.children do
         local c = self.children[i]
         c.globalX = self.globalX + c.x
@@ -77,7 +139,7 @@ function control:updateGlobalPosition()
     self:redraw()
 end
 
-control:defineProperty('x', {
+Control:defineProperty('x', {
     get = function(o) return o._x end,
     set = function(o, value)
         local same = o._x == value
@@ -91,7 +153,7 @@ control:defineProperty('x', {
     end
 })
 
-control:defineProperty('y', {
+Control:defineProperty('y', {
     get = function(o) return o._y end,
     set = function(o, value) 
         local same = o._y == value
@@ -105,13 +167,17 @@ control:defineProperty('y', {
     end
 })
 
-function control:updatePosition()
+function Control:updatePosition()
+    if self.parent == nil then
+        error("Parent is nill", 1)
+    end
+
     self.globalX = self.parent.globalX + self.x
     self.globalY = self.parent.globalY + self.y
     self:redraw()
 end
 
-control:defineProperty('w', {
+Control:defineProperty('w', {
     get = function(o) return o._w end,
     set = function(o, value) 
         local same = o._w == value
@@ -126,7 +192,7 @@ control:defineProperty('w', {
     end
 })
 
-control:defineProperty('h', {
+Control:defineProperty('h', {
     get = function(o) return o._h end,
     set = function(o, value) 
         local same = o._h == value
@@ -141,7 +207,7 @@ control:defineProperty('h', {
     end
 })
 
-control:defineProperty('expandW', {
+Control:defineProperty('expandW', {
     get = function(o) return o._expandW end,
     set = function(o, value)
         local same = o._expandW == value
@@ -154,7 +220,7 @@ control:defineProperty('expandW', {
     end
 })
 
-control:defineProperty('expandH', {
+Control:defineProperty('expandH', {
     get = function(o) return o._expandH end,
     set = function(o, value) 
         local same = o._expandH == value
@@ -165,7 +231,7 @@ control:defineProperty('expandH', {
     end
 })
 
-function control:_expandChildren()
+function Control:_expandChildren()
     for i = 1, #self.children do
         local c = self.children[i]
         if c.expandH then
@@ -174,25 +240,24 @@ function control:_expandChildren()
         if c.expandW then
             c.w = self.w - self.marginR - c.x
         end
-        if c.anchorW == control.anchor.RIGHT then
+        if c.anchorW == Control.anchor.RIGHT then
             c.x = self.w - c.w
             --local a = e.e
-        elseif c.anchorW == control.anchor.CENTER then
+        elseif c.anchorW == Control.anchor.CENTER then
             c.x = math.floor(self.w / 2 + 0.5) -  math.floor(c.w / 2 + 0.5)
         end
 
-        if c.anchorH == control.anchor.DOWN then
+        if c.anchorH == Control.anchor.DOWN then
             c.y = self.h - c.h
-        elseif c.anchorH == control.anchor.CENTER then
+        elseif c.anchorH == Control.anchor.CENTER then
             c.y = math.floor(self.h / 2 + 0.5) - math.floor(c.w / 2 + 0.5)
         end
         
     end
 end
 
-function control:_resize()
+function Control:_resize()
     self.w, self.h = self:getMinimumSize()
-
     --[[
     if self._expandW then
         self.w = self.parent.w
@@ -204,7 +269,7 @@ function control:_resize()
     ]]--
 end
 
-function control:getMinimumSize()
+function Control:getMinimumSize()
     if self._fitToText then
         return #self.text + self.marginL + self.marginR, 1
     else
@@ -212,7 +277,7 @@ function control:getMinimumSize()
     end
 end
 
-control:defineProperty('fitToText', {
+Control:defineProperty('fitToText', {
     get = function(o) return o._fitToText end,
     set = function(o, value)
         o._fitToText = value
@@ -223,7 +288,7 @@ control:defineProperty('fitToText', {
 })
 
 
-control:defineProperty('text', {
+Control:defineProperty('text', {
     get = function(o) return o._text end,
     set = function(o, value)
         local same = o._text == value
@@ -237,6 +302,7 @@ control:defineProperty('text', {
     end
 })
 
+---@param o Control
 local function propogateVisiblity(o)
     for i = 1, #o.children do
         local c = o.children[i]
@@ -248,7 +314,7 @@ local function propogateVisiblity(o)
     end
 end
 
-control:defineProperty('visible', {
+Control:defineProperty('visible', {
     get = function(o) return o._visible end,
     set = function(o, value) 
         local same = o._visible == value
@@ -263,7 +329,7 @@ control:defineProperty('visible', {
     end
 })
 
-control:defineProperty('style', {
+Control:defineProperty('style', {
     get = function(o) return o._style end,
     set = function(o, value) 
         local same = o._style == value
@@ -281,7 +347,7 @@ control:defineProperty('style', {
     end
 })
 
-control:defineProperty('anchorW', {
+Control:defineProperty('anchorW', {
     get = function(o) return o._anchorW end,
     set = function(o, value) 
         local same = o._anchorW == value
@@ -292,7 +358,7 @@ control:defineProperty('anchorW', {
     end
 })
 
-control:defineProperty('anchorH', {
+Control:defineProperty('anchorH', {
     get = function(o) return o._anchorH end,
     set = function(o, value) 
         local same = o._anchorH == value
@@ -327,15 +393,15 @@ control:defineProperty('marginL', {
 })
 ]]--
 
-control.shadow = false -- Change this to style
+Control.shadow = false -- Change this to style
 
-function control:add()
+function Control:add()
     self:ready()
     self:redraw()
     self.add = function () end -- A bit of a ugly hack to prevent add being called multiple times
 end
 
-function control:remove()
+function Control:remove()
     --[[
     --for i = 1, #self.children do
     --    self.children[i]:remove()
@@ -361,16 +427,16 @@ function control:remove()
     self:queueFree()
 end
 
-function control:queueFree()
+function Control:queueFree()
     table.insert(engine.freeQueue, self)
 end
 
-function control:redraw()
+function Control:redraw()
     engine.queueRedraw = true
     --engine.renderQueue[self] = true
 end
 
-function control:render() -- Determines how the control object is drawn
+function Control:render() -- Determines how the control object is drawn
     --SHADOW
     self:drawShadow()
     --PANEL
@@ -383,7 +449,7 @@ function control:render() -- Determines how the control object is drawn
     self:write()
 end
 
-function control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'redraw' instead
+function Control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'redraw' instead
     if self.visible == false or self.rendering == false or self.parent == nil then
         return
     end
@@ -391,7 +457,7 @@ function control:draw() -- Draws the control object if it is valid, NOTE this sh
     self:render()
 end
 
-function control:drawShadow()
+function Control:drawShadow()
     if self.shadow ~= true then return end
     if self.w == 0 or self.h == 0 then return end
 
@@ -424,8 +490,11 @@ function control:drawShadow()
     --paintutils.drawLine(startX, startY, endX, endY, self._style.shadowColor)
 end
 
-
-function control:drawPanel(left, up, right, down)
+---@param left number 
+---@param up number 
+---@param right number 
+---@param down number 
+function Control:drawPanel(left, up, right, down)
     if self._style.background == true or self._style.background == nil then
         paintutils.drawFilledBox(
             left,
@@ -461,11 +530,11 @@ local function getTextPosition(_x, _y, _w, _h, center, text)
     return x + 1, y + 1
 end
 
-function control:getTextPosition()
+function Control:getTextPosition()
     return getTextPosition(self._globalX, self._globalY, self._w, self._h, self.centerText, self.text)
 end
 
-function control:write()
+function Control:write()
     if self._text == "" or self.text == nil then
         return
     end
@@ -493,7 +562,8 @@ function control:write()
     --term.write(t)
 end
 
-function control:addChild(o)
+---@param o Control
+function Control:addChild(o)
 	local t = {}
 
 	for i = 1, #self.children do
@@ -515,7 +585,14 @@ function control:addChild(o)
     --self:syncChildrenKey("style", self._style)
 end
 
-function control:removeChild(o)
+---@return Control
+---@param i integer
+function Control:getChild(i)
+	return self.children[i]
+end
+
+---@param o Control
+function Control:removeChild(o)
     for i = 1, #self.children do
         if self.children[i] == o then
             table.remove(self.children, i)
@@ -528,41 +605,47 @@ function control:removeChild(o)
     self:redraw()
 end
 
-function control:syncChildrenKey(key, value)
+---@param key string
+function Control:syncChildrenKey(key, value)
     for i = 1, #self.children do
         local c = self.children[i]
         --if (c[key] == nil) then
             c[key] = value
         --end
     end
-end 
+end
 
-function control:syncChildrenFunction(key)
+---@param key string
+function Control:syncChildrenFunction(key)
     for i = 1, #self.children do
         local c = self.children[i]
         c[key](c)
     end
 end
 
-function control:drag(x, y, button)
+---@param x number
+---@param y number
+---@param button integer
+function Control:drag(x, y, button)
     if not self.draggable then return end
     self.x = self.x + x
     self.y = self.y + y
 end
 
-function control:toFront()
+function Control:toFront()
     if self.parent.children[#self.parent.children] == self then return end
     engine.utils.pushBottom(self.parent.children, self)
     self:redraw()
 end
 
-function control:toBack()
+function Control:toBack()
     if self.parent.children[1] == self then return end
     engine.utils.pushTop(self.parent.children, self)
     self:redraw()
 end
 
-function control:inFocus()
+---@return boolean
+function Control:inFocus()
     if self.focus == true then return true end
 
     for i = 1, #self.children do
@@ -574,47 +657,116 @@ function control:inFocus()
     return false
 end
 
-function control:isVisible()
+---@return boolean
+function Control:isVisible()
     if self.visible == false then return false end
     if self.parent == nil then return true end
     return self.parent:isVisible()
 end
 
 
-function control:grabFocus()
+function Control:grabFocus()
     engine.input.grabControlFocus(self)
 end
 
-function control:releaseFocus()
+function Control:releaseFocus()
     engine.input.releaseControlFocus(self)
 end
 
-function control:grabCursorControl()
+function Control:grabCursorControl()
     engine.input.setCursorControl(self)
     self:updateCursor()
 end
 
-function control:releaseCursorControl()
+function Control:releaseCursorControl()
     engine.input.setCursorControl(nil)
 end
 
 --Event Functions that should be overwritten
-function control:ready() end
-function control:treeEntered() end
-function control:childrenChanged() end
-function control:click(button, x, y) end
-function control:pressed(button, x, y) end
-function control:doublePressed() end
-function control:up() end
-function control:scroll(dir) end
-function control:focusChanged() end
-function control:updateCursor() end
-function control:positionChanged() end
-function control:globalPositionChanged() end
-function control:sizeChanged()  end
-function control:transformChanged()  end
-function control:styleChanged() end
-function control:visibilityChanged() end
+function Control:ready() end
+function Control:treeEntered() end
+function Control:childrenChanged() end
+function Control:click(button, x, y) end
+function Control:pressed(button, x, y) end
+function Control:doublePressed() end
+function Control:up() end
+function Control:scroll(dir) end
+function Control:focusChanged() end
+function Control:updateCursor() end
+function Control:positionChanged() end
+function Control:globalPositionChanged() end
+function Control:sizeChanged()  end
+function Control:transformChanged()  end
+function Control:styleChanged() end
+function Control:visibilityChanged() end
 
-return control
+---@param p Control
+---@param c Control
+local function addControl(p, c)
+    local child = c:new()
+    p:addChild(child)
+    return child
+end
+
+---@return Control
+function Control:addControl()
+    return addControl(self, engine.Control)
+end
+
+---@return Button
+function Control:addButton()
+    return addControl(self, engine.Button)
+end
+
+---@return ColorPicker
+function Control:addColorPicker()
+    return addControl(self, engine.ColorPicker)
+end
+
+---@return Container
+function Control:addContainer()
+    return addControl(self, engine.Container)
+end
+
+---@return Dropdown
+function Control:addDropdown()
+    return addControl(self, engine.Dropdown)
+end
+
+---@return FlowContainer
+function Control:addFlowContainer()
+    return addControl(self, engine.FlowContainer)
+end
+
+---@return HContainer
+function Control:addHContainer()
+    return addControl(self, engine.HContainer)
+end
+
+---@return Icon
+function Control:addIcon()
+    return addControl(self, engine.Icon)
+end
+
+---@return LineEdit
+function Control:addLineEdit()
+    return addControl(self, engine.LineEdit)
+end
+
+---@return ScrollContainer
+function Control:addScrollContainer()
+    return addControl(self, engine.ScrollContainer)
+end
+
+---@return VContainer
+function Control:addVContainer()
+    return addControl(self, engine.VContainer)
+end
+
+---@return WindowControl
+function Control:addWindowControl()
+    return addControl(self, engine.WindowControl)
+end
+
+return Control
 end

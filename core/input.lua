@@ -294,9 +294,14 @@ local function mouseUp(button, x, y)
 end
 
 local function mouseDrag(button, x, y)
-    if mouse.inTerm(x, y) == false then return end 
-    mouse.drag(button, x, y)
-end 
+    if mouse.inTerm(x, y) == false then 
+        if mouse.current then
+            mouse.current:up()
+        end
+    else
+        mouse.drag(button, x, y)
+    end
+end
 
 local function mouseEvent(event, data)
     for i = 1, #mouseEventListeners do 
