@@ -2,6 +2,9 @@ print("MOS is Starting...")
 
 ---@class MOS
 local mos = {}
+function mos.getVersion ()
+    return "1.0.0"
+end
 
 local src = debug.getinfo(1, "S").short_src
 local corePath = ".core"
@@ -115,7 +118,7 @@ end
 
 local dropdown = engine.Dropdown
 local programViewport = require(".core.multiProcess.programViewport")(engine.Control, multiProgram, engine.input)
-local programWindow = require(".core.multiProcess.programWindow")(engine.WindowControl)
+local programWindow = require(".core.multiProcess.programWindow")(engine.WindowControl, engine.input)
 
 local style = engine.getDefaultStyle()
 local clickStyle = engine.getDefaultClickedStyle()

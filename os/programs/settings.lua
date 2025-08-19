@@ -1,6 +1,7 @@
 local src = debug.getinfo(1, "S").short_src
 local corePath = ".core"
 
+---@type Engine
 local engine = require(corePath .. ".engine")
 
 ---@type MOS
@@ -11,16 +12,8 @@ if mos == nil then
     return
 end
 
-term.setTextColor(colors.white)
-
-local backgroundStyle = engine.newStyle()
-backgroundStyle.backgroundColor = colors.black
-
-local background = engine.root:addControl()
-background.expandW = true
-background.expandH = true
-background.text = ""
-background.style = backgroundStyle
+engine.backgroundColor = colors.white
+engine.background = true
 
 local main = engine.root:addVContainer()
 main.expandW = true
@@ -44,15 +37,17 @@ local seperatorStyle = engine.newStyle()
 seperatorStyle.backgroundColor = colors.white
 seperatorStyle.textColor = colors.gray
 
-local appearanceSeperator = main:addControl()
-appearanceSeperator.h = 1
-appearanceSeperator.expandW = true
-appearanceSeperator.text = "-Appearance-"
-appearanceSeperator.centerText = true
-appearanceSeperator.style = seperatorStyle
+local function addSeperator(text)
+    local seperator = main:addControl()
+    seperator.h = 1
+    seperator.expandW = true
+    seperator.centerText = true
+    seperator.style = seperatorStyle
+    seperator.text = text
+    return seperator
+end
 
 
----comment
 ---@param text string
 local function addLabel(text)
     ---@type Control
@@ -65,6 +60,33 @@ local function addLabel(text)
 
     return label
 end
+
+---@param o Control
+local function addReset(o)
+    local reset = o:addButton()
+    reset.x = -1
+    reset.h = 1
+    reset.w = 1
+    reset.text = "x"
+    reset.inheritStyle = false
+    reset.normalStyle = buttonStyle
+    reset.clickedStyle = clickedStyle
+    return reset
+end
+
+local function addSettingsInfo(text, infoText)
+    local label = addLabel(text)
+    ---@type Button
+    local info = engine.Control:new{}
+    label:addChild(info)
+    info.text = infoText
+    info.style = buttonStyle
+    info.h = 1
+    info.fitToText = true
+    info.anchorW = info.anchor.RIGHT
+    return info
+end
+
 
 local function addSettingsButton(text, buttonText)
     local label = addLabel(text)
@@ -79,8 +101,6 @@ local function addSettingsButton(text, buttonText)
     return button
 end
 
-local reset
-
 local function addSettingsColor(text)
     local label = addLabel(text)
 
@@ -93,35 +113,38 @@ local function addSettingsColor(text)
     picker.anchorW = picker.anchor.RIGHT
     picker.dragSelectable = true
 
-    reset = picker:addButton()
-    reset.x = -1
-    reset.h = 1
-    reset.w = 1
-    reset.text = "x"
-    reset.inheritStyle = false
-    reset.normalStyle = buttonStyle
-    reset.clickedStyle = clickedStyle
-
-    picker.reset = picker
-
-    reset.visible = mos.profile.backgroundColor ~= nil
-    if mos.profile.backgroundColor ~= nil then
-        picker.style.backgroundColor = mos.profile.backgroundColor
-    end
-
-    reset.pressed = function (o)
-        ---@type Profile
-        mos.profile.backgroundColor = nil
-        mos.engine.backgroundColor = mos.theme.backgroundColor
-        mos.refreshTheme()
-        o.visible = false
-        picker.style.backgroundColor = colors.white
-    end
-
     return picker
 end
 
+
+local function addSettingsLineEdit(text, editText)
+    local label = addLabel(text)
+
+    local edit = label:addLineEdit()
+    edit.w = 16
+    edit.trueText = editText
+    edit.dragSelectable = true
+    edit.normalStyle.backgroundColor = colors.lightGray
+    edit.focusStyle.backgroundColor = colors.black
+    edit.focusStyle.textColor = colors.white
+    edit.style = edit.normalStyle
+    edit.anchorW = edit.anchor.RIGHT
+    return edit
+end
+
 local fileExplorer = nil
+
+addSeperator("-MOS-")
+addSettingsInfo("Version", tostring(mos.getVersion()))
+
+addSeperator("-Computer-")
+addSettingsInfo("ID", "#" .. tostring(os.getComputerID()))
+local labelEdit = addSettingsLineEdit("Label", os.getComputerLabel())
+function labelEdit:textSubmitted()
+    os.setComputerLabel(labelEdit.text)
+end
+
+addSeperator("-Appearance-")
 
 local changeTheme = addSettingsButton("Theme", "[Browse]")
 
@@ -138,23 +161,48 @@ end
 
 local changeBackground = addSettingsButton("Background Image", "[Browse]")
 
+local imageReset = addReset(changeBackground)
+imageReset.visible = mos.profile.backgroundIcon ~= nil
+
+
 function changeBackground:pressed()
     fileExplorer = mos.launchProgram("Choose .nfp", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
         mos.backgroundIcon.texture = paintutils.loadImage(path)
         mos.profile.backgroundIcon = path
+        imageReset.visible = true
     end, "os/textures/backgrounds/")
 end
 
-local changeBackgroundColor = addSettingsColor("Background Color")
+function imageReset:pressed()
+    mos.profile.backgroundIcon = nil
+    mos.backgroundIcon.texture = nil
+    imageReset.visible = false
+end
 
-function changeBackgroundColor:optionPressed(i)
-    local color = changeBackgroundColor:getColor()
+local picker = addSettingsColor("Background Color")
+
+local colorReset = addReset(picker)
+
+colorReset.visible = mos.profile.backgroundColor ~= nil
+if mos.profile.backgroundColor ~= nil then
+    picker.style.backgroundColor = mos.profile.backgroundColor
+end
+
+colorReset.pressed = function (o)
+    ---@type Profile
+    mos.profile.backgroundColor = nil
+    mos.engine.backgroundColor = mos.theme.backgroundColor
+    mos.refreshTheme()
+    o.visible = false
+    picker.style.backgroundColor = colors.white
+end
+
+
+function picker:colorPressed(color)
     mos.profile.backgroundColor = color
     mos.engine.backgroundColor = color
-    local style = self:getOption(i).style:new()
-    self.normalStyle = style
-    self.clickedStyle = style
-    reset.visible = true
+    --local style = self:getOption(i).style:new()
+    colorReset.visible = true
 end
 
 

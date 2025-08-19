@@ -1,6 +1,8 @@
 -- Extends windowControl, attaches a programViewport to a window.
 ---@return ProgramWindow
-return function(windowControl)
+---@param windowControl WindowControl
+---@param input Input
+return function(windowControl, input)
 ---@class ProgramWindow : WindowControl
 local ProgramWindow = windowControl:new{}
 ProgramWindow.type = "ProgramWindow"
@@ -14,21 +16,47 @@ ProgramWindow:defineProperty('clickedStyle', {
     get = function(o) return o._clickedStyle end,
     set = function(o, value)
         o._clickedStyle = value
+        --
         o.minimizeButton.clickedStyle = value
         o.splitLeftButton.clickedStyle = value
         o.splitRightButton.clickedStyle = value
+        o.splitUpButton.clickedStyle = value
+        o.splitDownButton.clickedStyle = value
+        --
         o.minimizeButton.normalStyle = o.focusedStyle
         o.splitLeftButton.normalStyle = o.focusedStyle
         o.splitRightButton.normalStyle = o.focusedStyle
+        o.splitUpButton.normalStyle = o.focusedStyle
+        o.splitDownButton.normalStyle = o.focusedStyle
     end
 })
 
 ProgramWindow.showShadow = true
 
-local function addButton (w)
-    local b = w:addButton()
-    b.clickedStyle = w.clickedStyle
+---@return Button
+local function addButton (wi)
+    local b = wi:addButton()
+    b.clickedStyle = wi.clickedStyle
     return b
+end
+
+local function addSplit (wi, h, fn)
+    local split = addButton(wi)
+    split.visible = false
+    split.centerText = true
+    if h then
+        split.expandH = true
+        split.w = 1
+    else
+        split.expandW = true
+        split.h = 1
+    end
+
+    split.pressed = function ()
+        fn(wi)
+    end
+
+    return split
 end
 
 function ProgramWindow:ready()
@@ -40,28 +68,21 @@ function ProgramWindow:ready()
     self.minimizeButton.text = "-"
     self.minimizeButton.propogateFocusUp = true
 
-    self.splitLeftButton = addButton(self)
-    self.splitLeftButton.x = self.w - 4
-    self.splitLeftButton.w = 1
-    self.splitLeftButton.h = 1
-    self.splitLeftButton.text = "<"
-    --self.splitLeftButton.propogateFocusUp = true
+    self.splitLeftButton = addSplit(self, true, self.enableLeftSplitScreen)
+    self.splitLeftButton.x = -1
+    self.splitLeftButton.text = "\17"
 
-    self.splitLeftButton.pressed = function(o)
-        o.parent:enableLeftSplitScreen()
-    end
+    self.splitRightButton = addSplit(self, true, self.enableRightSplitScreen)
+    self.splitRightButton.x = self.w + 1
+    self.splitRightButton.text = "\16"
 
-    self.splitRightButton = addButton(self)
-    self.splitRightButton.x = self.w - 3
-    self.splitRightButton.w = 1
-    self.splitRightButton.h = 1
-    self.splitRightButton.text = ">"
-    --self.splitRightButton.propogateFocusUp = true
+    self.splitUpButton = addSplit(self, false, self.enableUpSplitScreen)
+    self.splitUpButton.y = -1
+    self.splitUpButton.text = "\30"
 
-    self.splitRightButton.pressed = function(o)
-        self:releaseFocus()
-        self:enableRightSplitScreen()
-    end
+    self.splitDownButton = addSplit(self, false, self.enableDownSplitScreen)
+    self.splitDownButton.y = self.h + 1
+    self.splitDownButton.text = "\31"
 
     self.minimizeButton.pressed = function(o)
         self.visible = false
@@ -79,6 +100,34 @@ function ProgramWindow:ready()
     self.exitButton.dragSelectable = true
     self.splitLeftButton.dragSelectable = true
     self.splitRightButton.dragSelectable = true
+
+    input.addRawEventListener(self)
+end
+
+function ProgramWindow:setSplitButtonsVisible(visible)
+    self.splitLeftButton.visible = visible
+    self.splitRightButton.visible = visible
+    self.splitUpButton.visible = visible
+    self.splitDownButton.visible = visible
+end
+
+function ProgramWindow:rawEvent(data)
+    local event = data[1]
+    local key = data[2]
+    if event == "key" then
+        if key == keys.leftAlt and self:inFocus() then
+            self:setSplitButtonsVisible(true)
+        end
+    elseif event == "key_up" then
+        if key == keys.leftAlt then
+            self:setSplitButtonsVisible(false)
+        end
+    end
+end
+
+function ProgramWindow:queueFree()
+   windowControl.queueFree(self)
+   input.removeRawEventListener(self)
 end
 
 function ProgramWindow:enableLeftSplitScreen()
@@ -88,8 +137,6 @@ function ProgramWindow:enableLeftSplitScreen()
     self.w = math.ceil(w/2)
     self.h = h-1
     self.showShadow = false
-    self:toFront()
-    self:grabFocus()
 end
 
 function ProgramWindow:enableRightSplitScreen()
@@ -99,10 +146,25 @@ function ProgramWindow:enableRightSplitScreen()
     self.w = math.ceil(w/2)
     self.h = h-1
     self.showShadow = false
-    self:toFront()
-    self:grabFocus()
 end
 
+function ProgramWindow:enableUpSplitScreen()
+    local w, h = term.getSize()
+    self.x = 0
+    self.y = 1
+    self.w = w
+    self.h = math.ceil(h/2)
+    self.showShadow = false
+end
+
+function ProgramWindow:enableDownSplitScreen()
+    local w, h = term.getSize()
+    self.x = 0
+    self.y = math.ceil(h/2) - 1
+    self.w = w
+    self.h = math.ceil(h/2)
+    self.showShadow = false
+end
 
 function ProgramWindow:close()
     self.programViewport.terminated = true
@@ -133,13 +195,6 @@ function ProgramWindow:addViewport(pv)
     pv.y = 1
     pv.h = pv.h - 1
     pv.propogateFocusUp = true
-    --self.programViewport.click = function(o)
-    --    o.parent:toFront()
-    --end
-
-    --self.programViewport.focusChanged = function(o)
-    --    o.parent:updateFocus()
-    --end
 end
 
 function ProgramWindow:click()
@@ -147,17 +202,13 @@ function ProgramWindow:click()
     self:toFront()
 end
 
---function programWindow:launchProgram(path, ...)
---    self.programViewport:launchProgram(path, ...)
---end
-
 function ProgramWindow:sizeChanged()
     windowControl.sizeChanged(self)
     self.minimizeButton.x = self.w - 2
     self.programViewport.w = self.w
     self.programViewport.h = self.h - 1
-    self.splitLeftButton.x = self.w - 4
-    self.splitRightButton.x = self.w - 3
+    self.splitRightButton.x = self.w
+    self.splitDownButton.y = self.h
     self.showShadow = true
 end
 
@@ -166,15 +217,14 @@ function ProgramWindow:focusChanged()
 end
 
 function ProgramWindow:updateFocus()
-    if self:inFocus() then -- or (self.programViewport ~= nil and self.programViewport:inFocus()) then
+    if self:inFocus() then
         self.style = self.focusedStyle
-        --term.setCursorBlink(true)
         self:toFront()
         self:grabCursorControl()
     else
         self.style = self.unfocusedStyle
         self:releaseCursorControl()
-        --term.setCursorBlink(false)
+        self:setSplitButtonsVisible(false)
     end
 end
 

@@ -10,13 +10,14 @@ function FlowContainer:sort()
 	local nextH = 0
 	for i = 1, #self.children do
 		local c = self.children[i]
-		c.globalX = self.globalX + w
-		c.globalY = self.globalY + h
-		w = w + c.w + 1
+		c.x = w
+		c.y = h
+		w = w + c.w
 		nextH = math.max(nextH, h + c.h)
 		if w > self.w then
 			w = 0
-			h = nextH + 1
+			h = nextH
+			self._h = h
 		end
 	end
 end
