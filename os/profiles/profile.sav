@@ -1,22 +1,16 @@
 {
-  backgroundIcon = "os/textures/backgrounds/tux.nfp",
+  backgroundIcon = "os/textures/backgrounds/facit.nfp",
   favorites = {
-    [ "freeTest.lua" ] = {
-      name = "freeTest.lua",
+    [ "os/textures/backgrounds/melvin.nfp" ] = {
+      name = "melvin.nfp",
     },
     [ "os/programs/paint.lua" ] = {
       name = "paint.lua",
     },
-    [ "os/textures/backgrounds/melvin.nfp" ] = {
-      name = "melvin.nfp",
-    },
-    [ ".gitattributes" ] = {
-      name = ".gitattributes",
-    },
   },
   backgroundPath = "os/textures/backgrounds/melvin.nfp",
-  backgroundUpdateTime = 0.1,
-  theme = "os/themes/pinkTheme.thm",
+  backgroundUpdateTime = 1,
+  theme = "os/themes/darkTheme.thm",
   fileExecptions = {
     [ ".nfp" ] = {
       program = "/os/programs/paint.lua",

@@ -1,41 +1,48 @@
-local path = ".core."
+local src = debug.getinfo(1, "S").short_src
+local corePath = ".core"
 
 ---@class Engine
 local engine = {}
 
-local object = require(path .. "object")
-local collision = require(path .. "collision")
-local input = require(path .. "input")(engine, collision)
-local utils = require(path .. "utils")
+local object = require(corePath .. ".object")
+local collision = require(corePath .. ".collision")
+local input = require(corePath .. ".input")(engine, collision)
+local utils = require(corePath .. ".utils")
 
 engine.input = input
 engine.utils = utils
-
 engine.freeQueue = {}
 
 ---@type Style
-local style = require(path .. "styles.style")(object)
+local style = require(corePath .. ".styles.style")(object)
 ---@type Style
-local clickedStyle = require(path .. "styles.style")(style)
+local clickedStyle = require(corePath .. ".styles.style")(style)
+---@type Style
+local editStyle = style:new()
+editStyle.backgroundColor = colors.gray
+---@type Style
+local editFocusStyle = editStyle:new()
+editFocusStyle.backgroundColor = colors.lightGray
+
 
 --Objects
 local objectList = {}
 
 local function requireObject(name, ...)
-    local o = require(path .. "objects." .. name)(...)
+    local o = require(corePath .. ".objects." .. name)(...)
     objectList[name] = o
     --engine[name] = o
     return o
 end
 
 ---@type Control
-engine.Control = requireObject("control", object, engine, style) -- Should it only be engine as argument?
+engine.Control = requireObject("control", object, engine, style)
 ---@type Button
 engine.Button = requireObject("button", engine.Control, style, clickedStyle)
 ---@type Dropdown
 engine.Dropdown = requireObject("dropdown", engine.Button, input, utils)
 -----@type ColorPicker
---engine.colorPicker = requireObject("dropdown", engine.dropdown, style)
+engine.ColorPicker = requireObject("colorPicker", engine.Dropdown, input, style, utils)
 ---@type Container
 engine.Container = requireObject("container", engine.Control)
 ---@type VContainer
@@ -48,34 +55,14 @@ engine.FlowContainer = requireObject("flowContainer", engine.Container)
 engine.ScrollContainer = requireObject("scrollContainer", engine.Container, input)
 ---@type WindowControl
 engine.WindowControl = requireObject("windowControl", engine.Control, engine.Button)
-
-local editStyle = style:new{}
-editStyle.backgroundColor = colors.gray
-editStyle.centerText = false
-
-local editFocusStyle = editStyle:new()
-editFocusStyle.backgroundColor = colors.lightGray
-
----@type Control
+---@type LineEdit
 engine.LineEdit = requireObject("lineEdit", engine.Control, editStyle, editFocusStyle, input)
----@type Control
+---@type Icon
 engine.Icon = requireObject("icon", engine.Control)
-
---Engine
---Adds 'add' functions for all control objects Example: control:addButton()
-for k, v in pairs(objectList) do
-    --engine.Control["add" .. utils.capitaliseFirst(k)] = function(o)
-    --    local c = objectList[k]:new{}
-    --    o:addChild(c)
-    --    return c
-    --end
-end
 
 local parentTerm = term.current()
 local initialW, initialH = parentTerm.getSize()
 local screenBuffer = window.create(parentTerm, 1, 1, initialW, initialH)
---term.redirect(screenBuffer) -- NOTE IMPORTANT (Otherwise viewports will draw behind screenbuffer since their parents will be the parent of the screenbuffer)
---NOTE This in no longer needed since the parent term is now passed through as an argument when creating viewports
 
 engine.parentTerm = parentTerm
 engine.screenBuffer = screenBuffer
@@ -87,9 +74,11 @@ if __Global == nil then
     __Global = {}
     __Global.nextID = 0
     local dest = ".logs/"
-    local logs = fs.list(dest)
-    for i = 1, #logs - 4 do
-        fs.delete(fs.combine(dest, logs[i]))
+    if fs.exists(dest) then
+        local logs = fs.list(dest)
+        for i = 1, #logs - 4 do
+            fs.delete(fs.combine(dest, logs[i]))
+        end 
     end
 
     __Global.logFile = fs.open(fs.combine(dest, tostring(os.epoch("utc")) .. ".log"), "w")
@@ -104,8 +93,10 @@ if __Global == nil then
         __Global.logFile.write(line)
         __Global.logFile.flush()
     end
+    __Global.log = function () end
 end
 
+---@type Control
 local root = engine.Control:new{}
 root.rendering = false
 root.text = "root"
@@ -184,15 +175,6 @@ engine.start = function ()
         engine.freeQueue = {}
     end
 
-    --[[
-    while engine.running do
-        input.processInput()
-        redrawScreen()
-    end
-    ]]--
-
-    local exception = dofile("rom/modules/main/cc/internal/tiny_require.lua")("cc.internal.exception")
-    local barrier_ctx = { co = coroutine.running() }
 
     local drawTimerID = 0
     local id = __Global.nextID
@@ -217,8 +199,8 @@ engine.start = function ()
         end
     end
 
-    local coDraw = coroutine.create(function() return exception.try_barrier(barrier_ctx, fnDraw) end)
-    local coInput = coroutine.create(function() return exception.try_barrier(barrier_ctx, fnInput) end)
+    local coDraw = coroutine.create(fnDraw)
+    local coInput = coroutine.create(fnInput)
 
     coroutine.resume(coDraw)
     while engine.running do
@@ -252,26 +234,27 @@ engine.stop = function ()
     end
 end
 
-engine.getObjects = function ()
-	return objectList
-end
-
+---@return Control 
 engine.getObject = function (name)
 	return objectList[name]
 end
 
+---@return Style
 engine.newStyle = function ()
     return style:new{}
 end
 
+---@return Style
 engine.getDefaultStyle = function ()
     return style
 end
 
+---@return Style
 engine.getDefaultClickedStyle = function ()
     return clickedStyle
 end
 
+---@return Control
 engine.getFocus = function ()
     return input.getFocus()
 end

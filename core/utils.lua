@@ -17,7 +17,7 @@ local function find(t, v)
 end
 
 local function combine(first, second)
-	for k,v in pairs(second) do 
+	for k,v in pairs(second) do
 		table.insert(first, v)
 	end
 end
@@ -40,7 +40,7 @@ local function split(s, c)
 			str = str:gsub(' ', '')
             table.insert(strings, str)
             start = i 
-        end   
+        end
     end
     return strings
 end

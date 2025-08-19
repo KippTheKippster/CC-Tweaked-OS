@@ -1,4 +1,8 @@
-local engine = require(".core.engine")
+local src = debug.getinfo(1, "S").short_src
+local corePath = "." .. fs.getDir(fs.getDir(fs.getDir(src))) .. "core"
+
+local engine = require(corePath .. ".engine")
+
 local mos = __mos
 
 local args = {...}
