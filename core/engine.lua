@@ -41,8 +41,8 @@ engine.Control = requireObject("control", object, engine, style)
 engine.Button = requireObject("button", engine.Control, style, clickedStyle)
 ---@type Dropdown
 engine.Dropdown = requireObject("dropdown", engine.Button, input, utils)
------@type ColorPicker
-engine.ColorPicker = requireObject("colorPicker", engine.Dropdown, input, style, utils)
+---@type ColorPicker
+engine.ColorPicker = requireObject("colorPicker", engine.Control, engine.FlowContainer, input, style, utils)
 ---@type Container
 engine.Container = requireObject("container", engine.Control)
 ---@type VContainer

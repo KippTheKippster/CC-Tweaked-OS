@@ -141,8 +141,8 @@ local function loadTable(file)
     return textutils.unserialise(data)
 end
 
-
-return {
+---@class Utils
+local Utils = {
 	contains = contains,
     find = find,
 	split = split,
@@ -159,3 +159,6 @@ return {
 	saveTable = saveTable,
 	loadTable = loadTable
 }
+
+---@type Utils
+return Utils

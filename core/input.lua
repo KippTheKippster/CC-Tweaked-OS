@@ -335,6 +335,10 @@ local function addRawEventListener(o)
     table.insert(rawEventListeners, o)
 end
 
+local function removeRawEventListener(o)
+    table.remove(rawEventListeners, engine.utils.find(rawEventListeners, o))
+end
+
 local function rawEvent(data)
     for i = 1, #rawEventListeners do 
         if type(rawEventListeners[i]) == "table" then
@@ -414,7 +418,8 @@ local function processInput()
     return event
 end
 
-return {
+---@class Input
+local Input = {
     isKey = isKey,
     addKeyListener = addKeyListener,
     addCharListener = addCharListener,
@@ -423,6 +428,7 @@ return {
     addMouseEventListener = addMouseEventListener,
     addResizeEventListener = addResizeEventListener,
     addRawEventListener = addRawEventListener,
+    removeRawEventListener = removeRawEventListener,
     grabControlFocus = grabControlFocus,
     releaseControlFocus = releaseControlFocus,
     getFocus = getFocus,
@@ -432,4 +438,6 @@ return {
     consumeInput = consumeInput,
     isInputConsumed = isInputConsumed
 }
+
+return Input
 end
