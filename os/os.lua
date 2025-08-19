@@ -68,7 +68,7 @@ local function validateTable(tbl, default)
 end
 
 function mos.loadProfile(file)
-    file = file or "os/profiles/profile.sav"
+    file = file or ".mosdata/profile.sav"
     local profile = utils.loadTable(file)
     mos.profile = profile or {}
     validateTable(mos.profile, defaultProfile)
@@ -78,7 +78,7 @@ function mos.loadProfile(file)
 end
 
 function mos.saveProfile(file)
-    file = file or "os/profiles/profile.sav"
+    file = file or ".mosdata/profile.sav"
     utils.saveTable(mos.profile, file)
 end
 
