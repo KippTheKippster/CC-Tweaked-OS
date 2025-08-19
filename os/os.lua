@@ -1,15 +1,24 @@
 print("MOS is Starting...")
 
+---@class MOS
 local mos = {}
 
-local engine = require(".core.engine")
-local utils = require(".core.utils")
-local multiProgram = require(".core.multiProcess.multiProgram")
+local src = debug.getinfo(1, "S").short_src
+local corePath = ".core"
+
+local engine = require(corePath .. ".engine")
+local utils = require(corePath .. ".utils")
+local multiProgram = require(corePath .. ".multiProcess.multiProgram")
 
 local termW, termH = term.getSize()
 
+local windows = {}
+local customTools = {}
+local currentWindow = nil
+
 --MOS
 --Profile
+---@class Theme
 local defaultTheme = {
     backgroundColor = colors.yellow,
     shadow = true,
@@ -31,6 +40,7 @@ local defaultTheme = {
     palette = {}
 }
 
+---@class Profile
 local defaultProfile = {
     backgroundIcon = "os/textures/backgrounds/tux.nfp",
     backgroundPath = "os/textures/backgrounds/melvin.nfp",
@@ -43,6 +53,7 @@ local defaultProfile = {
         [".txt"] = { program = "/rom/programs/edit.lua" }
     },
     theme = "",
+    backgroundColor = nil,
     favorites = {
 
     },
@@ -98,34 +109,49 @@ function mos.loadTheme(file)
         validateTable(theme, defaultTheme)
     end
 
-    local palette = mos.theme.palette
-    for i = 0, 15 do
-        local color = 2 ^ i
-        if palette[color] ~= nil then
-            term.setPaletteColor(color, palette[color])
-        else
-            term.setPaletteColor(color, term.nativePaletteColor(color))
-        end
-    end
     mos.refreshTheme()
 end
 
 
-local dropdown = engine.getObject("dropdown")
-local programViewport = require(".core.multiProcess.programViewport")(engine.getObject("control"), multiProgram, engine.input)
-local programWindow = require(".core.multiProcess.programWindow")(engine.getObject("windowControl"), programViewport)
+local dropdown = engine.Dropdown
+local programViewport = require(".core.multiProcess.programViewport")(engine.Control, multiProgram, engine.input)
+local programWindow = require(".core.multiProcess.programWindow")(engine.WindowControl)
 
 local style = engine.getDefaultStyle()
 local clickStyle = engine.getDefaultClickedStyle()
 local optionNormalStyle = style:new{}
 local optionClickStyle = clickStyle:new{}
 local windowStyle = engine.newStyle()
+---@type Style
 local normalWindowStyle = windowStyle:new{}
+---@type Style
 local focusWindowStyle = windowStyle:new{}
 local clickWindowStyle = engine.newStyle()
 local exitButtonClickStyle = engine.newStyle()
 
 mos.refreshTheme = function ()
+    local palette = mos.theme.palette
+    local redirects = { engine.screenBuffer }--{ engine.screenBuffer, engine.parentTerm, term.native() }
+    for _, window in ipairs(windows) do
+        table.insert(redirects, window.programViewport.program.window)
+    end
+
+    for _, redirect in ipairs(redirects) do
+        redirect.setVisible(false)
+        local line = " "
+        for i = 0, 15 do
+            local color = 2 ^ i
+            if palette[color] ~= nil then
+                redirect.setPaletteColor(color, palette[color])
+                line = line .. "u"
+            else
+                redirect.setPaletteColor(color, term.nativePaletteColor(color))
+                line = line .. "n"
+            end
+        end
+        __Global.log(tostring(redirect) .. line)
+    end
+
     --Styles
     local theme = mos.theme
     --Background
@@ -150,7 +176,6 @@ mos.refreshTheme = function ()
     dropdown.optionNormalStyle = optionNormalStyle
     dropdown.optionClickedStyle = optionClickStyle
     dropdown.optionShadow = theme.shadow
-    dropdown.optionMargin = true
 
     --Window
     local windowColors = theme.windowColors
@@ -171,29 +196,20 @@ mos.refreshTheme = function ()
     exitButtonClickStyle.textColor = colors.white
 end
 
+---@type Theme
+mos.theme = nil
+---@type Profile
+mos.profile = nil
+
 mos.loadProfile()
 mos.loadTheme(mos.profile.theme)
 utils.saveTable(defaultTheme, "os/themes/defaultTheme.thm")
 
 --Objects
 --Background
-local background = engine.getObject("icon"):new{}
-background.text = ""
-background.rendering = false
-
-function background:treeEntered()
-    self.texture = paintutils.loadImage(mos.profile.backgroundPath)
-end
-
---engine.root:addChild(background)
---background.y = 1
---background.x = 0
-
-local backgroundIcon = engine.getObject("icon"):new{}
+local backgroundIcon = engine.root:addIcon()
 backgroundIcon.text = ""
 backgroundIcon.texture = paintutils.loadImage(mos.profile.backgroundIcon)
-backgroundIcon.offsetY = 2
-engine.root:addChild(backgroundIcon)
 backgroundIcon.anchorW = backgroundIcon.anchor.CENTER
 backgroundIcon.anchorH = backgroundIcon.anchor.CENTER
 
@@ -239,10 +255,12 @@ local function removeFromToolbar(control)
     toolBar:removeChild(control)
 end
 
+---@type Dropdown
 local windowDropdown = dropdown:new{}
 addToToolbar(windowDropdown)
 windowDropdown.text = "="
 
+---@type Dropdown
 local mosDropdown = dropdown:new{}
 addToToolbar(mosDropdown)
 mosDropdown.text = "MOS"
@@ -291,9 +309,7 @@ clock.w = #"00:00"
 clock.h = 1
 clock.anchorW = clock.anchor.RIGHT
 
-local windows = {}
-local customTools = {}
-local currentWindow = nil
+
 
 local function isFullscreen()
     local fullscreen = false
@@ -307,7 +323,7 @@ local function isFullscreen()
 end
 
 local function setFullscreenMode(fullscreen)
-    background.visible = fullscreen == false
+    backgroundIcon.visible = fullscreen == false
     if fullscreen == true then
         topBar:toFront()
     else
@@ -390,6 +406,7 @@ local function addWindow(w)
     end
     w.text = w.text .. " "
     local b = windowDropdown:addToList(w.text)
+    b.window = w
     local x = b:addButton()
     x.text = "x"
     x.w = #x.text
@@ -431,6 +448,7 @@ local function launchProgram(name, path, x, y, w, h, ...)
     window.style = normalWindowStyle
     window.focusedStyle = focusWindowStyle
     window.unfocusedStyle = normalWindowStyle
+    window.exitButton.normalStyle = focusWindowStyle
     window.exitButton.clickedStyle = exitButtonClickStyle
     window.clickedStyle = clickWindowStyle
     window.oldW = w --Fixes bug so that the window doesn't resize to default size
@@ -517,9 +535,9 @@ function mosDropdown:optionPressed(i)
 end
 
 function windowDropdown:optionPressed(i)
-    local text = windowDropdown:getOptionText(i)
+    local option = windowDropdown:getOption(i)
     for _, window in ipairs(windows) do
-        if window.text == text then
+        if window == option.window then
             window.visible = true
             window:grabFocus()
             window:toFront()
@@ -546,9 +564,6 @@ function root:rawEvent(data)
     if event == "timer" and data[2] == clock_timer_id then
         clock:update()
     end
-
-    --HACK, setting color palette seemingly doesn't work at start
-    mos.loadTheme(mos.profile.theme)
 
     if event == "key" then
         if data[2] == keys.w then

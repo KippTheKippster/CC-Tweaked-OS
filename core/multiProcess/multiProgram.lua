@@ -58,6 +58,7 @@ local function createMultishellWrapper(p, env, ...)
         env = env,
         args = args,
         mp = mp,
+        _G = _G
     }
 
     mp.runProgram(env, "rom/programs/advanced/multishell.lua")

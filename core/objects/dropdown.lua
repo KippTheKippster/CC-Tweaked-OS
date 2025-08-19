@@ -14,13 +14,12 @@ Dropdown.listQueue = nil
 Dropdown.shortcutSelection = nil
 Dropdown.optionNormalStyle = Dropdown.normalStyle
 Dropdown.optionClickedStyle = Dropdown.clickedStyle
-Dropdown.optionShadow = Dropdown.clickedStyle
+Dropdown.optionShadow = false
 
 function Dropdown:ready()
     self.list = self:addVContainer()
     self.list.inheritStyle = false
     self.list.style = self.normalStyle
-    --self.list.style.shadowColor = colors.black
     self.list.render = function (o)
         o:drawShadow()
     end
@@ -76,8 +75,8 @@ function Dropdown:focusChanged()
     end
 end
 
+---@return Control
 function Dropdown:addToList(text, clickable)
-    --sleep(0.1)
     if clickable == nil then
         clickable = true
     end
@@ -85,7 +84,7 @@ function Dropdown:addToList(text, clickable)
     if self.list == nil then
         self.listQueue = self.listQueue or {}
         table.insert(self.listQueue, { text = text, clickable = clickable })
-        return
+        return nil
     end
 
     local b = nil
@@ -140,7 +139,6 @@ function Dropdown:removeFromList(o)
             end
         end
     else
-        --local i = utils.find(self.list.children, o)
         self.list:removeChild(o)
     end
 end

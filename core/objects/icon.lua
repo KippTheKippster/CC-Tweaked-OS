@@ -17,11 +17,14 @@ Icon.offsetY = 0
 
 Icon:defineProperty('texture', {
     get = function(o) return o._texture end,
+    ---@param o Icon
+    ---@param value table
     set = function(o, value)
         local same = o._texture == value
         o._texture = value
         if same == false then
             o.w, o.h = o:getTextureSize()
+            o.parent:_expandChildren()
             o:redraw()
         end
     end

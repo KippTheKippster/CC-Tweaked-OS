@@ -1,0 +1,15 @@
+repeat
+    local w, h = term.getSize()
+    w = w
+    h = h
+
+    term.setBackgroundColor(colors.red)
+    term.clear()
+
+    paintutils.drawLine(1, h/2, w / 2, 1, colors.yellow)
+    paintutils.drawLine(w / 2, 1, w, h/2, colors.yellow)
+    paintutils.drawLine(w, h/2, w / 2, h, colors.yellow)
+    paintutils.drawLine(w/2, h, 0, h/2, colors.yellow)
+    
+    os.sleep(0.2)
+until false

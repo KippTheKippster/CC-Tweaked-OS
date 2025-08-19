@@ -8,7 +8,8 @@ while(true) do
     term.setBackgroundColor(colors.black)
     term.clear()
     time = time + 0.4
-    for i = 1, 52 do
+    local w = term.getSize()    
+    for i = 1, w do
         local t = i / 4 + time
         amp = math.cos(time) * 4
         local x = i 

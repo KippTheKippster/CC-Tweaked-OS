@@ -250,7 +250,7 @@ function Control:_expandChildren()
         if c.anchorH == Control.anchor.DOWN then
             c.y = self.h - c.h
         elseif c.anchorH == Control.anchor.CENTER then
-            c.y = math.floor(self.h / 2 + 0.5) - math.floor(c.w / 2 + 0.5)
+            c.y = math.floor(self.h / 2 + 0.5) - math.floor(c.h / 2 + 0.5)
         end
         
     end

@@ -1,6 +1,3 @@
-local path = ".core."
-local utils = require(".core.utils")
-
 ---@class Object
 local Object = {}
 Object.type = "Object"
@@ -79,7 +76,7 @@ local function free__newindex(o, key, value)
 end
 
 --Creates a new object, copying properties and signals to the new object
----@return Object
+---@return table
 function Object:new(o)
     o = o or {}
     local mt = {
