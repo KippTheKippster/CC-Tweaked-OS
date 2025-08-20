@@ -107,7 +107,7 @@ backButton.text = '<'
 backButton.normalStyle = toolsStyle
 
 local copyButton = tools:addButton()
-copyButton.text = '\169'
+copyButton.text = string.char(169)
 copyButton.w = #copyButton.text
 copyButton.h = 1
 copyButton.normalStyle = toolsStyle
@@ -293,7 +293,7 @@ end
 
 fileExplorer.addHeart = function (o, file)
     local heart = o:addButton()
-    heart.text = "\3"
+    heart.text = string.char(3)
     heart.w = #heart.text
     heart.h = 1
     heart.normalStyle = style
