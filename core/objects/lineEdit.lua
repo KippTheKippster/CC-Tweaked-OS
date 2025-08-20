@@ -30,32 +30,15 @@ LineEdit.lineScroll = 0
 function LineEdit:ready()
     input.addCharListener(self)
 	input.addKeyListener(self)
-    --self.cursor = self:addControl()
-    --self.cursor.w = 1
-    --self.cursor.h = 1
-    --self.cursor.text = "a"
-    --self.cursor.visible = false
+    input.addRawEventListener(self)
     self.style = self.normalStyle
 end
 
---[[
-function lineEdit:render()
-    control.render(self)
-    if self.focus then
-        term.setCursorPos(self.globalX + #self.text + self.cursorOffset + 1, self.globalY + 1)
-        term.setBackgroundColor(self.style.backgroundColor)
-        term.setTextColor(self.style.textColor)
-        local char = self.trueText:sub(
-            #self.text + self.cursorOffset + 1,
-            #self.text + self.cursorOffset + 1
-        )
-        if char == "" then
-            char = " "
-        end
-        term.write(char)
-    end
+function LineEdit:queueFree()
+    control.queueFree(self)
+    input.removeRawEventListener(self)
 end
-]]--
+
 
 function LineEdit:updateCursor()
     term.setCursorBlink(true)   
@@ -71,13 +54,17 @@ function LineEdit:trueTextChanged()
     self:redraw()
 end
 
+function LineEdit:addText(text, offset)
+    self.trueText = (
+        self.trueText:sub(0, #self.trueText + offset) ..
+        text ..
+        self.trueText:sub(#self.trueText + offset + 1)
+    ) 
+end
+
 function LineEdit:char(char)
     if self.focus == false then return end
-    self.trueText = (
-        self.trueText:sub(0, #self.trueText + self.cursorOffset) .. 
-        char ..
-        self.trueText:sub(#self.trueText + self.cursorOffset + 1)
-    ) 
+    self:addText(char, self.cursorOffset)
 end
 
 LineEdit.co = nil
@@ -89,7 +76,7 @@ function LineEdit:key(key)
             self.trueText = self.trueText:sub(#self.trueText + self.cursorOffset + 1)
         else
 		    self.trueText = (
-                self.trueText:sub(0, #self.trueText + self.cursorOffset - 1) .. 
+                self.trueText:sub(0, #self.trueText + self.cursorOffset - 1) ..
                 self.trueText:sub(#self.trueText + self.cursorOffset + 1)
             )
         end
@@ -109,6 +96,12 @@ function LineEdit:key(key)
         --self.cursorOffset = min(self.cursorOffset, 0)
         self:redraw()
 	end
+end
+
+function LineEdit:rawEvent(data)
+    if data[1] == "paste" then
+        self:addText(data[2], self.cursorOffset)
+    end
 end
 
 function LineEdit:focusChanged()

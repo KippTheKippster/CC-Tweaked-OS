@@ -258,7 +258,6 @@ local function getPath(c)
     end
 end
 
-
 local function getTitle(c)
     local title = c.text
     if title:sub(-4) == ".lua" then
@@ -586,7 +585,7 @@ local function createDiskDropdown(name)
         local text = o:getOptionText(idx)
         if text == "Install Folder" then
             createEditFile("", function (edit)
-                local dest = getPath(edit)
+                local dest = fs.combine(currentPath, edit.text)
                 if fs.isReadOnly(dest) then return false end
                 if fs.exists(dest) then return false end
                 pPopupError(fs.copy, disk.getMountPath(name), dest)
@@ -723,17 +722,23 @@ else
     openFolder("")
 end
 
-local fileDropdown = mos.engine.getObject("dropdown"):new{}
-local editDropdown = mos.engine.getObject("dropdown"):new{}
+---@type Dropdown
+local fileDropdown = mos.engine.Dropdown:new{}
+---@type Dropdown
+local editDropdown = mos.engine.Dropdown:new{}
+---@type Dropdown
+local pastebinDropdown = mos.engine.Dropdown:new{}
 
 local function windowFocusChanged(focus)
     if focus then
         mos.addToToolbar(fileDropdown)
         mos.addToToolbar(editDropdown)
+        --mos.addToToolbar(pastebinDropdown)
         scanDisks()
     else
         mos.removeFromToolbar(fileDropdown)
         mos.removeFromToolbar(editDropdown)
+        --mos.removeFromToolbar(pastebinDropdown)
         clearDisks()
     end
 end
@@ -909,6 +914,21 @@ function editDropdown:optionPressed(i)
     __window:grabFocus()
 end
 
+function pastebinDropdown:optionPressed(i)
+    local text = pastebinDropdown:getOptionText(i)
+    if text == "Get" then
+        createEditFile("", function (o, name)
+            local selectedPath = fs.combine(currentPath, name)
+            startSelectedFiles = { name }
+            mos.launchProgram("Write Code", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function (code)
+                --callbackFunction(getTitle(selection), selectedPath, false, ...)
+                shell.run("/rom/programs/http/pastebin.lua", "get", code, selectedPath)
+                refreshFiles()
+            end)
+        end, vContainer, true)
+    end
+end
+
 
 function inputReader:key(key)
     if key == keys.up then
@@ -949,5 +969,10 @@ editDropdown:addToList("Rename")
 editDropdown:addToList("Favorite")
 editDropdown:addToList("--------", false)
 editDropdown:addToList("Delete")
+
+pastebinDropdown.text = "Pastebin"
+pastebinDropdown:addToList("Get")
+pastebinDropdown:addToList("Put")
+pastebinDropdown:addToList("Run")
 
 engine:start()
