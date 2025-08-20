@@ -300,7 +300,7 @@ mos.refreshMosDropdown = function ()
                 --mos.launchProgram(v.name, k, 2, 2, 24, 12)
             end
             local x = option:addButton()
-            x.text = "\3"
+            x.text = string.char(3)
             x.w = #x.text
             x.h = 1
             x.anchorW = x.anchor.RIGHT
