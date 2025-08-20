@@ -132,6 +132,19 @@ local focusWindowStyle = windowStyle:new{}
 local clickWindowStyle = engine.newStyle()
 local exitButtonClickStyle = engine.newStyle()
 
+---@class MosStyles
+mos.styles = {
+    style = style,
+    clickStyle = clickStyle,
+    optionNormalStyle = optionNormalStyle,
+    optionClickStyle = optionClickStyle,
+    windowStyle = windowStyle,
+    normalWindowStyle = normalWindowStyle,
+    focusWindowStyle = focusWindowStyle,
+    clickWindowStyle = clickWindowStyle,
+    exitButtonClickStyle = exitButtonClickStyle
+}
+
 mos.refreshTheme = function ()
     local palette = mos.theme.palette
     local redirects = { engine.screenBuffer }--{ engine.screenBuffer, engine.parentTerm, term.native() }

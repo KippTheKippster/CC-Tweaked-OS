@@ -12,20 +12,16 @@ if mos == nil then
     return
 end
 
-engine.backgroundColor = colors.white
-engine.background = true
+local buttonStyle = mos.styles.style
+local clickedStyle = mos.styles.clickStyle
+local seperatorStyle = mos.styles.style
 
 local main = engine.root:addVContainer()
 main.expandW = true
 main.expandH = true
+main.style = buttonStyle
+main.rendering = true
 
-local buttonStyle = engine.newStyle()
-buttonStyle.backgroundColor = colors.white
-buttonStyle.textColor = colors.black
-
-local clickedStyle = engine:newStyle()
-clickedStyle.backgroundColor = colors.lightBlue
-clickedStyle.textColor = colors.black
 
 local settingsButton = engine.getObject("button"):new{}
 settingsButton.h = 1
@@ -33,9 +29,6 @@ settingsButton.fitToText = true
 settingsButton.normalStyle = buttonStyle
 settingsButton.clickedStyle = clickedStyle
 
-local seperatorStyle = engine.newStyle()
-seperatorStyle.backgroundColor = colors.white
-seperatorStyle.textColor = colors.gray
 
 local function addSeperator(text)
     local seperator = main:addControl()
@@ -124,9 +117,10 @@ local function addSettingsLineEdit(text, editText)
     edit.w = 16
     edit.trueText = editText
     edit.dragSelectable = true
-    edit.normalStyle.backgroundColor = colors.lightGray
-    edit.focusStyle.backgroundColor = colors.black
-    edit.focusStyle.textColor = colors.white
+    edit.normalStyle.backgroundColor = colors.gray
+    edit.normalStyle.textColor = colors.white
+    edit.focusStyle.backgroundColor = colors.lightGray
+    edit.focusStyle.textColor = colors.black
     edit.style = edit.normalStyle
     edit.anchorW = edit.anchor.RIGHT
     return edit
@@ -136,6 +130,20 @@ local fileExplorer = nil
 
 addSeperator("-MOS-")
 addSettingsInfo("Version", tostring(mos.getVersion()))
+local installerText = "[Install]"
+if fs.exists("/mosInstaller.lua") then
+    installerText = "[Run]"
+end
+local versionButton = addSettingsButton("Installer", installerText)
+function versionButton:pressed()
+    if fs.exists("/mosInstaller.lua") then
+        mos.openProgram("MOS Installer", "mosInstaller.lua")
+    else
+        mos.openProgram("Downloading MOS Installer", "/rom/programs/http/pastebin.lua", false, "get", "Wa0niW8x", "mosInstaller.lua")
+        versionButton.text = "[Run]"
+        versionButton.parent:_expandChildren()
+    end
+end
 
 addSeperator("-Computer-")
 addSettingsInfo("ID", "#" .. tostring(os.getComputerID()))
@@ -154,6 +162,7 @@ function changeTheme:pressed()
         if path:sub(-#suffix) == suffix then
             mos.loadTheme(path)
             mos.engine.root:redraw()
+            engine.root:redraw()
             fileExplorer:close()
         end
     end, "os/themes/")

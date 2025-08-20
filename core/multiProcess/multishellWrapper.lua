@@ -19,25 +19,6 @@ end
 
 multishell.setTitle(n, name)
 
---[[
-local setTitle = multishell.setTitle
-multishell.setTitle = function (id, title)
-    print("DJSAIODJSIAO")
-    setTitle(id, title)
-    env.__window.text = title
-    --local a = b.c
-end
-
-
-local setFocus = multishell.setFocus
-multishell.setFocus = function (id)
-    local title = multishell.getTitle(id)
-    env.__window.text = title
-    setFocus(id)
-
-end
-]]--
-
 term.clear()
 term.setCursorPos(1, 1)
 
