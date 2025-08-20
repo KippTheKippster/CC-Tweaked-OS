@@ -50,7 +50,7 @@ local defaultProfile = {
     backgroundUpdateTime = 0.1,
     fileExecptions = {
         [".nfp"] = {
-            program = "/rom/programs/fun/advanced/paint.lua",
+            program = "/os/programs//paint.lua",
             fullscreen = true
         },
         [".txt"] = { program = "/rom/programs/edit.lua" }

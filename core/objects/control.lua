@@ -473,12 +473,12 @@ function Control:drawShadow()
 
     for i = 2, self.h + 1 do
         term.setCursorPos(self.globalX + self.w + 1, self.globalY + i)
-        term.write("\127")
+        term.write(string.char(127))
     end
 
     for i = 2, self.w do
         term.setCursorPos(self.globalX + i, self.globalY + self.h + 1)
-        term.write("\127")
+        term.write(string.char(127))
     end
     --term.write(text)
     --paintutils.drawLine(startX, startY, endX, endY, self._style.shadowColor)

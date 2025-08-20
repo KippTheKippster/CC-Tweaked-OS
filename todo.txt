@@ -34,12 +34,13 @@ File explorer functionality:
     #Create file
     #Remove file
     #Scroll
-    Copy path
-    Disk drive
+    #Copy path
+    #Disk drive
 
 Oddities:
+    Paint resize crashes
     Scroll up in fileexplorer
-    Open w/ args can crash
+    #Open w/ args can crash
     table.insert in addChild leads to stack overflow
     #Positions with decimal values sometimes ignore clicks 
     #If a program is opened in edit mode by fileExplorer and then executed it leads to the native term being used 

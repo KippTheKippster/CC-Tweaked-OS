@@ -507,12 +507,12 @@ function sprite:render()
         term.setBackgroundColor(colors.black)
         term.setTextColor(colors.gray)
         local w, h = term.getSize()
-        fillArea('\146', 0, 0, w, h)
+        fillArea(string.char(146), 0, 0, w, h)
 
         term.setBackgroundColor(colors.gray)
         term.setTextColor(colors.lightGray)
         w, h = paint.getCanvasSize(paint.canvas)
-        fillArea('\127', self.x, self.y, w, h)
+        fillArea(string.char(127), self.x, self.y, w, h)
 
         paintutils.drawImage(paint.canvas, self.x + 1, self.y + 1)
     end
@@ -531,7 +531,7 @@ function sprite:setPixel(x, y, button)
         term.setBackgroundColor(colors.gray)
         term.setTextColor(colors.lightGray)
         term.setCursorPos(x + self.globalX, y + self.globalY)
-        term.write('\127')
+        term.write(string.char(127))
     else
         paintutils.drawPixel(x + self.globalX, y + self.globalY, color)
     end
@@ -679,17 +679,17 @@ end
 
 local penTool = toolIcon:new{}
 toolbar:addChild(penTool)
-penTool.text = "\14 Pen"
+penTool.text = string.char(14) .. " Pen"
 penTool.tool = "pen"
 
 local selectTool = toolIcon:new{}
 toolbar:addChild(selectTool)
-selectTool.text = "\35 Selection Box"
+selectTool.text = string.char(35) .. " Selection Box"
 selectTool.tool = "selection"
 
 local bucketTool = toolIcon:new{}
 toolbar:addChild(bucketTool)
-bucketTool.text = "\219 Bucket"
+bucketTool.text = string.char(219) .. " Bucket"
 bucketTool.tool = "bucket"
 
 setCurrentToolIcon(penTool)
@@ -729,7 +729,7 @@ for i = 0, 16 do
     if i == 16 then
         c.style.backgroundColor = colors.gray
         c.style.textColor = colors.lightGray
-        c.text = "\127\127"
+        c.text = string.char(127) .. string.char(127)
         c.colorIndex = -1
     else
         c.style.backgroundColor = 2 ^ i
