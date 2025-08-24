@@ -14,10 +14,13 @@ ProgramViewport.skipEvent = false
 ProgramViewport.oldW = 0
 ProgramViewport.oldH = 0
 ProgramViewport.queueResizeEvent = false
+---@type table
+ProgramViewport.focusKeys = nil
 
 function ProgramViewport:treeEntered()
     self.oldW = self.w
     self.oldH = self.h
+    self.focusKeys = {}
 end
 
 function ProgramViewport:draw()
@@ -111,30 +114,52 @@ function ProgramViewport:unhandledEvent(data)
 
         result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
         self:redraw()
-    elseif event == 'key' or event == 'key_up' or event == "char" then
+    elseif event == 'char' then
+    elseif event == 'key' then
         if self.parent:inFocus()  == false then return end
-        if input.isInputConsumed() == true then return end
+        --if input.isInputConsumed() == true then return end
 
+        local key = data[2]
+        local held = data[3]
+
+        if self.focusKeys[key] == nil and held == false then
+            self.focusKeys[key] = true
+        end
+
+    if (held and self.focusKeys[key]) or not held then
+        result = resumeProcess(self, data)
+        if key >= 0 and key <= 255 then
+            result = resumeProcess(self, { 'char', keys.getName(key) })
+        end
+    end
+    elseif event == "key_up" then
+        --if input.isInputConsumed() == true then return end
+        --if self.parent:inFocus()  == false then return end
+        self.focusKeys[data[2]] = nil
         result = resumeProcess(self, data)
     else
         result = resumeProcess(self, data)
     end
 
-    local ok, err = result[1], result[2]
-    if ok == false then
-        term.redirect(self.program.window)
-        term.setCursorPos(1, 1)
-        term.setTextColor(colors.red)
-        term.setBackgroundColor(colors.black)
-        print("Viewport Result: ", err)
-        __Global.log("Viewport Error: ", err)
-        term.redirect(self.parentTerm)
-        return true
+    if result then
+        local ok, err = result[1], result[2]
+        if ok == false then
+            term.redirect(self.program.window)
+            term.setCursorPos(1, 1)
+            term.setTextColor(colors.red)
+            term.setBackgroundColor(colors.black)
+            print("Viewport Result: ", err)
+            __Global.log("Viewport Error: ", err)
+            term.redirect(self.parentTerm)
+            return true
+        end
+
+        self:redraw()
+
+        return table.unpack(result)
     end
 
-    self:redraw()
-
-    return table.unpack(result)
+    return nil
 end
 
 function ProgramViewport:updateWindow()
