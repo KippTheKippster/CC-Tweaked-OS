@@ -209,10 +209,6 @@ function FileButton:click()
     engine.Button.click(self)
     if engine.input.isKey(keys.leftCtrl) == false then
         for k, v in ipairs(selectedFileButtons) do
-            if v:isValid() == false then
-                term.setTextColour(colors.red)
-                term.setCursorPos(1, 5)
-            end
             v.style = v.normalStyle
             v.selected = false
         end
@@ -346,12 +342,29 @@ local function openFolder(path)
 
     vContainer.children = {}
 
+    local fileFilter = fs.getName(filter)
+    if fileFilter == "root" and filter ~= "root" or filter:sub(#filter) == "/" then
+        fileFilter = ""
+    end
+
+    local dirFilter = fs.getDir(filter .. "a")
+    if filter == "" then
+        dirFilter = ""
+    end
+
+    if filter:sub(1, 1) == "/" then
+        dirFilter = ""
+    end
+
+    if dirFilter ~= "" then
+        path = fs.combine(path, dirFilter)
+    end
     local names = fs.list(path, "r")
     local files = {}
     local dirs = {}
     local selectedButtons = {}
     for i, name in ipairs(names) do
-        if filter == "" or name:find(filter) ~= nil then
+        if fileFilter == "" or name:find(fileFilter) ~= nil then
             if fs.isDir(fs.combine(path, name)) then
                 table.insert(dirs, name)
             else
@@ -427,6 +440,7 @@ function backButton:pressed()
     openFolder(fs.getDir(currentPath))
 end
 
+---@type LineEdit
 local searchEdit = tools:addLineEdit()
 searchEdit.inheritStyle = false
 searchEdit.expandW = true
@@ -456,15 +470,23 @@ function searchEdit:trueTextChanged()
     if self.text == "" then
         self:releaseFocus()
     end
+
     filter = self.text
-    refreshFiles()
+
+    local dir = fs.getDir(self.trueText .. "a")
+    if dir == "root" then
+        dir = ""
+    end
+    if self.text:sub(1, 1) == "/" and currentPath ~= dir then
+        openFolder(dir)
+    else
+        refreshFiles()
+    end
 end
 
 function inputReader:scroll(dir)
     local newY = vContainer.y - dir
     local h = engine.root.h - marginD
-    --local w, h = term.getSize()
-    term.setTextColour(colors.white)
     if #vContainer.children - h < 0 then
         vContainer.y = 1
         return
@@ -813,7 +835,6 @@ function fileDropdown:optionPressed(i)
 
     local text = fileDropdown:getOptionText(i)
     local selectedPath = getPath(selection)
-    __Global.log(selectedPath)
     if text == "New File" then
         createEditFile("", function (o, path)
             if fs.isReadOnly(path) then
