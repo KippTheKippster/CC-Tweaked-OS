@@ -45,15 +45,6 @@ local function split(s, c)
     return strings
 end
 
-local function hasTag(data, tag)
-	local tags = data["tags"]
-	if tags[tag] == true then
-		return true
-	else
-		return false
-	end
-end
-
 local function printTable(table, recursive, prefix)
 	if table == nil then error("Atempting to print a nil value", 2) end
 	if prefix == nil then prefix = "" end
@@ -61,9 +52,7 @@ local function printTable(table, recursive, prefix)
 	for k, v in pairs(table) do
 		print(prefix .. tostring(k) .. " = " .. tostring(v))
 		if recursive and type(v) == "table" then 
-			--print(prefix .. "{")
 			printTable(v, prefix .. "   ")
-			--print(prefix .. "}")
 		end
 	end
 	print(prefix .. "}")
@@ -83,8 +72,7 @@ local function clamp(value, min, max)
 end
 
 local function getDir(value)
-    local value = clamp(value, -1, 1)
-    --value = math.min(value + 0.5)
+    value = clamp(value, -1, 1)
     return value
 end
 

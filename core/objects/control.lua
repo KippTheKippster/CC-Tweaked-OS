@@ -242,7 +242,6 @@ function Control:_expandChildren()
         end
         if c.anchorW == Control.anchor.RIGHT then
             c.x = self.w - c.w
-            --local a = e.e
         elseif c.anchorW == Control.anchor.CENTER then
             c.x = math.floor(self.w / 2 + 0.5) -  math.floor(c.w / 2 + 0.5)
         end
@@ -252,21 +251,11 @@ function Control:_expandChildren()
         elseif c.anchorH == Control.anchor.CENTER then
             c.y = math.floor(self.h / 2 + 0.5) - math.floor(c.h / 2 + 0.5)
         end
-        
     end
 end
 
 function Control:_resize()
     self.w, self.h = self:getMinimumSize()
-    --[[
-    if self._expandW then
-        self.w = self.parent.w
-    end
-
-    if self._expandH then
-        self.h = self.parent.h
-    end
-    ]]--
 end
 
 function Control:getMinimumSize()
@@ -369,30 +358,6 @@ Control:defineProperty('anchorH', {
     end
 })
 
---[[
-control:defineProperty('marginR', {
-    get = function(o) return o._marginR end,
-    set = function(o, value) 
-        local old = o._marginR
-        o._marginR = value
-        if old ~= value then
-            o.w = o.w + (value - old)
-        end
-    end
-})
-
-control:defineProperty('marginL', {
-    get = function(o) return o._marginL end,
-    set = function(o, value) 
-        local old = o._marginL
-        o._marginL = value
-        if old ~= value then
-            o.w = o.w + (value - old)
-        end
-    end
-})
-]]--
-
 Control.shadow = false -- Change this to style
 
 function Control:add()
@@ -402,28 +367,6 @@ function Control:add()
 end
 
 function Control:remove()
-    --[[
-    --for i = 1, #self.children do
-    --    self.children[i]:remove()
-    --end
-
-    if self.parent then
-        for i = 1, #self.parent.children do
-            if self.parent.children[i] == self then
-                table.remove(self.parent.children, i)
-            end
-	    end
-    end
-    
-    if engine.input.getCursorControl() == self then
-        self:releaseCursorControl()
-    end
-
-    --self.parent:childrenChanged()
-    --self:redraw()
-    --self = {}
-    object.remove(self)
-    ]]--
     self:queueFree()
 end
 
@@ -433,7 +376,6 @@ end
 
 function Control:redraw()
     engine.queueRedraw = true
-    --engine.renderQueue[self] = true
 end
 
 function Control:render() -- Determines how the control object is drawn
@@ -460,7 +402,7 @@ end
 function Control:drawShadow()
     if self.shadow ~= true then return end
     if self.w == 0 or self.h == 0 then return end
-    
+
     term.setTextColor(colors.black)
     term.setBackgroundColor(self._style.shadowColor)
 
@@ -539,12 +481,10 @@ function Control:write()
     local x, y = term.getCursorPos()
     local t = self.text:sub(s, s + l)
     for i = 1, #t do
-        --term.setBackgroundColor(engine.drawutils.getPixel(term.getCursorPos()))
         term.write(t:sub(i, i))
         x = x + 1
         term.setCursorPos(x, y)
     end
-    --term.write(t)
 end
 
 ---@param o Control
@@ -552,11 +492,9 @@ function Control:addChild(o)
 	local t = {}
 
 	for i = 1, #self.children do
-		--t[i] = self.children[i]
         table.insert(t, self.children[i])
 	end
     table.insert(t, o)
-	--t[#self.children + 1] = o
 	self.children = t
     o:add()
 	o.parent = self
@@ -567,7 +505,6 @@ function Control:addChild(o)
     self:childrenChanged()
     self:_expandChildren()
     self:redraw()
-    --self:syncChildrenKey("style", self._style)
 end
 
 ---@return Control
@@ -594,9 +531,7 @@ end
 function Control:syncChildrenKey(key, value)
     for i = 1, #self.children do
         local c = self.children[i]
-        --if (c[key] == nil) then
-            c[key] = value
-        --end
+        c[key] = value
     end
 end
 

@@ -5,8 +5,6 @@ local engine = require(corePath .. ".engine")
 
 local args = {...}
 local diskName = args[1]
-local mos = __mos
-local window = __window
 
 local style = engine.getDefaultStyle()
 style.backgroundColor = colors.white

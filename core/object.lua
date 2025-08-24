@@ -33,7 +33,6 @@ end
 
 --Set key from object
 local function object__newindex(o, key, value)
-    --print("newINDEX: " .. tostring(table) .. " key: " .. key)
     local __properties = o.__properties--rawget(o, "__properties")
     if __properties ~= nil and __properties[key] ~= nil  then
         if o.__properties[key].set == nil then

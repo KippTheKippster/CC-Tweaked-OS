@@ -20,7 +20,6 @@ edit:grabFocus()
 edit.trueText = startText or ""
 
 function edit:textSubmitted()
-    --local a = e.c
     if splitText then
         local split = engine.utils.split(edit.text, " ")
         local returnArgs = {}
