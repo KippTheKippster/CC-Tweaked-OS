@@ -460,34 +460,19 @@ end
 function Control:drawShadow()
     if self.shadow ~= true then return end
     if self.w == 0 or self.h == 0 then return end
-
-    local startX = self.globalX + self.w + 1
-    local startY = self.globalY + 2
-    local endX = startX
-    local endY = startY + self.h - 1
-
-    --term.setCursorPos(startX, startY)
     
     term.setTextColor(colors.black)
     term.setBackgroundColor(self._style.shadowColor)
 
-    for i = 2, self.h + 1 do
+    for i = 2 - self._style.shadowOffsetU, self.h + 1 + self._style.shadowOffsetD do
         term.setCursorPos(self.globalX + self.w + 1, self.globalY + i)
         term.write(string.char(127))
     end
 
-    for i = 2, self.w do
+    for i = 2 - self._style.shadowOffsetL, self.w + self._style.shadowOffsetR do
         term.setCursorPos(self.globalX + i, self.globalY + self.h + 1)
         term.write(string.char(127))
     end
-    --term.write(text)
-    --paintutils.drawLine(startX, startY, endX, endY, self._style.shadowColor)
-
-    startY = endY
-    endX = startX - 1
-    startX = self.globalX + 2
-
-    --paintutils.drawLine(startX, startY, endX, endY, self._style.shadowColor)
 end
 
 ---@param left number 

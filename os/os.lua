@@ -180,6 +180,7 @@ mos.refreshTheme = function ()
     style.textColor = toolbarColors.text
     style.backgroundColor = toolbarColors.background
     style.shadowColor = theme.shadowColor
+    style.shadowOffsetU = 1
     clickStyle.shadowColor = theme.shadowColor
 
     clickStyle.textColor = toolbarColors.clickText
