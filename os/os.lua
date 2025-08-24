@@ -13,8 +13,6 @@ local engine = require(corePath .. ".engine")
 local utils = require(corePath .. ".utils")
 local multiProgram = require(corePath .. ".multiProcess.multiProgram")
 
-local termW, termH = term.getSize()
-
 local windows = {}
 local customTools = {}
 local currentWindow = nil
@@ -239,7 +237,6 @@ focusContainer.rendering = false
 local windowContainer = focusContainer:addControl()
 windowContainer.mouseIgnore = true
 windowContainer.rendering = false
--- windowsContainer.y = 1
 
 --Top Bar
 local topBar = focusContainer:addControl()
@@ -255,7 +252,6 @@ toolBar.expandW = true
 toolBar.h = 1
 toolBar.separation = 1
 toolBar.mouseIgnore = true
-
 
 local function toolbarChildFocusChanged(c)
     if c.focus == true then
@@ -298,7 +294,6 @@ mos.refreshMosDropdown = function ()
             local option = mosDropdown:addToList(v.name .. "  ")
             option.pressed = function (o)
                 mos.openProgram(v.name, k, false)
-                --mos.launchProgram(v.name, k, 2, 2, 24, 12)
             end
             local x = option:addButton()
             x.text = string.char(3)
@@ -350,13 +345,6 @@ end
 
 local function windowFullscreenChanged(w)
     setFullscreenMode(isFullscreen())
-    --local render = w.fullscreen == false
-    --w.rendering = render
-    --w.label.visible = render
-   -- w.scaleButton.visible = render
-    --w.exitButton.visible = render
-    --w.minimizeButton.visible = render
-
 end
 
 local function windowClosed(w, b)
@@ -370,12 +358,10 @@ local function windowClosed(w, b)
     end
 
     table.remove(windows, utils.find(windows, w))
-    --windows[w] = nil
 
     for i = 1, #windowContainer.children do
         local nextW = windowContainer.children[i]
         if nextW.visible == true then
-            --engine.input.consumeInput()
             nextW.programViewport.skipEvent = true
             nextW:grabFocus()
             break
@@ -446,9 +432,6 @@ local function addWindow(w)
     w:redraw()
 end
 
-
---topBar:addChild(windowsDropdown)
-
 local function launchProgram(name, path, x, y, w, h, ...)
     local window = programWindow:new{}
     windowContainer:addChild(window)
@@ -487,7 +470,7 @@ local function launchProgram(name, path, x, y, w, h, ...)
 end
 
 local function openProgram(name, path, edit, ...)
-    if edit == true then -- Lctrl
+    if edit == true then
         return launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", 1, 1, 24, 12, path)
     else
         local x, y, w, h = 1, 1, 24, 12
@@ -532,8 +515,6 @@ mos.createPopup = function (title, text, x, y, w, h, parent)
     label.h = 1
     label.text = text
     label.clipText = true
-
-    --addWindow(popup)
 end
 
 function mosDropdown:optionPressed(i)
@@ -630,7 +611,6 @@ __Global.log("Launching MOS")
 multiProgram.launchProcess(engine.screenBuffer, engine.start, nil, 1, 1, term.getSize())
 local err = multiProgram.start()
 __Global.log("MOS Terminated")
-
 
 mos.saveProfile()
 

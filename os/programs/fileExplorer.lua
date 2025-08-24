@@ -279,7 +279,7 @@ local function scrollToControl(control, center)
     end
 
     if control.globalY <= 0 then
-        vContainer.globalY = vContainer.globalY - control.globalY + marginU - offset--h - control.globalY--  - offset
+        vContainer.globalY = vContainer.globalY - control.globalY + marginU - offset
     elseif control.globalY >= h then
         vContainer.globalY = -control.globalY + h - offset - marginD
     end
@@ -423,7 +423,7 @@ local function openFolder(path)
         end
     end
 
-    if #startSelectedFiles > 0 then -- TODO FIXME1
+    if #startSelectedFiles > 0 then -- TODO FIXME
         --local last = startSelectedFiles[#startSelectedFiles - 1]
         --scrollToControl(last)
     end
@@ -563,7 +563,7 @@ end
 
 local function createAudioDropdown(name)
     local dropdown = mos.engine.getObject("dropdown"):new{}
-    dropdown.text = disk.getAudioTitle(name) or disk.getMountPath(name) --  or --"D-" .. name --tostring(disk.getID(name))
+    dropdown.text = disk.getAudioTitle(name) or disk.getMountPath(name)
     dropdown.text = "[" .. dropdown.text .. "]"
     dropdown.w = #dropdown.text
     dropdown:addToList("Play Audio")
@@ -592,7 +592,7 @@ end
 local function createDiskDropdown(name)
     ---@type Dropdown
     local dropdown = mos.engine.getObject("dropdown"):new{}
-    dropdown.text = disk.getMountPath(name) -- disk.getLabel(name) or --"D-" .. name --tostring(disk.getID(name))
+    dropdown.text = disk.getMountPath(name)
     dropdown.text = "[" .. dropdown.text .. "]"
     dropdown.w = #dropdown.text
     dropdown:addToList("Install Folder")
@@ -666,7 +666,7 @@ local function addDisk(name)
         return
     end
 
-    presentDisks[name] = dropdown--disk.getLabel(name) or "disk"
+    presentDisks[name] = dropdown
 
     mos.addToToolbar(dropdown)
 end
@@ -727,8 +727,6 @@ local function traverse(dir)
     end
 end
 
-
-
 function FileButton:doublePressed()
     callbackFunction(getTitle(self), getPath(self), engine.input.isKey(keys.leftCtrl))
 end
@@ -755,12 +753,10 @@ local function windowFocusChanged(focus)
     if focus then
         mos.addToToolbar(fileDropdown)
         mos.addToToolbar(editDropdown)
-        --mos.addToToolbar(pastebinDropdown)
         scanDisks()
     else
         mos.removeFromToolbar(fileDropdown)
         mos.removeFromToolbar(editDropdown)
-        --mos.removeFromToolbar(pastebinDropdown)
         clearDisks()
     end
 end
@@ -935,22 +931,6 @@ function editDropdown:optionPressed(i)
     __window:grabFocus()
 end
 
-function pastebinDropdown:optionPressed(i)
-    local text = pastebinDropdown:getOptionText(i)
-    if text == "Get" then
-        createEditFile("", function (o, name)
-            local selectedPath = fs.combine(currentPath, name)
-            startSelectedFiles = { name }
-            mos.launchProgram("Write Code", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function (code)
-                --callbackFunction(getTitle(selection), selectedPath, false, ...)
-                shell.run("/rom/programs/http/pastebin.lua", "get", code, selectedPath)
-                refreshFiles()
-            end)
-        end, vContainer, true)
-    end
-end
-
-
 function inputReader:key(key)
     if key == keys.up then
         traverse(-1)
@@ -990,10 +970,5 @@ editDropdown:addToList("Rename")
 editDropdown:addToList("Favorite")
 editDropdown:addToList("--------", false)
 editDropdown:addToList("Delete")
-
-pastebinDropdown.text = "Pastebin"
-pastebinDropdown:addToList("Get")
-pastebinDropdown:addToList("Put")
-pastebinDropdown:addToList("Run")
 
 engine:start()

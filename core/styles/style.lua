@@ -7,7 +7,6 @@ style.borderColor = colors.gray
 style.textColor = colors.black
 style.background = true
 style.border = false
---style.shadow = false
 style.shadowColor = colors.gray
 style.shadowOffsetL = 0
 style.shadowOffsetR = 0

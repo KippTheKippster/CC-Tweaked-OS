@@ -10,7 +10,7 @@ local function refreshStyle (button)
         button.style = button.clickedStyle
     else
         button.style = button.normalStyle
-    end 
+    end
 end
 
 Button.isClicked = false

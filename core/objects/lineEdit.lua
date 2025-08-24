@@ -21,10 +21,9 @@ control:defineProperty('trueText', {
         if same == false then
             o:trueTextChanged()
         end
-    end 
+    end
 })
 LineEdit.clipText = true
---lineEdit.offsetTextX = 0
 LineEdit.lineScroll = 0
 
 function LineEdit:ready()
@@ -93,7 +92,6 @@ function LineEdit:key(key)
         if self.cursorOffset > 0 then
             self.cursorOffset = 0
         end
-        --self.cursorOffset = min(self.cursorOffset, 0)
         self:redraw()
 	end
 end
@@ -108,16 +106,6 @@ function LineEdit:focusChanged()
     if self.focus then
         self.style = self.focusStyle
         self:grabCursorControl()
-        --self.co = coroutine.create(read)
-        --[[
-        term.setTextColour(colors.white)
-        parallel.waitForAny(function ()
-            self.trueText = read()
-        end, function ()
-            while true do
-                sleep(1.0)
-            end
-        end)]]
     else
         term.setCursorBlink(false)
         self.style = self.normalStyle

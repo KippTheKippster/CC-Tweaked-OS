@@ -7,7 +7,6 @@ Container.type = "Container"
 Container.mouseIgnore = false
 Container.text = ""
 Container.visible = true
---container.background = false
 Container.rendering = false
 Container.sortOnTransformChanged = false
 

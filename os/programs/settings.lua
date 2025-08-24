@@ -210,7 +210,6 @@ end
 function picker:colorPressed(color)
     mos.profile.backgroundColor = color
     mos.engine.backgroundColor = color
-    --local style = self:getOption(i).style:new()
     colorReset.visible = true
 end
 

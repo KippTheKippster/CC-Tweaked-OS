@@ -135,9 +135,6 @@ function mouse.click(button, x, y)
     local c = mouse.getControl(x, y)
     if mouse.current ~= c then -- If user clicks on a new control (or nothing)
         mouse.clickTime = os.clock()
-        if mouse.current ~= nil then
-            --mouse.current:up()
-        end
         mouse.changeFocus(c)
     elseif c ~= nil then -- If user clicks on the same control
 		local time = os.clock()
@@ -197,7 +194,6 @@ function mouse.drag(button, x, y)
 end
 
 function mouse.scroll(dir, x, y)
-    --if mouse.current == nil then return end
     local function scrollControl(c, dir, x, y)
         if isControlInArea(c, x, y) == true then
             c:scroll(dir)
@@ -209,7 +205,6 @@ function mouse.scroll(dir, x, y)
     end
 
     scrollControl(engine.root, dir, x, y)
-    --mouse.current:scroll(dir)
 end
 
 local function getFocus()
@@ -228,9 +223,7 @@ local function sendEvent(listeners, fun, ...)
             return
         end
 
-        if isValid(listeners[i]) == false then
-            --table.remove(listeners, i) -- I have no idea if this is safe
-        else
+        if isValid(listeners[i]) == true then
             if type(listeners[i]) == "table" then
                 listeners[i][fun](listeners[i], ...)
             elseif type(listeners[i]) == "function" then
@@ -247,9 +240,6 @@ end
 local function key(k)
     keys[k] = true
     sendEvent(keyListeners, "key", k)
-    --for i = 1, #keyListeners do
-    --    keyListeners[i]:key(k)
-    --end
 end
 
 local function keyUp(key)
@@ -262,9 +252,6 @@ end
 
 local function char(c)
     sendEvent(charListeners, "char", c)
-    --for i = 1, #charListeners do 
-    --    charListeners[i]:char(char)
-    --end
 end
 
 local function addCharListener(o)
@@ -294,7 +281,7 @@ local function mouseUp(button, x, y)
 end
 
 local function mouseDrag(button, x, y)
-    if mouse.inTerm(x, y) == false then 
+    if mouse.inTerm(x, y) == false then
         if mouse.current then
             mouse.current:up()
         end
@@ -304,7 +291,7 @@ local function mouseDrag(button, x, y)
 end
 
 local function mouseEvent(event, data)
-    for i = 1, #mouseEventListeners do 
+    for i = 1, #mouseEventListeners do
         mouseEventListeners[i]:mouseEvent(event, data)
     end
 end
@@ -325,7 +312,7 @@ local function resizeEvent()
             resizeEventListeners[i]:resizeEvent()
         elseif type(resizeEventListeners[i]) == "function" then
             resizeEventListeners[i]()
-        end 
+        end
     end
 end
 
@@ -401,8 +388,6 @@ local function processInput()
         )
     elseif event == "term_resize" then
         resizeEvent()
-    elseif event == "terminate" then
-        --term.clear()
     end
 
     rawEvent(data)

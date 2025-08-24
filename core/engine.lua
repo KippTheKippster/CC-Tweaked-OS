@@ -31,7 +31,6 @@ local objectList = {}
 local function requireObject(name, ...)
     local o = require(corePath .. ".objects." .. name)(...)
     objectList[name] = o
-    --engine[name] = o
     return o
 end
 
@@ -93,7 +92,7 @@ if __Global == nil then
         __Global.logFile.write(line)
         __Global.logFile.flush()
     end
-    __Global.log = function () end
+    --__Global.log = function () end
 end
 
 ---@type Control
