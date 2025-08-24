@@ -9,6 +9,10 @@ style.background = true
 style.border = false
 --style.shadow = false
 style.shadowColor = colors.gray
+style.shadowOffsetL = 0
+style.shadowOffsetR = 0
+style.shadowOffsetU = 0
+style.shadowOffsetD = 0
 
 return style
 end
