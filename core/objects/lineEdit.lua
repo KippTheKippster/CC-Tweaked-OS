@@ -58,7 +58,7 @@ function LineEdit:addText(text, offset)
         self.trueText:sub(0, #self.trueText + offset) ..
         text ..
         self.trueText:sub(#self.trueText + offset + 1)
-    ) 
+    )
 end
 
 function LineEdit:char(char)

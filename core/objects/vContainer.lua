@@ -8,7 +8,7 @@ VContainer.center = false
 
 function VContainer:sort()
 	local w = self.w
-	if self.expandW == false then
+	if self.expandW == false then -- Todo Replace with fitToChildren
 		w = 0
 	end
 	local h = 0

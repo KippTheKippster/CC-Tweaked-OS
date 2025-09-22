@@ -1,7 +1,9 @@
 local src = debug.getinfo(1, "S").short_src
 local corePath = ".core"
 
+---@type Engine
 local engine = require(corePath .. ".engine")
+---@type Utils
 local utils = require(corePath .. ".utils")
 
 local currentPath = ""
@@ -160,7 +162,7 @@ if saveMode == true then
     saveEdit = saveContainer.edit
 
     function saveEdit:focusChanged()
-        engine.getObject("lineEdit").focusChanged(self)
+        engine.LineEdit.focusChanged(self)
         if self.focus then
            currentLineEdit = self 
         else
@@ -365,14 +367,16 @@ local function openFolder(path)
     local selectedButtons = {}
     for i, name in ipairs(names) do
         if fileFilter == "" or name:find(fileFilter) ~= nil then
-            if fs.isDir(fs.combine(path, name)) then
-                table.insert(dirs, name)
-            else
-                table.insert(files, name)
-            end
+            if mos.profile.showDotFiles or name:sub(0, 1) ~= "." then
+                if fs.isDir(fs.combine(path, name)) then
+                    table.insert(dirs, name)
+                else
+                    table.insert(files, name)
+                end
 
-            if utils.find(startSelectedFiles, name) ~= nil then
-                selectedButtons[name] = true
+                if utils.find(startSelectedFiles, name) ~= nil then
+                    selectedButtons[name] = true
+                end
             end
         end
     end
@@ -452,12 +456,10 @@ editStyle.textColor = colors.black
 searchEdit.focusStyle = editStyle
 
 function searchEdit:focusChanged()
-    --engine.getObject("lineEdit").focusChanged(self)
     if self.focus == true then
         self:grabCursorControl()
         self.trueText = ""
     else
-        --self.trueText = ""
         self:releaseCursorControl()
     end
     self.visible = self.focus
@@ -466,7 +468,7 @@ end
 function searchEdit:trueTextChanged()
     if self.visible == false then return end
 
-	engine.getObject("lineEdit").trueTextChanged(self)
+	engine.LineEdit.trueTextChanged(self)
     if self.text == "" then
         self:releaseFocus()
     end
@@ -562,7 +564,7 @@ local function ejectDisk(name)
 end
 
 local function createAudioDropdown(name)
-    local dropdown = mos.engine.getObject("dropdown"):new{}
+    local dropdown = mos.engine.Dropdown:new{}
     dropdown.text = disk.getAudioTitle(name) or disk.getMountPath(name)
     dropdown.text = "[" .. dropdown.text .. "]"
     dropdown.w = #dropdown.text
@@ -591,7 +593,7 @@ end
 
 local function createDiskDropdown(name)
     ---@type Dropdown
-    local dropdown = mos.engine.getObject("dropdown"):new{}
+    local dropdown = mos.engine.Dropdown:new{}
     dropdown.text = disk.getMountPath(name)
     dropdown.text = "[" .. dropdown.text .. "]"
     dropdown.w = #dropdown.text
@@ -696,6 +698,8 @@ function inputReader:rawEvent(data)
             clearDisks()
         end
     elseif event == "mos_favorite_remove" then
+        refreshFiles()
+    elseif event == "mos_refresh_files" then
         refreshFiles()
     elseif event == "paste" then
         fileExplorer.pasteCopiedFiles()

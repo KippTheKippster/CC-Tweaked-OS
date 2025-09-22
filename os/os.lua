@@ -9,8 +9,11 @@ end
 local src = debug.getinfo(1, "S").short_src
 local corePath = ".core"
 
+---@type Engine
 local engine = require(corePath .. ".engine")
+---@type Utils
 local utils = require(corePath .. ".utils")
+---@type MultiProgram
 local multiProgram = require(corePath .. ".multiProcess.multiProgram")
 
 local windows = {}
@@ -58,6 +61,9 @@ local defaultProfile = {
     favorites = {
 
     },
+    showDotFiles = false,
+    showRomFiles = false,
+    showOSFiles = false,
 }
 
 local function validateTable(tbl, default)
@@ -123,6 +129,7 @@ local clickStyle = engine.getDefaultClickedStyle()
 local optionNormalStyle = style:new{}
 local optionClickStyle = clickStyle:new{}
 local windowStyle = engine.newStyle()
+windowStyle.shadowOffsetU = 0
 ---@type Style
 local normalWindowStyle = windowStyle:new{}
 ---@type Style
@@ -179,6 +186,7 @@ mos.refreshTheme = function ()
     style.backgroundColor = toolbarColors.background
     style.shadowColor = theme.shadowColor
     style.shadowOffsetU = 1
+    
     clickStyle.shadowColor = theme.shadowColor
 
     clickStyle.textColor = toolbarColors.clickText
@@ -198,6 +206,7 @@ mos.refreshTheme = function ()
     programWindow.shadow = theme.shadow
     windowStyle.shadowColor = theme.shadowColor
 
+    normalWindowStyle.shadowOffsetU = 0
     normalWindowStyle.backgroundColor = windowColors.background
     normalWindowStyle.textColor = windowColors.text
 
@@ -320,8 +329,6 @@ local clock = topBar:addControl()
 clock.w = #"00:00"
 clock.h = 1
 clock.anchorW = clock.anchor.RIGHT
-
-
 
 local function isFullscreen()
     local fullscreen = false
@@ -574,6 +581,10 @@ function root:rawEvent(data)
             if currentWindow ~= nil then
                 currentWindow:setFullscreen(currentWindow.fullscreen == false)
             end
+        elseif data[2] == keys.tab then
+            mos.quickSearch:next()
+        elseif data[2] == keys.enter then
+            mos.quickSearch:select()
         elseif engine.input.isKey(keys.leftAlt) then
             for i = 1, #toolBar.children do
                 if data[2] == keys.one + (i - 1) then
@@ -591,6 +602,10 @@ function root:rawEvent(data)
                 end
             end
         end
+    elseif event == "mouse_up" then
+        if mos.quickSearch:isOpen() then
+            mos.quickSearch:close()
+        end
     end
 end
 
@@ -601,11 +616,14 @@ mos.root = engine.root
 mos.addWindow = addWindow
 mos.launchProgram = launchProgram
 mos.openProgram = openProgram
-mos.background = background
 mos.backgroundIcon = backgroundIcon
 mos.bindTool = bindTool
 mos.addToToolbar = addToToolbar
 mos.removeFromToolbar = removeFromToolbar
+mos.quickSearch = require("programs.quickSearch")(mos)
+
+engine.root:addChild(mos.quickSearch)
+
 
 __Global.log("Launching MOS")
 multiProgram.launchProcess(engine.screenBuffer, engine.start, nil, 1, 1, term.getSize())

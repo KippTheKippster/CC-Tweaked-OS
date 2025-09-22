@@ -115,6 +115,9 @@ function ProgramViewport:unhandledEvent(data)
         result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
         self:redraw()
     elseif event == 'char' then
+        if self.parent:inFocus()  == false then return end
+
+        result = resumeProcess(self, data)
     elseif event == 'key' then
         if self.parent:inFocus()  == false then return end
         --if input.isInputConsumed() == true then return end
@@ -126,12 +129,12 @@ function ProgramViewport:unhandledEvent(data)
             self.focusKeys[key] = true
         end
 
-    if (held and self.focusKeys[key]) or not held then
-        result = resumeProcess(self, data)
-        if key >= 0 and key <= 255 then
-            result = resumeProcess(self, { 'char', keys.getName(key) })
+        if (held and self.focusKeys[key]) or not held then
+            result = resumeProcess(self, data)
+            --if key >= 0 and key <= 255 then
+            --    result = resumeProcess(self, { 'char', string.char(key) })
+            --end
         end
-    end
     elseif event == "key_up" then
         --if input.isInputConsumed() == true then return end
         --if self.parent:inFocus()  == false then return end

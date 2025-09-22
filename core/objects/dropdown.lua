@@ -71,6 +71,7 @@ function Dropdown:focusChanged()
         if self.shortcutSelection ~= nil then
             self.shortcutSelection:up()
         end
+
         self:close()
     end
 end
@@ -94,7 +95,6 @@ function Dropdown:addToList(text, clickable)
     else
         b = self.list:addControl()
     end
-    self.list.visible = false
     b.shadow = false
     b.inheritStyle = false
     b.style = self.optionNormalStyle

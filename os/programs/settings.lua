@@ -23,7 +23,7 @@ main.style = buttonStyle
 main.rendering = true
 
 
-local settingsButton = engine.getObject("button"):new{}
+local settingsButton = engine.Button:new{}
 settingsButton.h = 1
 settingsButton.fitToText = true
 settingsButton.normalStyle = buttonStyle
@@ -211,6 +211,21 @@ function picker:colorPressed(color)
     mos.profile.backgroundColor = color
     mos.engine.backgroundColor = color
     colorReset.visible = true
+end
+
+local dotFiles = addSettingsButton("Show '.' Files", "[ ]")
+if mos.profile.showDotFiles then
+    dotFiles.text = "[x]"
+end
+
+dotFiles.pressed = function (o)
+    mos.profile.showDotFiles = mos.profile.showDotFiles == false
+    os.queueEvent("mos_refresh_files")
+    if mos.profile.showDotFiles then
+        o.text = "[x]"
+    else
+        o.text = "[ ]"
+    end
 end
 
 

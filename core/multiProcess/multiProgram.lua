@@ -2,6 +2,7 @@
 
 local utils = require(".core.utils")
 
+---@class MultiProgram
 local mp = {}
 local tProcesses = {}
 local endQueue = {}
