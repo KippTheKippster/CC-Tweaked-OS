@@ -1,15 +1,20 @@
 local src = debug.getinfo(1, "S").short_src
 local corePath = "." .. fs.getDir(fs.getDir(fs.getDir(src))) .. "core"
 
+---@type Engine
 local engine = require(corePath .. ".engine")
-
+---@type MOS
 local mos = __mos
 
 local args = {...}
 
+---@type Control
 local background = nil
+---@type Control
 local sprite = nil
+---@type Control
 local selectionBox = nil
+---@type table
 local coords = nil
 
 --#region Paint
@@ -634,14 +639,14 @@ function selectionBox:render()
         paintutils.drawImage(paint.selectionCanvas, self.globalX + 1, self.globalY + 1)
     end
 
-    engine.getObject("control").render(self)
+    engine.Control.render(self)
 end
 
 local toolbar = engine.root:addVContainer()
 toolbar.text = ""
 toolbar.w = 1
 
-local toolIcon = engine.getObject("control"):new{}
+local toolIcon = engine.Control:new{}
 toolIcon.w = 1
 toolIcon.h = 1
 toolIcon.text = "Tool"
@@ -719,6 +724,7 @@ colorL.style.backgroundColor = paint.colorL
 colorR.style.backgroundColor = paint.colorR
 
 for i = 0, 16 do
+    ---@class PaletteColor : Control
     local c = palette:addControl()
     c.w = 2
     c.h = 1
@@ -770,7 +776,7 @@ editFocusStyle.backgroundColor = colors.black
 local function createEditField(fieldName, text, parent)
     text = text or ""
 
-    local h = engine.getObject("hContainer"):new{}
+    local h = engine.HContainer:new{}
     h.h = 1
     h.expandW = true
     local label = h:addControl()
@@ -793,6 +799,8 @@ local function createEditField(fieldName, text, parent)
     return edit
 end
 
+---comment
+---@return WindowControl
 local function createDialogue()
     local wi = engine.root:addWindowControl()
     wi.style = windowStyle
@@ -804,6 +812,7 @@ end
 local function createResizeDialogue(fn)
     local _w, _h = paint.getCanvasSize(paint.canvas)
 
+    ---@class resizeDialogue : WindowControl
     local wi = createDialogue()
     wi.text = "Resize"
     wi.vContainer = wi:addVContainer()
@@ -833,7 +842,7 @@ end
 
 --#region MOS
 if mos then
-    local fileDropdown = mos.engine.getObject("dropdown"):new{}
+    local fileDropdown = mos.engine.Dropdown:new{}
     fileDropdown.text = "File"
     fileDropdown:addToList("New  Image")
     fileDropdown:addToList("Open Image")
@@ -858,7 +867,7 @@ if mos then
         end
     end
 
-    local imageDropdown = mos.engine.getObject("dropdown"):new{}
+    local imageDropdown = mos.engine.Dropdown:new{}
     imageDropdown.text = "Image"
     imageDropdown:addToList("Resize")
     imageDropdown:addToList("Trim")

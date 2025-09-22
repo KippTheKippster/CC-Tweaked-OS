@@ -26,12 +26,9 @@ editFocusStyle.backgroundColor = colors.lightGray
 
 
 --Objects
-local objectList = {}
 
 local function requireObject(name, ...)
-    local o = require(corePath .. ".objects." .. name)(...)
-    objectList[name] = o
-    return o
+    return require(corePath .. ".objects." .. name)(...)
 end
 
 ---@type Control
@@ -92,7 +89,7 @@ if __Global == nil then
         __Global.logFile.write(line)
         __Global.logFile.flush()
     end
-    --__Global.log = function () end
+    __Global.log = function () end
 end
 
 ---@type Control
@@ -165,10 +162,12 @@ engine.start = function ()
 
     local function freeQueue()
         for i, c in ipairs(engine.freeQueue) do
-            if c.parent then
-                c.parent:removeChild(c)
+            if c ~= nil and c:isValid() then
+                if c.parent then
+                    c.parent:removeChild(c)
+                end
+                freeControl(c)
             end
-            freeControl(c)
         end
 
         engine.freeQueue = {}
@@ -231,11 +230,6 @@ engine.stop = function ()
     if globalRoot then
         __Global.logFile.close()
     end
-end
-
----@return Control 
-engine.getObject = function (name)
-	return objectList[name]
 end
 
 ---@return Style
