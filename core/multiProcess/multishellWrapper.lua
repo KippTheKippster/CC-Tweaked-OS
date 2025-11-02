@@ -6,9 +6,7 @@ local args = __wrapper.args
 
 local mp = __wrapper.mp
 
-_G = __wrapper._G
-
-__wrapper = nil
+_G.__wrapper = nil
 
 local n = multishell.getFocus()
 local path = args[1]
@@ -26,8 +24,12 @@ shell.exit()
 
 env._G = _G
 
-local ok, err = pcall(mp.runProgram, env, table.unpack(args))
+if fs.exists(path) then
+   local ok, err = pcall(mp.runProgram, env, table.unpack(args))
 
-if ok == false then
-    error(err, 3)
+    if ok == false then
+        error(err, 3)
+    end
+else
+    error("No such program as \"" .. path .. "\"", 0)
 end

@@ -19,61 +19,75 @@ local function isValid(o)
     end
 end
 
-local function isControlInArea(c, x, y)
+local function isControlInPoint(c, x, y)
     return collision.inArea(
         x, y, math.floor(c.globalX) + 1, math.floor(c.globalY) + 1, math.floor(c.w) - 1, math.floor(c.h) - 1
         )
 end
 
-local function controlInArea(c, x, y)
-    if isControlInArea(c, x, y)
-        and c.mouseIgnore == false
-        and c.visible == true
-    then
+local function getBranchInPoint(root, x, y)
+    if root.visible == false then
+        return nil
+    end
+
+    for i, child in ipairs(root.children) do
+        local branchInPoint = getBranchInPoint(child, x, y)
+        if branchInPoint then
+            return branchInPoint
+        end
+    end
+
+    if isControlInPoint(root, x, y) and root.mouseIgnore == false then
+        return root
+    end
+
+    return nil
+end
+
+---Returns a list with all the root top level controls
+---@param parent Control
+---@param list table
+---@return table
+local function getTopLevelControls(parent, list)
+    for i, child in ipairs(parent.children) do
+        if child.topLevel then
+            table.insert(list, child)
+        else
+            getTopLevelControls(child, list)
+        end
+    end
+
+    return list
+end
+
+---Returns the deepest control in branch that overlaps point (x, y)
+---@param x number
+---@param y number
+---@return Control|nil
+function mouse.getControlInPoint(x, y)
+    local topControls = getTopLevelControls(engine.root, {})
+    for _, control in ipairs(topControls) do
+        local branch = getBranchInPoint(control, x, y)
+        if branch then
+            return branch
+        end
+    end
+
+    return getBranchInPoint(engine.root, x, y)
+end
+
+---Returns the focus owner of control c 
+---@param c Control
+---@return Control|nil
+function mouse.getFocusOwner(c)
+    if c == nil then
+        return nil
+    elseif c:isValid() == false then
+        return nil
+    elseif c.propogateFocusUp == false then
         return c
-    end
-
-    return nil
-end
-
-local function childrenInArea(children, x, y)
-    for i = 1, #children do
-        local index = #children - i + 1
-        if children[index].visible == true and #children[index].children > 0 then
-            local inArea = childrenInArea(children[index].children, x, y)
-            if inArea ~= nil then
-                return inArea
-            end
-        end
-        local inArea = controlInArea(children[index], x, y)
-        if inArea ~= nil and inArea.visible == true then
-            return inArea
-        end
-    end
-
-    return nil
-end
-
-function mouse.getControl(x, y)
-    return childrenInArea(engine.root.children, x, y)
-end
-
-function mouse.getFocusOwner(o)
-    if o == nil then
-        return nil
-    elseif o:isValid() == false then
-        return nil
-    elseif o.propogateFocusUp == false then
-        return o
     else
-        return mouse.getFocusOwner(o.parent)
-    end
-end
-
-function mouse.propogateInput(o, method, ...)
-    method(o, ...)
-    if o.propogateInputUp == true then
-        mouse.propogateInput(o.parent)
+        return mouse.getFocusOwner(c.parent)
     end
 end
 
@@ -84,7 +98,7 @@ local function addFocusChangedListener(o)
 end
 
 local function focusChangedEvent(o)
-    for i = 1, #focusChangedListeners do 
+    for i = 1, #focusChangedListeners do
         if type(focusChangedListeners[i]) == "table" then
             focusChangedListeners[i]:focusChangedEvent(o)
         elseif type(focusChangedListeners[i]) == "function" then
@@ -132,7 +146,7 @@ end
 function mouse.click(button, x, y)
     mouse.dragX = x
     mouse.dragY = y
-    local c = mouse.getControl(x, y)
+    local c = mouse.getControlInPoint(x, y)
     if mouse.current ~= c then -- If user clicks on a new control (or nothing)
         mouse.clickTime = os.clock()
         mouse.changeFocus(c)
@@ -182,7 +196,7 @@ function mouse.drag(button, x, y)
     if isValid(mouse.current) == false then return end
     local relativeX = x - mouse.dragX
     local relativeY = y - mouse.dragY
-    local c = mouse.getControl(x, y)
+    local c = mouse.getControlInPoint(x, y)
     if c ~= nil and c ~= mouse.current and c.dragSelectable == true and mouse.current.dragSelectable == true then
         mouse.current:up()
         mouse.changeFocus(c)
@@ -194,17 +208,17 @@ function mouse.drag(button, x, y)
 end
 
 function mouse.scroll(dir, x, y)
-    local function scrollControl(c, dir, x, y)
-        if isControlInArea(c, x, y) == true then
+    local function scrollControl(c)
+        if isControlInPoint(c, x, y) == true then
             c:scroll(dir)
         end
 
         for i = 1, #c.children do
-            scrollControl(c.children[i], dir, x, y)
+            scrollControl(c.children[i])
         end
     end
 
-    scrollControl(engine.root, dir, x, y)
+    scrollControl(engine.root)
 end
 
 local function getFocus()
@@ -323,16 +337,19 @@ local function addRawEventListener(o)
 end
 
 local function removeRawEventListener(o)
+    __Global.log("Removing:", o.text, o.type)
     table.remove(rawEventListeners, engine.utils.find(rawEventListeners, o))
 end
 
 local function rawEvent(data)
-    for i = 1, #rawEventListeners do 
-        if type(rawEventListeners[i]) == "table" then
-            rawEventListeners[i]:rawEvent(data)
-        elseif type(rawEventListeners[i]) == "function" then
-            rawEventListeners[i](data)
+    for _, listener in ipairs(rawEventListeners) do
+        if isValid(listener) then
+        if type(listener) == "table" then
+            listener:rawEvent(data)
+        elseif type(listener) == "function" then
+            listener(data)
         end
+    end
     end
 end
 

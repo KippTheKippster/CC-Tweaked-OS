@@ -1,5 +1,5 @@
 ---@return Dropdown
-return function(button, input, utils)
+return function(button, input, utils, engine)
 ---@class Dropdown : Button
 local Dropdown = button:new{}
 Dropdown.type = "Dropdown"
@@ -24,6 +24,7 @@ function Dropdown:ready()
         o:drawShadow()
     end
     self.list.rendering = true
+    self.list.topLevel = true
     self.list.y = self.h
     self.list.w = 0
     self.list.h = 0
@@ -148,6 +149,7 @@ function Dropdown:clearList()
     for i = 1, #self.list.children do
         self.list:removeChild(self.list.children[1])
     end
+    self.shortcutSelection = nil
 end
 
 function Dropdown:click()
@@ -195,6 +197,41 @@ function Dropdown:next()
             self.shortcutSelection = nil
             for i = 1, #self.list.children - idx do
                 local next = self.list.children[idx + i]
+                if next ~= nil and next.optionSelectable == true then
+                    self.shortcutSelection = next
+                    break
+                end
+            end
+        end
+    end
+
+    if self.shortcutSelection == nil then
+        self.shortcutSelection = self
+    end
+
+    self.shortcutSelection:click()
+    self.shortcutSelection:grabFocus()
+end
+
+function Dropdown:previous()
+    self.list.visible = true
+    if self:isOpened() == false then
+        if self.shortcutSelection ~= nil then
+            self.shortcutSelection:releaseFocus()
+        end
+        self.shortcutSelection = nil
+    end
+
+    if self.shortcutSelection ~= nil then
+        self.shortcutSelection:up()
+        local idx = utils.find(self.list.children, self.shortcutSelection)
+
+        if idx == nil then
+            self.shortcutSelection = self.list.children[#self.list.children]
+        else
+            self.shortcutSelection = nil
+            for i = 1, #self.list.children do
+                local next = self.list.children[idx - i]
                 if next ~= nil and next.optionSelectable == true then
                     self.shortcutSelection = next
                     break

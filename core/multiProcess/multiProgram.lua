@@ -1,6 +1,6 @@
 -- Handles coroutines of multiple programs
 
-local utils = require(".core.utils")
+local utils = require(__Global.coreDotPath .. ".utils")
 
 ---@class MultiProgram
 local mp = {}
@@ -69,7 +69,7 @@ end
 
 mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
     local env = { shell = shell, multishell = multishell }
-    env.require, env.package = dofile("rom/modules/main/cc/require.lua").make(env, "")
+    env.require, env.package = dofile("/rom/modules/main/cc/require.lua").make(env, "")
 
     extraEnv = extraEnv or {}
     for k, v in pairs(extraEnv) do
@@ -83,7 +83,7 @@ mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w,
     end, resume, x, y, w, h, ...)
 
     coroutine.resume(p.co, "start")
-    coroutine.resume(p.co, "paste", "core/multiProcess/multishellWrapper.lua")
+    coroutine.resume(p.co, "paste", __Global.corePath .. "/multiProcess/multishellWrapper.lua")
     coroutine.resume(p.co, "key", keys.enter)
 
     return p

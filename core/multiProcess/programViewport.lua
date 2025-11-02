@@ -1,4 +1,7 @@
 -- Extends control, draws the inbuilt cc-tweaked window object on to a control object.
+---@param control Control
+---@param multiProgram MultiProgram
+---@param input Input
 ---@return ProgramViewport
 return function(control, multiProgram, input)
 ---@class ProgramViewport : Control
@@ -44,15 +47,12 @@ end
 function ProgramViewport:launchProgram(parentTerm, programPath, extraEnv, ...)
     self.parentTerm = parentTerm
     self.program = multiProgram.launchProgram(parentTerm, programPath, extraEnv, function (data)
-        --if self:isValid() == false then return nil end
         return self:unhandledEvent(data)
     end, self.globalX + 1, self.globalY + 1, self.w, self.h, ...)
 end
 
 function ProgramViewport:endProcess()
-    --term.redirect(self.program.co.window)
     multiProgram.endProcess(self.program)
-    --term.redirect(self.parentTerm)
 end
 
 local function drawChildren(viewport)

@@ -3,7 +3,7 @@ local collision = {}
 function collision.inArea(x, y, x1, y1, w, h)
     if (
         x <= x1 + w and
-        x >= x1 and 
+        x >= x1 and
         y <= y1 + h and
         y >= y1
     ) then

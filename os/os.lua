@@ -6,15 +6,24 @@ function mos.getVersion ()
     return "1.0.0"
 end
 
-local src = debug.getinfo(1, "S").short_src
-local corePath = ".core"
+mos.latestMosOption = ""
+
+local runningProgram = shell.getRunningProgram()
+local mosPath = fs.getDir(fs.getDir(runningProgram))
+local mosDotPath = "." .. mosPath:gsub("/", ".")
+local corePath = mosPath .. "/core"
+_G.corePath = corePath
+local coreDotPath = mosDotPath .. ".core"
+local osPath = mosPath .. "/os"
+local osDotPath = mosDotPath .. ".os"
 
 ---@type Engine
-local engine = require(corePath .. ".engine")
----@type Utils
-local utils = require(corePath .. ".utils")
+local engine = require(coreDotPath .. ".engine")
+
+__Global.mosDotPath = mosDotPath
+
 ---@type MultiProgram
-local multiProgram = require(corePath .. ".multiProcess.multiProgram")
+local multiProgram = require(coreDotPath .. ".multiProcess.multiProgram")
 
 local windows = {}
 local customTools = {}
@@ -46,12 +55,11 @@ local defaultTheme = {
 
 ---@class Profile
 local defaultProfile = {
-    backgroundIcon = "os/textures/backgrounds/tux.nfp",
-    backgroundPath = "os/textures/backgrounds/melvin.nfp",
+    backgroundIcon = osPath .. "/textures/backgrounds/tux.nfp",
     backgroundUpdateTime = 0.1,
     fileExecptions = {
         [".nfp"] = {
-            program = "/os/programs//paint.lua",
+            program = osPath .."/programs/paint.lua",
             fullscreen = true
         },
         [".txt"] = { program = "/rom/programs/edit.lua" }
@@ -61,9 +69,9 @@ local defaultProfile = {
     favorites = {
 
     },
-    showDotFiles = false,
-    showRomFiles = false,
-    showOSFiles = false,
+    showDotFiles = true,
+    showRomFiles = true,
+    showMosFiles = true,
 }
 
 local function validateTable(tbl, default)
@@ -75,8 +83,8 @@ local function validateTable(tbl, default)
 end
 
 function mos.loadProfile(file)
-    file = file or ".mosdata/profile.sav"
-    local profile = utils.loadTable(file)
+    file = file or "/.mosdata/profiles/profile.sav"
+    local profile = engine.utils.loadTable(file)
     mos.profile = profile or {}
     validateTable(mos.profile, defaultProfile)
     if profile == nil then
@@ -85,8 +93,8 @@ function mos.loadProfile(file)
 end
 
 function mos.saveProfile(file)
-    file = file or ".mosdata/profile.sav"
-    utils.saveTable(mos.profile, file)
+    file = file or "/.mosdata/profiles/profile.sav"
+    engine.utils.saveTable(mos.profile, file)
 end
 
 function mos.isFileFavorite(file, profile)
@@ -107,7 +115,7 @@ function mos.removeFileFavorite(file, profile)
 end
 
 function mos.loadTheme(file)
-    local theme = utils.loadTable(file)
+    local theme = engine.utils.loadTable(file)
     if theme == nil then
        mos.theme = defaultTheme
     else
@@ -121,8 +129,8 @@ end
 
 
 local dropdown = engine.Dropdown
-local programViewport = require(".core.multiProcess.programViewport")(engine.Control, multiProgram, engine.input)
-local programWindow = require(".core.multiProcess.programWindow")(engine.WindowControl, engine.input)
+local programViewport = require(coreDotPath .. ".multiProcess.programViewport")(engine.Control, multiProgram, engine.input)
+local programWindow = require(coreDotPath .. ".multiProcess.programWindow")(engine.WindowControl, engine.input)
 
 local style = engine.getDefaultStyle()
 local clickStyle = engine.getDefaultClickedStyle()
@@ -227,15 +235,15 @@ mos.profile = nil
 
 mos.loadProfile()
 mos.loadTheme(mos.profile.theme)
-utils.saveTable(defaultTheme, "os/themes/defaultTheme.thm")
+engine.utils.saveTable(defaultTheme, osPath .. "/themes/defaultTheme.thm")
 
 --Objects
 --Background
 local backgroundIcon = engine.root:addIcon()
 backgroundIcon.text = ""
 backgroundIcon.texture = paintutils.loadImage(mos.profile.backgroundIcon)
-backgroundIcon.anchorW = backgroundIcon.anchor.CENTER
-backgroundIcon.anchorH = backgroundIcon.anchor.CENTER
+backgroundIcon.anchorW = backgroundIcon.Anchor.CENTER
+backgroundIcon.anchorH = backgroundIcon.Anchor.CENTER
 
 
 local focusContainer = engine.root:addControl()
@@ -308,7 +316,7 @@ mos.refreshMosDropdown = function ()
             x.text = string.char(3)
             x.w = #x.text
             x.h = 1
-            x.anchorW = x.anchor.RIGHT
+            x.anchorW = x.Anchor.RIGHT
             x.dragSelectable = true
             x.propogateFocusUp = true
             x.pressed = function ()
@@ -320,6 +328,7 @@ mos.refreshMosDropdown = function ()
         mosDropdown:addToList("-------------", false)
     end
 
+    --mosDropdown:addToList("Reboot")
     mosDropdown:addToList("Exit")
 end
 
@@ -328,7 +337,7 @@ mos.refreshMosDropdown()
 local clock = topBar:addControl()
 clock.w = #"00:00"
 clock.h = 1
-clock.anchorW = clock.anchor.RIGHT
+clock.anchorW = clock.Anchor.RIGHT
 
 local function isFullscreen()
     local fullscreen = false
@@ -354,6 +363,9 @@ local function windowFullscreenChanged(w)
     setFullscreenMode(isFullscreen())
 end
 
+---comment
+---@param w WindowControl
+---@param b Button
 local function windowClosed(w, b)
     w.fullscreen = false
     if isFullscreen() == false then
@@ -364,10 +376,11 @@ local function windowClosed(w, b)
         customTools[w](false)
     end
 
-    table.remove(windows, utils.find(windows, w))
+    table.remove(windows, engine.utils.find(windows, w))
 
-    for i = 1, #windowContainer.children do
-        local nextW = windowContainer.children[i]
+    w.visible = false
+    for i = 0, #windowContainer.children - 1 do
+        local nextW = windowContainer.children[#windowContainer.children - i]
         if nextW.visible == true then
             nextW.programViewport.skipEvent = true
             nextW:grabFocus()
@@ -421,7 +434,7 @@ local function addWindow(w)
     x.text = "x"
     x.w = #x.text
     x.h = 1
-    x.anchorW = x.anchor.RIGHT
+    x.anchorW = x.Anchor.RIGHT
     x.dragSelectable = true
     x.propogateFocusUp = true
     x.pressed = function ()
@@ -526,16 +539,20 @@ end
 
 function mosDropdown:optionPressed(i)
     local text = mosDropdown:getOptionText(i)
+    mos.latestMosOption = text
     if text == "Test" then
         launchProgram("Shell", "test", 2, 2, 200, 19)
     elseif text == "Shell" then
-        launchProgram("Shell", "rom/programs/advanced/multishell.lua", 2, 2, 20, 10)
+        launchProgram("Shell", "/rom/programs/advanced/multishell.lua", 2, 2, 20, 10)
     elseif text == "Exit" then
         multiProgram.exit()
+    elseif text == "Reboot" then
+        multiProgram.exit()
+        shell.run(osPath .. "/os.lua")
     elseif text == "File Explorer" then
-        launchProgram("File Explorer", "/os/programs/fileExplorer.lua", 7, 2, 35, 15, openProgram)
+        launchProgram("File Explorer", osPath .. "/programs/fileExplorer.lua", 7, 2, 35, 15, openProgram)
     elseif text == "Settings" then
-        launchProgram("Settings", "/os/programs/settings.lua", 20, 5, 30, 13)
+        launchProgram("Settings", osPath .. "/programs/settings.lua", 20, 5, 30, 13)
     end
 end
 
@@ -573,7 +590,7 @@ function root:rawEvent(data)
     if event == "key" then
         if data[2] == keys.w then
             if engine.input.isKey(keys.leftCtrl) then
-                if utils.contains(windows, engine.input.getFocus()) then
+                if engine.utils.contains(windows, engine.input.getFocus()) then
                     engine.input.getFocus():close()
                 end
             end
@@ -581,10 +598,21 @@ function root:rawEvent(data)
             if currentWindow ~= nil then
                 currentWindow:setFullscreen(currentWindow.fullscreen == false)
             end
-        elseif data[2] == keys.tab then
-            mos.quickSearch:next()
+        elseif data[2] == keys.s then
+            if engine.input.isKey(keys.leftAlt) then
+                if mos.quickSearch:isOpen() then
+                    mos.quickSearch:close()
+                else
+                    mos.quickSearch:open()
+                end
+            end
+            --mos.quickSearch:next()
         elseif data[2] == keys.enter then
             mos.quickSearch:select()
+        elseif data[2] == keys.up then
+            mos.quickSearch:previous()
+        elseif data[2] == keys.down then
+            mos.quickSearch:next()
         elseif engine.input.isKey(keys.leftAlt) then
             for i = 1, #toolBar.children do
                 if data[2] == keys.one + (i - 1) then
@@ -620,15 +648,15 @@ mos.backgroundIcon = backgroundIcon
 mos.bindTool = bindTool
 mos.addToToolbar = addToToolbar
 mos.removeFromToolbar = removeFromToolbar
-mos.quickSearch = require("programs.quickSearch")(mos)
-
+mos.quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
 engine.root:addChild(mos.quickSearch)
-
+mos.quickSearch.y = 1
 
 __Global.log("Launching MOS")
 multiProgram.launchProcess(engine.screenBuffer, engine.start, nil, 1, 1, term.getSize())
 local err = multiProgram.start()
 __Global.log("MOS Terminated")
+engine.stop()
 
 mos.saveProfile()
 
@@ -647,4 +675,8 @@ else
     --term.clear()
     print("Something Went Wrong :(")
     print(err)
+end
+
+if mos.latestMosOption == "Reboot" then
+    shell.run(mosPath .. "/mos.lua")
 end
