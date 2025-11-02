@@ -30,7 +30,8 @@ local function getBranchInPoint(root, x, y)
         return nil
     end
 
-    for i, child in ipairs(root.children) do
+    for i = 1, #root.children do
+        local child = root.children[#root.children - i + 1]
         local branchInPoint = getBranchInPoint(child, x, y)
         if branchInPoint then
             return branchInPoint
