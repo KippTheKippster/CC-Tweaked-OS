@@ -1,8 +1,7 @@
-local src = debug.getinfo(1, "S").short_src
-local corePath = ".core"
+local corePath = __Global.coreDotPath
 
 ---@type Engine
-local engine = require(corePath .. ".engine")
+local engine = require(corePath .. ".engine")--corePath .. ".engine")
 ---@type Utils
 local utils = require(corePath .. ".utils")
 
@@ -17,8 +16,7 @@ local fileExplorer = {}
 local selectedFileButtons = {}
 local copiedFiles = {}
 local readOnlyFiles = {
-    ["os"] = true,
-    ["core"] = true
+    ["mos"] = true,
 }
 
 local popupStyle = engine.newStyle()
@@ -113,7 +111,7 @@ copyButton.text = string.char(169)
 copyButton.w = #copyButton.text
 copyButton.h = 1
 copyButton.normalStyle = toolsStyle
-copyButton.anchorW = copyButton.anchor.RIGHT
+copyButton.anchorW = copyButton.Anchor.RIGHT
 
 local marginU = 1
 local marginD = 0
@@ -138,7 +136,7 @@ if saveMode == true then
     saveContainer.style = toolsStyle
     saveContainer.h = 1
     saveContainer.expandW = true
-    saveContainer.anchorH = saveContainer.anchor.DOWN
+    saveContainer.anchorH = saveContainer.Anchor.DOWN
 
     saveContainer.label = saveContainer:addControl()
     saveContainer.label.h = 1
@@ -295,7 +293,7 @@ fileExplorer.addHeart = function (o, file)
     heart.w = #heart.text
     heart.h = 1
     heart.normalStyle = style
-    heart.anchorW = heart.anchor.RIGHT
+    heart.anchorW = heart.Anchor.RIGHT
     heart.pressed = function ()
         fileExplorer.removeFavorite(o, file)
     end
@@ -367,7 +365,10 @@ local function openFolder(path)
     local selectedButtons = {}
     for i, name in ipairs(names) do
         if fileFilter == "" or name:find(fileFilter) ~= nil then
-            if mos.profile.showDotFiles or name:sub(0, 1) ~= "." then
+            if
+                (mos.profile.showDotFiles or name:sub(0, 1) ~= ".") and not 
+                (mos.profile.showMosFiles == false and fs.combine(path, name) == "mos") and not
+                (mos.profile.showRomFiles == false and fs.combine(path, name) == "rom") then
                 if fs.isDir(fs.combine(path, name)) then
                     table.insert(dirs, name)
                 else
@@ -413,7 +414,7 @@ local function openFolder(path)
         local sizeLabel = button:addControl()
         sizeLabel.fitToText = true
         sizeLabel.h = 1
-        sizeLabel.anchorW = sizeLabel.anchor.RIGHT
+        sizeLabel.anchorW = sizeLabel.Anchor.RIGHT
         sizeLabel.text = math.ceil(fs.getSize(buttonPath) / 1000) .. "KB  "
         button:_expandChildren()
 

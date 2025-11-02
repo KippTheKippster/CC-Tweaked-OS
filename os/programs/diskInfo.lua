@@ -1,10 +1,13 @@
-local src = debug.getinfo(1, "S").short_src
-local corePath = ".core"
+local corePath = __Global.coreDotPath
 
 local engine = require(corePath .. ".engine")
 
 local args = {...}
-local diskName = args[1]
+local diskName = args[1] or ""
+
+if not disk.isPresent(diskName) then
+    error("Disk '" .. diskName .. "' is not present", 0)
+end
 
 local style = engine.getDefaultStyle()
 style.backgroundColor = colors.white
@@ -35,7 +38,5 @@ else
     newLine("  Port - " .. diskName)
     newLine("    ID - " .. disk.getID(diskName))
 end
-
-
 
 engine.start()

@@ -1,5 +1,4 @@
-local src = debug.getinfo(1, "S").short_src
-local corePath = ".core"
+local corePath = __Global.coreDotPath
 
 ---@type Engine
 local engine = require(corePath .. ".engine")
@@ -14,11 +13,16 @@ end
 
 local buttonStyle = mos.styles.style
 local clickedStyle = mos.styles.clickStyle
-local seperatorStyle = mos.styles.style
+local seperatorStyle = mos.styles.style:new()
+seperatorStyle.textColor = colors.gray
 
-local main = engine.root:addVContainer()
+local scrollContainer = engine.root:addScrollContainer()
+scrollContainer.marginR = 1
+scrollContainer.expandW = true
+scrollContainer.expandH = true
+
+local main = scrollContainer:addVContainer()
 main.expandW = true
-main.expandH = true
 main.style = buttonStyle
 main.rendering = true
 
@@ -32,7 +36,7 @@ settingsButton.clickedStyle = clickedStyle
 
 local function addSeperator(text)
     local seperator = main:addControl()
-    seperator.h = 1
+    seperator.h = 2
     seperator.expandW = true
     seperator.centerText = true
     seperator.style = seperatorStyle
@@ -76,7 +80,7 @@ local function addSettingsInfo(text, infoText)
     info.style = buttonStyle
     info.h = 1
     info.fitToText = true
-    info.anchorW = info.anchor.RIGHT
+    info.anchorW = info.Anchor.RIGHT
     return info
 end
 
@@ -90,7 +94,7 @@ local function addSettingsButton(text, buttonText)
     button.text = buttonText
     button.dragSelectable = true
     button.style = buttonStyle
-    button.anchorW = button.anchor.RIGHT
+    button.anchorW = button.Anchor.RIGHT
     return button
 end
 
@@ -98,12 +102,14 @@ local function addSettingsColor(text)
     local label = addLabel(text)
 
     local picker = label:addColorPicker()
+ 
     local pickerStyle = buttonStyle:new()
     picker.style = pickerStyle
-    picker.normalStyle = pickerStyle
-    picker.clickedStyle = pickerStyle
+    --picker.normalStyle = pickerStyle
+    --picker.clickedStyle = pickerStyle
     picker.text = "[      ]"
-    picker.anchorW = picker.anchor.RIGHT
+    picker.fitToText = true
+    picker.anchorW = picker.Anchor.RIGHT
     picker.dragSelectable = true
 
     return picker
@@ -122,7 +128,7 @@ local function addSettingsLineEdit(text, editText)
     edit.focusStyle.backgroundColor = colors.lightGray
     edit.focusStyle.textColor = colors.black
     edit.style = edit.normalStyle
-    edit.anchorW = edit.anchor.RIGHT
+    edit.anchorW = edit.Anchor.RIGHT
     return edit
 end
 
@@ -157,7 +163,7 @@ addSeperator("-Appearance-")
 local changeTheme = addSettingsButton("Theme", "[Browse]")
 
 function changeTheme:pressed()
-    fileExplorer = mos.launchProgram("Choose .thm", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
+    fileExplorer = mos.launchProgram("Choose .thm", "/mos/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
         local suffix = ".thm"
         if path:sub(-#suffix) == suffix then
             mos.loadTheme(path)
@@ -165,7 +171,7 @@ function changeTheme:pressed()
             engine.root:redraw()
             fileExplorer:close()
         end
-    end, "os/themes/")
+    end, "/mos/os/themes/")
 end
 
 local changeBackground = addSettingsButton("Background Image", "[Browse]")
@@ -175,11 +181,11 @@ imageReset.visible = mos.profile.backgroundIcon ~= nil
 
 
 function changeBackground:pressed()
-    fileExplorer = mos.launchProgram("Choose .nfp", "/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
+    fileExplorer = mos.launchProgram("Choose .nfp", "/mos/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
         mos.backgroundIcon.texture = paintutils.loadImage(path)
         mos.profile.backgroundIcon = path
         imageReset.visible = true
-    end, "os/textures/backgrounds/")
+    end, "/mos/os/textures/backgrounds/")
 end
 
 function imageReset:pressed()
@@ -213,7 +219,9 @@ function picker:colorPressed(color)
     colorReset.visible = true
 end
 
-local dotFiles = addSettingsButton("Show '.' Files", "[ ]")
+addSeperator("-File Explorer-")
+
+local dotFiles = addSettingsButton("Show dot Files", "[ ]")
 if mos.profile.showDotFiles then
     dotFiles.text = "[x]"
 end
@@ -228,5 +236,38 @@ dotFiles.pressed = function (o)
     end
 end
 
+
+local mosFiles = addSettingsButton("Show mos Files", "[ ]")
+if mos.profile.showMosFiles then
+    mosFiles.text = "[x]"
+end
+
+mosFiles.pressed = function (o)
+    mos.profile.showMosFiles = mos.profile.showMosFiles == false
+    os.queueEvent("mos_refresh_files")
+    if mos.profile.showMosFiles then
+        o.text = "[x]"
+    else
+        o.text = "[ ]"
+    end
+end
+
+
+local romFiles = addSettingsButton("Show rom Files", "[ ]")
+if mos.profile.showRomFiles then
+    romFiles.text = "[x]"
+end
+
+romFiles.pressed = function (o)
+    mos.profile.showRomFiles = mos.profile.showRomFiles == false
+    os.queueEvent("mos_refresh_files")
+    if mos.profile.showRomFiles then
+        o.text = "[x]"
+    else
+        o.text = "[ ]"
+    end
+end
+
+local test = addSettingsColor("Background Color")
 
 engine.start()

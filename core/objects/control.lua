@@ -77,6 +77,7 @@ Control.mouseIgnore = false
 Control.rendering = true
 Control.draggable = false
 Control.dragSelectable = false
+Control.topLevel = false
 Control.children = {}
 ---@type Control
 Control.parent = nil
@@ -85,7 +86,7 @@ Control.marginR = 0
 Control.offsetTextX = 0
 
 ---@enum Anchor
-Control.anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3, CENTER = 4 }
+Control.Anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3, CENTER = 4 }
 
 ---@type Anchor
 Control.anchorW = nil
@@ -93,9 +94,9 @@ Control.anchorW = nil
 Control.anchorH = nil
 
 ---@type Anchor
-Control._anchorW = Control.anchor.LEFT
+Control._anchorW = Control.Anchor.LEFT
 ---@type Anchor
-Control._anchorH = Control.anchor.UP
+Control._anchorH = Control.Anchor.UP
 
 Control.visibilityChangedSignal = Control:createSignal()
 Control.focusChangedSignal = Control:createSignal()
@@ -112,7 +113,7 @@ Control:defineProperty('globalX', {
             o:globalPositionChanged()
             o:emitSignal(o.transformChanged)
         end
-    end 
+    end
 })
 
 Control:defineProperty('globalY', {
@@ -169,7 +170,7 @@ Control:defineProperty('y', {
 
 function Control:updatePosition()
     if self.parent == nil then
-        error("Parent is nill", 1)
+        error("Unable to update position of orphan control (parent == nil)", 2)
     end
 
     self.globalX = self.parent.globalX + self.x
@@ -222,9 +223,9 @@ Control:defineProperty('expandW', {
 
 Control:defineProperty('expandH', {
     get = function(o) return o._expandH end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._expandH == value
-        o._expandH = value 
+        o._expandH = value
         if same == false then
             o.parent:_expandChildren()
         end
@@ -239,16 +240,17 @@ function Control:_expandChildren()
         end
         if c.expandW then
             c.w = self.w - self.marginR - c.x
+            c.w = math.min(c.w, self.w)
         end
-        if c.anchorW == Control.anchor.RIGHT then
+        if c.anchorW == Control.Anchor.RIGHT then
             c.x = self.w - c.w
-        elseif c.anchorW == Control.anchor.CENTER then
+        elseif c.anchorW == Control.Anchor.CENTER then
             c.x = math.floor(self.w / 2 + 0.5) -  math.floor(c.w / 2 + 0.5)
         end
 
-        if c.anchorH == Control.anchor.DOWN then
+        if c.anchorH == Control.Anchor.DOWN then
             c.y = self.h - c.h
-        elseif c.anchorH == Control.anchor.CENTER then
+        elseif c.anchorH == Control.Anchor.CENTER then
             c.y = math.floor(self.h / 2 + 0.5) - math.floor(c.h / 2 + 0.5)
         end
     end
@@ -305,11 +307,10 @@ end
 
 Control:defineProperty('visible', {
     get = function(o) return o._visible end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._visible == value
-        o._visible = value 
+        o._visible = value
         if same == false then
-            --o:syncChildrenKey("visible", o._visible)
             o:visibilityChanged()
             o:emitSignal(o.visibilityChangedSignal)
             propogateVisiblity(o)
@@ -527,22 +528,6 @@ function Control:removeChild(o)
     self:redraw()
 end
 
----@param key string
-function Control:syncChildrenKey(key, value)
-    for i = 1, #self.children do
-        local c = self.children[i]
-        c[key] = value
-    end
-end
-
----@param key string
-function Control:syncChildrenFunction(key)
-    for i = 1, #self.children do
-        local c = self.children[i]
-        c[key](c)
-    end
-end
-
 ---@param x number
 ---@param y number
 ---@param button integer
@@ -584,6 +569,15 @@ function Control:isVisible()
     return self.parent:isVisible()
 end
 
+---@return boolean
+function Control:isOnScreen()
+    local w, h = engine.screenBuffer.getSize()
+    return (
+        self.globalX >= 0 and
+        self.globalY >= 0 and
+        self.globalX + self.w <= w and
+        self.globalY + self.h <= h)
+end
 
 function Control:grabFocus()
     engine.input.grabControlFocus(self)

@@ -1,11 +1,12 @@
 ---@return LineEdit
-return function(control, editStyle, editFocusStyle, input)
+return function(control, editStyle, editFocusStyle, ghostStyle, input)
 ---@class LineEdit : Control
 local LineEdit = control:new()
 LineEdit.type = "LineEdit"
 
 LineEdit.normalStyle = editStyle
 LineEdit.focusStyle = editFocusStyle
+LineEdit.ghostStyle = ghostStyle
 
 LineEdit.h = 1
 LineEdit.w = 12
@@ -25,31 +26,45 @@ control:defineProperty('trueText', {
 })
 LineEdit.clipText = true
 LineEdit.lineScroll = 0
+---@type Control
+LineEdit.ghostControl = nil
+---@type Style
+LineEdit.ghostStyle = nil
 
 function LineEdit:ready()
     input.addCharListener(self)
 	input.addKeyListener(self)
     input.addRawEventListener(self)
+
+    self.ghostControl = self:addControl()
+    self.ghostControl.expandW = true
+    self.ghostControl.expandH = true
+    self.ghostControl.visible = false --self.text == ""
+    self.ghostControl.inheritStyle = false
+
     self.style = self.normalStyle
+
+    self.ghostControl.style = self.ghostStyle
 end
 
 function LineEdit:queueFree()
-    control.queueFree(self)
     input.removeRawEventListener(self)
+    control.queueFree(self)
 end
 
 
 function LineEdit:updateCursor()
-    term.setCursorBlink(true)   
-    term.setCursorPos(self.globalX + #self.text + self.cursorOffset + 1, self.globalY + 1)
+    term.setCursorBlink(true)
+    term.setCursorPos(self.globalX + #self.text + self.cursorOffset + 1 + self.marginL, self.globalY + 1)
     term.setTextColor(self.style.textColor)
     term.setBackgroundColor(self.style.backgroundColor)
 end
 
 function LineEdit:trueTextChanged()
-	local w = #self.trueText - self.w + 1
+	local w = #self.trueText - self.w + self.marginL + 1
 	w = math.max(0, w)
 	self.text = self.trueText:sub(w + 1, #self.trueText)
+    self.ghostControl.visible = false -- self.text == ""
     self:redraw()
 end
 

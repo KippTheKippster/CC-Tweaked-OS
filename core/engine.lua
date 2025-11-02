@@ -1,25 +1,30 @@
-local src = debug.getinfo(1, "S").short_src
-local corePath = ".core"
+local coreDotPath = "." .. _G.corePath:gsub("/", ".")
 
 ---@class Engine
 local engine = {}
 
-local object = require(corePath .. ".object")
-local collision = require(corePath .. ".collision")
-local input = require(corePath .. ".input")(engine, collision)
-local utils = require(corePath .. ".utils")
+local object = require(coreDotPath .. ".object")
+local collision = require(coreDotPath .. ".collision")
+local input = require(coreDotPath .. ".input")(engine, collision)
+local utils = require(coreDotPath .. ".utils")
 
+---@type Input
 engine.input = input
+---@type Utils
 engine.utils = utils
 engine.freeQueue = {}
 
 ---@type Style
-local style = require(corePath .. ".styles.style")(object)
+local style = require(coreDotPath .. ".styles.style")(object)
 ---@type Style
-local clickedStyle = require(corePath .. ".styles.style")(style)
+local clickedStyle = require(coreDotPath .. ".styles.style")(style)
 ---@type Style
 local editStyle = style:new()
 editStyle.backgroundColor = colors.gray
+---@type Style
+local ghostStyle = style:new()
+ghostStyle.backgroundColor = colors.white
+ghostStyle.textColor = colors.gray
 ---@type Style
 local editFocusStyle = editStyle:new()
 editFocusStyle.backgroundColor = colors.lightGray
@@ -28,7 +33,7 @@ editFocusStyle.backgroundColor = colors.lightGray
 --Objects
 
 local function requireObject(name, ...)
-    return require(corePath .. ".objects." .. name)(...)
+    return require(coreDotPath .. ".objects." .. name)(...)
 end
 
 ---@type Control
@@ -36,9 +41,9 @@ engine.Control = requireObject("control", object, engine, style)
 ---@type Button
 engine.Button = requireObject("button", engine.Control, style, clickedStyle)
 ---@type Dropdown
-engine.Dropdown = requireObject("dropdown", engine.Button, input, utils)
+engine.Dropdown = requireObject("dropdown", engine.Button, input, utils, engine)
 ---@type ColorPicker
-engine.ColorPicker = requireObject("colorPicker", engine.Control, engine.FlowContainer, input, style, utils)
+engine.ColorPicker = requireObject("colorPicker", engine.Control, input, style, utils, engine)
 ---@type Container
 engine.Container = requireObject("container", engine.Control)
 ---@type VContainer
@@ -52,7 +57,7 @@ engine.ScrollContainer = requireObject("scrollContainer", engine.Container, inpu
 ---@type WindowControl
 engine.WindowControl = requireObject("windowControl", engine.Control, engine.Button)
 ---@type LineEdit
-engine.LineEdit = requireObject("lineEdit", engine.Control, editStyle, editFocusStyle, input)
+engine.LineEdit = requireObject("lineEdit", engine.Control, editStyle, editFocusStyle, ghostStyle, input)
 ---@type Icon
 engine.Icon = requireObject("icon", engine.Control)
 
@@ -65,20 +70,22 @@ engine.screenBuffer = screenBuffer
 
 local globalRoot = false
 
-if __Global == nil then
+if _G.__Global == nil then
     globalRoot = true
-    __Global = {}
-    __Global.nextID = 0
-    local dest = ".logs/"
+    _G.__Global = {}
+    _G.__Global.nextID = 0
+    _G.__Global.coreDotPath = coreDotPath
+    _G.__Global.corePath = corePath
+    local dest = "/.logs/"
     if fs.exists(dest) then
         local logs = fs.list(dest)
         for i = 1, #logs - 4 do
             fs.delete(fs.combine(dest, logs[i]))
-        end 
+        end
     end
 
-    __Global.logFile = fs.open(fs.combine(dest, tostring(os.epoch("utc")) .. ".log"), "w")
-    __Global.log = function (...)
+    _G.__Global.logFile = fs.open(fs.combine(dest, tostring(os.epoch("utc")) .. ".log"), "w")
+    _G.__Global.log = function (...)
         local line = ""
         local data = table.pack(...)
         for k, v in ipairs(data) do
@@ -86,10 +93,9 @@ if __Global == nil then
         end
         line = line .. '\n'
 
-        __Global.logFile.write(line)
-        __Global.logFile.flush()
+        _G.__Global.logFile.write(line)
+        _G.__Global.logFile.flush()
     end
-    __Global.log = function () end
 end
 
 ---@type Control
@@ -101,24 +107,40 @@ root.h = initialH
 root.mouseIgnore = true
 root:add()
 
+local top = engine.Control:new()
+top.rendering = false
+top.text = "top"
+top.w = initialW
+top.h = initialH
+top.mouseIgnore = true
+top:add()
+
 engine.running = false
 engine.queueRedraw = false
 engine.background = true
 engine.backgroundColor = colors.black
 engine.root = root
+engine.top = top
 
 local function onResizeEvent ()
     local w, h = parentTerm.getSize()
     screenBuffer.reposition(1, 1, w, h)
     engine.root.w, engine.root.h = w, h
+    engine.top.w, engine.top.h = w, h
 end
 
-local function drawTree (o)
+---@param o Control
+---@param topLevelList table|nil
+local function drawTree (o, topLevelList)
     if o.visible == false then return end
-    o:draw()
-    local c = o.children
-    for i = 1, #c do
-        drawTree(c[i])
+    if o.topLevel and topLevelList then
+        table.insert(topLevelList, o) -- TODO make list persistent
+    else
+        o:draw()
+        local c = o.children
+        for i = 1, #c do
+            drawTree(c[i], topLevelList)
+        end
     end
 end
 
@@ -131,7 +153,11 @@ local function redrawScreen ()
         term.clear()
     end
 
-    drawTree(engine.root)
+    local topLevelList = {}
+    drawTree(engine.root, topLevelList)
+    for i, control in ipairs(topLevelList) do
+        drawTree(control, nil)
+    end
 
     if input.getCursorControl() == nil then
         term.setCursorBlink(false)
@@ -150,23 +176,24 @@ engine.start = function ()
     engine.running = true
     engine.input.addResizeEventListener(onResizeEvent)
     engine.root:_expandChildren() -- HACK this should be called automatically 
+    engine.top:_expandChildren()
 
     redrawScreen()
 
-    local function freeControl(c)
-        for i, child in ipairs(c.children) do
-            freeControl(child)
+    local function freeTree(c)
+        for _, child in ipairs(c.children) do
+            freeTree(child)
         end
         c:free()
     end
 
     local function freeQueue()
-        for i, c in ipairs(engine.freeQueue) do
+        for _, c in ipairs(engine.freeQueue) do
             if c ~= nil and c:isValid() then
                 if c.parent then
                     c.parent:removeChild(c)
                 end
-                freeControl(c)
+                freeTree(c)
             end
         end
 
@@ -228,7 +255,8 @@ engine.stop = function ()
     engine.running = false
 
     if globalRoot then
-        __Global.logFile.close()
+        _G.__Global.logFile.close()
+        _G.__Global = nil
     end
 end
 

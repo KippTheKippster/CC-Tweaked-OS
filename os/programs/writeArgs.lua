@@ -1,8 +1,6 @@
-local src = debug.getinfo(1, "S").short_src
-local corePath = "." .. fs.getDir(fs.getDir(fs.getDir(src))) .. "core"
+local corePath = __Global.coreDotPath
 
 local engine = require(corePath .. ".engine")
-
 
 local args = {...}
 local callbackFunction = args[1]

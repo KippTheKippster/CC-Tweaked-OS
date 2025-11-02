@@ -1,21 +1,5 @@
 {
     "Lua.diagnostics.globals": [
-        "__window",
-        "shell",
-        "term",
-        "multishell",
-        "textutils",
-        "fs",
-        "colors",
-        "keys",
-        "paintutils",
-        "__mos",
-        "printError",
-        "disk",
-        "sleep",
-        "parallel",
-        "rednet",
-        "window",
-        "__wrapper"
+        "colors"
     ]
 }

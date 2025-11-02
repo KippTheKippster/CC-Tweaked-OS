@@ -1,6 +1,6 @@
 local function contains(t, v)
     for _, x in pairs(t) do
-        if v == x then 
+        if v == x then
             return true
         end
     end
@@ -8,11 +8,11 @@ local function contains(t, v)
 end
 
 local function find(t, v)
-    for i = 1, #t do
-        if t[i] == v then
-            return i
-        end
-    end
+    for i, o in ipairs(t) do
+		if o == v then
+			return i
+		end
+	end
     return nil
 end
 

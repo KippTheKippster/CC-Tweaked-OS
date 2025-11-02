@@ -1,5 +1,4 @@
-local src = debug.getinfo(1, "S").short_src
-local corePath = "." .. fs.getDir(fs.getDir(fs.getDir(src))) .. "core"
+local corePath = _G.__Global.coreDotPath
 
 ---@type Engine
 local engine = require(corePath .. ".engine")
@@ -373,7 +372,7 @@ ui.new = function ()
 end
 
 ui.open = function ()
-    ui.fileExplorer = mos.openProgram("Open File", "/os/programs/fileExplorer.lua", false, function (name, path)
+    ui.fileExplorer = mos.openProgram("Open File", "/mos/os/programs/fileExplorer.lua", false, function (name, path)
         paint.openImage(path)
         ui.fileExplorer:close()
         __window:grabFocus()
@@ -392,7 +391,7 @@ ui.save = function ()
 end
 
 ui.saveAs = function ()
-    ui.fileExplorer = mos.openProgram("Save File", "/os/programs/fileExplorer.lua", false, function (name, path)
+    ui.fileExplorer = mos.openProgram("Save File", "/mos/os/programs/fileExplorer.lua", false, function (name, path)
         local suffix = ".nfp"
         if path:sub(-#suffix) ~= suffix then
             path = path .. suffix
@@ -703,7 +702,7 @@ local palette = engine.root:addControl()
 palette.rendering = false
 
 palette.w = 2
-palette.anchorW = palette.anchor.RIGHT
+palette.anchorW = palette.Anchor.RIGHT
 palette.expandH = true
 
 local colorL = palette:addControl()
@@ -758,7 +757,7 @@ coordsStyle.textColor = colors.white
 coordsStyle.backgroundColor = colors.black
 
 coords = engine.root:addControl()
-coords.anchorH = coords.anchor.DOWN
+coords.anchorH = coords.Anchor.DOWN
 coords.fitToText = true
 coords.h = 1
 coords.style = coordsStyle
@@ -826,12 +825,13 @@ local function createResizeDialogue(fn)
     wi.ok.h = 1
     wi.ok.expandW = true
     wi.ok.centerText = true
-    wi.ok.anchorH = wi.anchor.DOWN
+    wi.ok.anchorH = wi.Anchor.DOWN
     wi.ok.pressed = function ()
         local w = tonumber(wi.wEdit.trueText) or _w
         local h = tonumber(wi.hEdit.trueText) or _h
         fn(w, h)
         wi:queueFree()
+        --wi.wEdit:queueFree()
     end
     wi:_expandChildren()
 
