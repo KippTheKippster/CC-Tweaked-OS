@@ -831,6 +831,7 @@ local function renameCurrentSelection()
         local ok = pPopupError(fs.move, file, dest)
         if ok == false then return end
         target.text = o.text
+        target.path = fs.combine(currentPath, o.text)
         target:click()
         target:up()
         if mos.isFileFavorite(file) then
