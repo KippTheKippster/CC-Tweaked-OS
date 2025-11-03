@@ -182,6 +182,9 @@ local style = engine:newStyle()
 style.backgroundColor = colors.black
 style.textColor = colors.white
 
+local heartOffStyle = style:new()
+heartOffStyle.textColor = colors.gray
+
 local clickedStyle = engine:newStyle()
 clickedStyle.backgroundColor = colors.lightGray
 clickedStyle.textColor = colors.white
@@ -287,15 +290,25 @@ local function scrollToControl(control, center)
     vContainer:redraw()
 end
 
+---comment
+---@param o Control
+---@param file string
 fileExplorer.addHeart = function (o, file)
     local heart = o:addButton()
     heart.text = string.char(3)
     heart.w = #heart.text
     heart.h = 1
     heart.normalStyle = style
+    heart.clickedStyle = clickedStyle
     heart.anchorW = heart.Anchor.RIGHT
+    heart.dragSelectable = true
+    heart.inheritStyle = false
     heart.pressed = function ()
-        fileExplorer.removeFavorite(o, file)
+        if mos.isFileFavorite(file) then
+            fileExplorer.removeFavorite(o, file)
+        else
+            fileExplorer.addFavorite(o, file)
+        end
     end
 
     o.heart = heart
@@ -306,18 +319,37 @@ fileExplorer.removeHeart = function (o)
     o.heart = nil
 end
 
+---comment
+---@param heart Button
+---@param active boolean
+fileExplorer.setHeartActive = function (heart, active)
+    if active then
+        heart.text = string.char(3)
+        heart.normalStyle = style
+    else
+        heart.text = string.char(3)
+        heart.normalStyle = heartOffStyle
+    end
+end
+
+---comment
+---@param o Control
+---@param file string
 fileExplorer.addFavorite = function (o, file)
     if mos.isFileFavorite(file) == true then return end
 
-    fileExplorer.addHeart(o, file)
+    fileExplorer.setHeartActive(o.heart, true)
     mos.addFileFavorite(file)
     mos.refreshMosDropdown()
 end
 
+---comment
+---@param o Control
+---@param file string
 fileExplorer.removeFavorite = function (o, file)
     if mos.isFileFavorite(file) == false then return end
 
-    fileExplorer.removeHeart(o)
+    fileExplorer.setHeartActive(o.heart, false)
     mos.removeFileFavorite(file)
     mos.refreshMosDropdown()
 end
@@ -418,9 +450,9 @@ local function openFolder(path)
         sizeLabel.text = math.ceil(fs.getSize(buttonPath) / 1000) .. "KB  "
         button:_expandChildren()
 
-        if mos.isFileFavorite(buttonPath) then
-            fileExplorer.addHeart(button, buttonPath)
-        end
+
+        fileExplorer.addHeart(button, buttonPath)
+        fileExplorer.setHeartActive(button.heart, mos.isFileFavorite(buttonPath))
 
         if selectedButtons[name] == true then
             button:click()
