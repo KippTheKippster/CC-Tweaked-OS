@@ -448,6 +448,7 @@ local function openFolder(path)
         sizeLabel.h = 1
         sizeLabel.anchorW = sizeLabel.Anchor.RIGHT
         sizeLabel.text = math.ceil(fs.getSize(buttonPath) / 1000) .. "KB  "
+        sizeLabel.mouseIgnore = true
         button:_expandChildren()
 
 

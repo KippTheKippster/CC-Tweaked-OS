@@ -238,6 +238,17 @@ function ProgramWindow:updateCursor()
     term.redirect(parentTerm)
 end
 
+---comment
+---@param visible boolean
+function ProgramWindow:setHeaderVisibility(visible)
+    self.rendering = visible
+    self.mouseIgnore = visible == false
+    self.scaleButton.visible = visible
+    self.exitButton.visible = visible
+    self.minimizeButton.visible = visible
+    self.label.visible = visible
+end
+
 function ProgramWindow:closed() end
 
 return ProgramWindow

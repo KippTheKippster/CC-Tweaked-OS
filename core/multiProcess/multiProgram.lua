@@ -65,8 +65,6 @@ local function createMultishellWrapper(p, env, ...)
     mp.runProgram(env, "rom/programs/advanced/multishell.lua")
 end
 
-
-
 mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
     local env = { shell = shell, multishell = multishell }
     env.require, env.package = dofile("/rom/modules/main/cc/require.lua").make(env, "")
