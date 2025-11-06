@@ -60,7 +60,7 @@ local defaultProfile = {
     fileExecptions = {
         [".nfp"] = {
             program = osPath .."/programs/paint.lua",
-            fullscreen = true
+            fullscreen = false
         },
         [".txt"] = { program = "/rom/programs/edit.lua" }
     },
@@ -167,18 +167,14 @@ mos.refreshTheme = function ()
 
     for _, redirect in ipairs(redirects) do
         redirect.setVisible(false)
-        local line = " "
         for i = 0, 15 do
             local color = 2 ^ i
             if palette[color] ~= nil then
                 redirect.setPaletteColor(color, palette[color])
-                line = line .. "u"
             else
                 redirect.setPaletteColor(color, term.nativePaletteColor(color))
-                line = line .. "n"
             end
         end
-        __Global.log(tostring(redirect) .. line)
     end
 
     --Styles
@@ -340,26 +336,38 @@ clock.h = 1
 clock.anchorW = clock.Anchor.RIGHT
 
 local function isFullscreen()
-    local fullscreen = false
-    for k, v in pairs(windows) do
-        if v.fullscreen == true then
-            fullscreen = true
-            break
-        end
-    end
-    return fullscreen
+    return mos.fullscreenWindow ~= nil
 end
 
 local function setFullscreenMode(fullscreen)
     backgroundIcon.visible = fullscreen == false
     if fullscreen == true then
         topBar:toFront()
+        topBar.style = focusWindowStyle
     else
         windowContainer:toFront()
+        topBar.style = style
+    end
+
+    for _, child in ipairs(toolBar.children) do
+        if child.normalStyle then
+            child.normalStyle = topBar.style
+        end
     end
 end
 
+
+---comment
+---@param w ProgramWindow
 local function windowFullscreenChanged(w)
+    if w.fullscreen == false then
+        if w == mos.fullscreenWindow then
+            mos.fullscreenWindow = nil
+        end
+    else
+        mos.fullscreenWindow = w
+    end
+
     setFullscreenMode(isFullscreen())
 end
 
@@ -368,6 +376,7 @@ end
 ---@param b Button
 local function windowClosed(w, b)
     w.fullscreen = false
+    windowFullscreenChanged(w) -- This is a bit of a hack, but it doesn't seem like the fullscreen signal is called right after?
     if isFullscreen() == false then
         setFullscreenMode(false)
     end
@@ -489,11 +498,25 @@ local function launchProgram(name, path, x, y, w, h, ...)
     return window
 end
 
+mos.windowStartX = 1
+mos.windowStartY = 2
+
 local function openProgram(name, path, edit, ...)
+    local screenW, screenH = mos.root.w, mos.root.h
+    local x, y, w, h = mos.windowStartX, mos.windowStartY, math.floor(screenW * 0.66), math.floor(screenH * 0.75)
+    mos.windowStartX = mos.windowStartX + 1
+    mos.windowStartY = mos.windowStartY + 1
+    if x + w > screenW - 2 then
+        mos.windowStartX = 1
+    end
+
+    if y + h > screenH - 2 then
+        mos.windowStartY = 2
+    end
+
     if edit == true then
-        return launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", 1, 1, 24, 12, path)
+        return launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", x, y, w, h, path)
     else
-        local x, y, w, h = 1, 1, 24, 12
         for k, v in pairs(mos.profile.fileExecptions) do
             local suffix = k
             if name:sub(-#suffix) == suffix then
@@ -541,18 +564,18 @@ function mosDropdown:optionPressed(i)
     local text = mosDropdown:getOptionText(i)
     mos.latestMosOption = text
     if text == "Test" then
-        launchProgram("Shell", "test", 2, 2, 200, 19)
+        openProgram("Shell", "test")
     elseif text == "Shell" then
-        launchProgram("Shell", "/rom/programs/advanced/multishell.lua", 2, 2, 20, 10)
+        openProgram("Shell", "/rom/programs/advanced/multishell.lua")
     elseif text == "Exit" then
         multiProgram.exit()
     elseif text == "Reboot" then
         multiProgram.exit()
         shell.run(osPath .. "/os.lua")
     elseif text == "File Explorer" then
-        launchProgram("File Explorer", osPath .. "/programs/fileExplorer.lua", 7, 2, 35, 15, openProgram)
+        openProgram("File Explorer", osPath .. "/programs/fileExplorer.lua", false, openProgram)
     elseif text == "Settings" then
-        launchProgram("Settings", osPath .. "/programs/settings.lua", 20, 5, 30, 13)
+        openProgram("Settings", osPath .. "/programs/settings.lua")
     end
 end
 
@@ -648,6 +671,8 @@ mos.backgroundIcon = backgroundIcon
 mos.bindTool = bindTool
 mos.addToToolbar = addToToolbar
 mos.removeFromToolbar = removeFromToolbar
+---@type ProgramWindow|nil
+mos.fullscreenWindow = nil
 mos.quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
 engine.root:addChild(mos.quickSearch)
 mos.quickSearch.y = 1

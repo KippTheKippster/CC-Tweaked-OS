@@ -11,8 +11,37 @@ qs.focusStyle = mos.styles.style
 
 qs.marginL = 2
 qs._skip = true
-qs.trueTextChanged = function (o)
-    engine.LineEdit.trueTextChanged(o)
+
+qs.programs = {}
+
+table.insert(qs.programs, { name = "File Explorer", path = "/mos/os/programs/fileExplorer.lua" })
+table.insert(qs.programs, { name = "Shell", path = "/rom/programs/advanced/multishell.lua" })
+table.insert(qs.programs, { name = "Settings", path = "/mos/os/programs/settings.lua" })
+table.insert(qs.programs, { name = "Paint", path = "/mos/os/programs/paint.lua" })
+table.insert(qs.programs, { name = "Lua", path = "/rom/programs/lua.lua" })
+table.insert(qs.programs, { name = "Time", path = "/rom/programs/time.lua" })
+
+local dirs = { "" }
+local index = 1
+while index <= #dirs do
+    local dir = dirs[index]
+    local files = fs.list(dirs[index])
+    for i, file in ipairs(files) do
+        if fs.isDir(file) then
+            if file ~= "rom" and file ~= "mos" and file ~= ".logs" and file ~= ".mosdata" then
+                table.insert(dirs, fs.combine(dir, file))
+            end
+        else
+            table.insert(qs.programs, { name = file, path = fs.combine(dir, file) })
+        end
+    end
+
+    index = index + 1
+end
+
+
+function qs:trueTextChanged ()
+    engine.LineEdit.trueTextChanged(self)
     qs:refreshList()
 end
 
@@ -80,6 +109,7 @@ icon.text = string.char(187)
 
 
 function qs:refreshList ()
+    --[[
     local function getFiles(dir, list)
         local files = fs.list(dir)
         local dirs = {}
@@ -112,36 +142,44 @@ function qs:refreshList ()
     for _, file in ipairs(fs.list("/.mosdata/paths")) do
         table.insert(shortcuts, { name = file, path = fs.combine("/.mosdata/paths", file) })
     end
+    ]]--
 
     local pathSelection = ""
     if list.shortcutSelection then
         pathSelection = list.shortcutSelection.text
     end
 
+    local count = 0
     list:clearList()
+    for i, program in ipairs(qs.programs) do
+        if count >= 10 then
+            break;
+        end
 
-    for i = 1, #shortcuts do
-        if shortcuts[i].name:lower():find(qs.trueText:lower()) ~= nil then --and fs.isDir(files[i]) == false then
-            local option = list:addToList(shortcuts[i].name:sub(1, #shortcuts[i].name - 4))
+        local continue = true
+        __Global.log(program.name:sub(0, 1))
+        if mos.profile.showDotFiles == false and program.name:sub(0, 1) == "." then
+            continue = false
+        end
+
+        if program.name:lower():find(qs.trueText:lower()) == nil then --and fs.isDir(files[i]) == false then
+            continue = false
+        end
+
+        if continue then
+            local option = list:addToList(program.name)--shortcuts[i]:sub(1, #shortcuts[i] - 4))
             option.pressed = function (o)
-                if shortcuts[i].path then
-                    local file = fs.open(shortcuts[i].path, "r")
-                    local path = file.readAll()
-                    file.close()
-                    self:close()
-                    mos.openProgram(o.text, path, false)
-                else
-                    self:close()
-                    mos.openProgram(o.text, shortcuts[i].file, false)
-                end
+                self:close()
+                mos.openProgram(o.text, program.path, false)
             end
 
             if option.text == pathSelection then
                 list.shortcutSelection = option
                 option:click()
             end
+
+            count = count + 1
         end
-        --button.expandW = true
     end
 
     if list.shortcutSelection == nil then

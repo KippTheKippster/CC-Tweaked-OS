@@ -3,9 +3,12 @@ local coreDotPath = "." .. _G.corePath:gsub("/", ".")
 ---@class Engine
 local engine = {}
 
+---@type Object
 local object = require(coreDotPath .. ".object")
 local collision = require(coreDotPath .. ".collision")
+---@type Input
 local input = require(coreDotPath .. ".input")(engine, collision)
+---@type Utils
 local utils = require(coreDotPath .. ".utils")
 
 ---@type Input
@@ -107,26 +110,16 @@ root.h = initialH
 root.mouseIgnore = true
 root:add()
 
-local top = engine.Control:new()
-top.rendering = false
-top.text = "top"
-top.w = initialW
-top.h = initialH
-top.mouseIgnore = true
-top:add()
-
 engine.running = false
 engine.queueRedraw = false
 engine.background = true
 engine.backgroundColor = colors.black
 engine.root = root
-engine.top = top
 
 local function onResizeEvent ()
     local w, h = parentTerm.getSize()
     screenBuffer.reposition(1, 1, w, h)
     engine.root.w, engine.root.h = w, h
-    engine.top.w, engine.top.h = w, h
 end
 
 ---@param o Control
@@ -176,7 +169,6 @@ engine.start = function ()
     engine.running = true
     engine.input.addResizeEventListener(onResizeEvent)
     engine.root:_expandChildren() -- HACK this should be called automatically 
-    engine.top:_expandChildren()
 
     redrawScreen()
 
@@ -220,7 +212,11 @@ engine.start = function ()
 
     local fnInput = function ()
         while engine.running do
-            input.processInput()
+            term.redirect(parentTerm)
+            local event = input.processInput()
+            --if event == "term_resize" then -- TODO Check, there might be too many terms being used?
+            --    __Global.log("term:", term.current(), ", screen:", screenBuffer, ", parent:", parentTerm)
+            --end
         end
     end
 
@@ -275,7 +271,7 @@ engine.getDefaultClickedStyle = function ()
     return clickedStyle
 end
 
----@return Control
+---@return Control|nil
 engine.getFocus = function ()
     return input.getFocus()
 end

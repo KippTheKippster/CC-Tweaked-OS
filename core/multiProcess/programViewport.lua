@@ -98,29 +98,19 @@ function ProgramViewport:unhandledEvent(data)
         return true
     end
 
-    if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
+    if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" or  event == "mouse_scroll" then
         if self.parent:inFocus() == false then return end
-        if input.isInputConsumed() == true then return end
 
         local button, x, y = data[2], data[3], data[4]
         local offsetX, offsetY = self.program.window.getPosition()
 
         result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
-    elseif event == "mouse_scroll" then
-        if input.isInputConsumed() == true then return end
-
-        local button, x, y = data[2], data[3], data[4]
-        local offsetX, offsetY = self.program.window.getPosition()
-
-        result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
-        self:redraw()
     elseif event == 'char' then
         if self.parent:inFocus()  == false then return end
 
         result = resumeProcess(self, data)
     elseif event == 'key' then
         if self.parent:inFocus()  == false then return end
-        --if input.isInputConsumed() == true then return end
 
         local key = data[2]
         local held = data[3]
@@ -131,13 +121,8 @@ function ProgramViewport:unhandledEvent(data)
 
         if (held and self.focusKeys[key]) or not held then
             result = resumeProcess(self, data)
-            --if key >= 0 and key <= 255 then
-            --    result = resumeProcess(self, { 'char', string.char(key) })
-            --end
         end
     elseif event == "key_up" then
-        --if input.isInputConsumed() == true then return end
-        --if self.parent:inFocus()  == false then return end
         self.focusKeys[data[2]] = nil
         result = resumeProcess(self, data)
     else

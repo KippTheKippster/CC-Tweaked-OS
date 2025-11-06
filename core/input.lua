@@ -1,5 +1,7 @@
 return function(engine, collision)
 
+local targetTerm = term.current()
+
 local inputConsumed = false
 local mouse = {}
 mouse.current = nil
@@ -140,7 +142,7 @@ function mouse.changeFocus(o)
 end
 
 function mouse.inTerm(x, y)
-    local w, h = term.getSize()
+    local w, h = targetTerm.getSize()
     return collision.inArea(x, y, 1, 1, w, h)
 end
 
@@ -338,7 +340,6 @@ local function addRawEventListener(o)
 end
 
 local function removeRawEventListener(o)
-    __Global.log("Removing:", o.text, o.type)
     table.remove(rawEventListeners, engine.utils.find(rawEventListeners, o))
 end
 
@@ -362,6 +363,8 @@ local function isInputConsumed()
     return inputConsumed
 end
 
+---comment
+---@return string|nil
 local function processInput()
     local data = table.pack(os.pullEventRaw())
     local event = data[1]
@@ -421,6 +424,10 @@ local function processInput()
     return event
 end
 
+local function setTargetTerm(t)
+   targetTerm = t 
+end
+
 ---@class Input
 local Input = {
     isKey = isKey,
@@ -439,7 +446,8 @@ local Input = {
     setCursorControl = setCursorControl,
     getCursorControl = getCursorControl,
     consumeInput = consumeInput,
-    isInputConsumed = isInputConsumed
+    isInputConsumed = isInputConsumed,
+    setTargetTerm = setTargetTerm
 }
 
 return Input
