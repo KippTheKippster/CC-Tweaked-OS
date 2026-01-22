@@ -1,17 +1,9 @@
 ---@return Button
 return function(control, style, clickedStyle)
 ---@class Button : Control 
-local Button = control:new{}
-Button.type = "Button"
+local Button = control:newClass()
+Button.__type = "Button"
 
----@param button Button
-local function refreshStyle (button)
-    if button.isClicked then
-        button.style = button.clickedStyle
-    else
-        button.style = button.normalStyle
-    end
-end
 
 Button.isClicked = false
 Button._normalStyle = style
@@ -23,7 +15,7 @@ Button:defineProperty("normalStyle", {
     end,
     set = function (o, value)
         o._normalStyle = value
-        refreshStyle(o)
+        o:refreshStyle(o)
     end
 })
 
@@ -36,20 +28,32 @@ Button:defineProperty("clickedStyle", {
     end,
     set = function (o, value)
         o._clickedStyle = value
-        refreshStyle(o)
+        o:refreshStyle(o)
     end
 })
+
+function Button:refreshStyle ()
+    if self.isClicked then
+        self.style = self.clickedStyle
+    else
+        self.style = self.normalStyle
+    end
+end
+
+function Button:treeEntered()
+    self:refreshStyle()
+end
 
 Button.text = "Button"
 
 function Button:click()
-    self.style = self.clickedStyle
     self.isClicked = true
+    self:refreshStyle()
 end
 
 function Button:up()
-    self.style = self.normalStyle
     self.isClicked = false
+    self:refreshStyle()
 end
 
 return Button

@@ -1,6 +1,7 @@
 ---@class Object
 local Object = {}
-Object.type = "Object"
+Object.__name = ""
+Object.__type = "Object"
 Object.__properties = {}
 Object.__connections = {}
 
@@ -21,7 +22,7 @@ local function object__index(o, key)
 
     local mt = getmetatable(o)
     while mt ~= nil do
-        local raw = rawget(mt, "base")[key]
+        local raw = rawget(mt, "__base")[key]
         if raw ~= nil then
             return raw
         end
@@ -48,7 +49,7 @@ end
 local function properties__index(o, key)
     local mt = getmetatable(o)
     while mt ~= nil do
-        local raw = rawget(mt, "base")[key]
+        local raw = rawget(mt, "__base")[key]
         if raw ~= nil then
             return raw
         end
@@ -65,6 +66,10 @@ local function free__index(o, key)
         return function ()
             return false
         end
+    elseif key == "__type" then
+        return rawget(o, "__type")
+    elseif key == "__name" then
+        return rawget(o, "__name")
     end
 
     error("\nAttempting to access value from the previously freed object: " .. tostring(o), 2)
@@ -76,10 +81,16 @@ end
 
 --Creates a new object, copying properties and signals to the new object
 ---@return table
-function Object:new(o)
-    o = o or {}
+function Object:new(...)
+    local o = self:newClass()
+    o:init(...)
+    return o
+end
+
+function Object:newClass()
+    local o = {}
     local mt = {
-        base = self,
+        __base = self,
         __index = object__index,
         __newindex = object__newindex,
     }
@@ -88,7 +99,7 @@ function Object:new(o)
 
     o.__properties = {}
     mt = {
-        base = self.__properties,
+        __base = self.__properties,
         __index = properties__index,
         __newindex = properties__newindex,
     }
@@ -98,6 +109,8 @@ function Object:new(o)
     o.__connections = {}
     return o
 end
+
+function Object:init(...) end
 
 function Object:remove()
     for k in pairs (self) do
@@ -116,9 +129,13 @@ function Object:free()
         self:disconnectSignal(k, v.method)
     end
 
+    local __type = self.__type
+    local __name = self.__name
     for k in pairs (self) do
         self[k] = nil
     end
+    self.__type = __type
+    self.__name = __name
 
     local mt = {
         __index = free__index,

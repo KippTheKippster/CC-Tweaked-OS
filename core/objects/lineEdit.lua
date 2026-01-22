@@ -1,8 +1,8 @@
 ---@return LineEdit
 return function(control, editStyle, editFocusStyle, ghostStyle, input)
 ---@class LineEdit : Control
-local LineEdit = control:new()
-LineEdit.type = "LineEdit"
+local LineEdit = control:newClass()
+LineEdit.__type = "LineEdit"
 
 LineEdit.normalStyle = editStyle
 LineEdit.focusStyle = editFocusStyle
@@ -26,25 +26,15 @@ control:defineProperty('trueText', {
 })
 LineEdit.clipText = true
 LineEdit.lineScroll = 0
----@type Control
-LineEdit.ghostControl = nil
 ---@type Style
 LineEdit.ghostStyle = nil
+LineEdit.fitToText = false
 
 function LineEdit:ready()
     input.addCharListener(self)
 	input.addKeyListener(self)
     input.addRawEventListener(self)
-
-    self.ghostControl = self:addControl()
-    self.ghostControl.expandW = true
-    self.ghostControl.expandH = true
-    self.ghostControl.visible = false --self.text == ""
-    self.ghostControl.inheritStyle = false
-
     self.style = self.normalStyle
-
-    self.ghostControl.style = self.ghostStyle
 end
 
 function LineEdit:queueFree()
@@ -60,11 +50,14 @@ function LineEdit:updateCursor()
     term.setBackgroundColor(self.style.backgroundColor)
 end
 
+function LineEdit:treeEntered()
+    self.style = self.normalStyle
+end
+
 function LineEdit:trueTextChanged()
 	local w = #self.trueText - self.w + self.marginL + 1
 	w = math.max(0, w)
 	self.text = self.trueText:sub(w + 1, #self.trueText)
-    self.ghostControl.visible = false -- self.text == ""
     self:redraw()
 end
 
@@ -112,6 +105,10 @@ function LineEdit:key(key)
 end
 
 function LineEdit:rawEvent(data)
+    if not self:inFocus() then
+        return
+    end
+
     if data[1] == "paste" then
         self:addText(data[2], self.cursorOffset)
     end

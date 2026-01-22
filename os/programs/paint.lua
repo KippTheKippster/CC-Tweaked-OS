@@ -372,7 +372,7 @@ ui.new = function ()
 end
 
 ui.open = function ()
-    ui.fileExplorer = mos.openProgram("Open File", "/mos/os/programs/fileExplorer.lua", false, function (name, path)
+    ui.fileExplorer = mos.openFileDialogue("Open File", function (path)
         paint.openImage(path)
         ui.fileExplorer:close()
         __window:grabFocus()
@@ -391,7 +391,7 @@ ui.save = function ()
 end
 
 ui.saveAs = function ()
-    ui.fileExplorer = mos.openProgram("Save File", "/mos/os/programs/fileExplorer.lua", false, function (name, path)
+    ui.fileExplorer = mos.openFileDialogue("Save File", function (path)
         local suffix = ".nfp"
         if path:sub(-#suffix) ~= suffix then
             path = path .. suffix
@@ -400,7 +400,7 @@ ui.saveAs = function ()
         ui.fileExplorer:close()
         __window:grabFocus()
         paint.setEdited(false)
-    end, "", true)
+    end, true, paint.saveFile)
 end
 
 background = engine.root:addControl()
@@ -642,10 +642,10 @@ function selectionBox:render()
 end
 
 local toolbar = engine.root:addVContainer()
-toolbar.text = ""
 toolbar.w = 1
 
-local toolIcon = engine.Control:new{}
+local toolIcon = engine.Control:new()
+toolIcon.fitToText = false
 toolIcon.w = 1
 toolIcon.h = 1
 toolIcon.text = "Tool"
@@ -681,17 +681,17 @@ function toolIcon:up()
     self.w = 1
 end
 
-local penTool = toolIcon:new{}
+local penTool = toolIcon:new()
 toolbar:addChild(penTool)
 penTool.text = string.char(14) .. " Pen"
 penTool.tool = "pen"
 
-local selectTool = toolIcon:new{}
+local selectTool = toolIcon:new()
 toolbar:addChild(selectTool)
 selectTool.text = string.char(35) .. " Selection Box"
 selectTool.tool = "selection"
 
-local bucketTool = toolIcon:new{}
+local bucketTool = toolIcon:new()
 toolbar:addChild(bucketTool)
 bucketTool.text = string.char(219) .. " Bucket"
 bucketTool.tool = "bucket"
@@ -725,7 +725,7 @@ colorR.style.backgroundColor = paint.colorR
 for i = 0, 16 do
     ---@class PaletteColor : Control
     local c = palette:addControl()
-    c.w = 2
+    c.minW = 2
     c.h = 1
     c.y = i
     c.text = ""
@@ -758,7 +758,6 @@ coordsStyle.backgroundColor = colors.black
 
 coords = engine.root:addControl()
 coords.anchorH = coords.Anchor.DOWN
-coords.fitToText = true
 coords.h = 1
 coords.style = coordsStyle
 
@@ -775,13 +774,12 @@ editFocusStyle.backgroundColor = colors.black
 local function createEditField(fieldName, text, parent)
     text = text or ""
 
-    local h = engine.HContainer:new{}
+    local h = engine.HContainer:new()
     h.h = 1
     h.expandW = true
     local label = h:addControl()
     label.text = fieldName
     label.h = 1
-    label.fitToText = true
     h.sortOnTransformChanged = true
 
     local edit = h:addLineEdit()
@@ -842,7 +840,7 @@ end
 
 --#region MOS
 if mos then
-    local fileDropdown = mos.engine.Dropdown:new{}
+    local fileDropdown = mos.engine.Dropdown:new()
     fileDropdown.text = "File"
     fileDropdown:addToList("New  Image")
     fileDropdown:addToList("Open Image")
@@ -867,7 +865,7 @@ if mos then
         end
     end
 
-    local imageDropdown = mos.engine.Dropdown:new{}
+    local imageDropdown = mos.engine.Dropdown:new()
     imageDropdown.text = "Image"
     imageDropdown:addToList("Resize")
     imageDropdown:addToList("Trim")

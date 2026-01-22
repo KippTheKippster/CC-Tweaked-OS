@@ -1,8 +1,8 @@
 ---@class HContainer
 return function(container)
 ---@class HContainer : Container
-local HContainer = container:new{}
-HContainer.type = "HContainer"
+local HContainer = container:newClass()
+HContainer.__type = "HContainer"
 
 HContainer.center = false
 HContainer.separation = 0
@@ -29,9 +29,10 @@ function HContainer:_expandChildren()
 	local minW = 0
 	local expandCount = 0
 	for i, c in ipairs(self.children) do
-		minW = minW + c:getMinimumSize()
 		if c.expandW == true then
 			expandCount = expandCount + 1
+		else
+			minW = minW + c:getMinimumSize()
 		end
 	end
 

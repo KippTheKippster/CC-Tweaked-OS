@@ -1,8 +1,8 @@
 ---@return WindowControl
 return function(control, button)
 ---@class WindowControl : Control
-local WindowControl = control:new{}
-WindowControl.type = "WindowControl"
+local WindowControl = control:newClass()
+WindowControl.__type = "WindowControl"
 
 WindowControl.draggable = true
 WindowControl.clipText = true
@@ -38,7 +38,7 @@ WindowControl:defineProperty('text', {
     end
 }, true)
 
-function WindowControl:ready()
+function WindowControl:init()
     self:refreshMinSize()
 
     self.label = self:addControl()
@@ -49,7 +49,7 @@ function WindowControl:ready()
     self.label.clipText = true
     self.label.w = self.w - 2
 
-    self.exitButton = button:new{}
+    self.exitButton = button:new()
     self:addChild(self.exitButton)
     self.exitButton.text = "x"
     self.exitButton.x = self.w - 1
@@ -61,7 +61,7 @@ function WindowControl:ready()
         self:close()
     end
 
-    self.scaleButton = control:new{}
+    self.scaleButton = control:new()
     self:addChild(self.scaleButton)
     self.scaleButton.w = 1
     self.scaleButton.h = 1

@@ -1,14 +1,15 @@
 ---@return Container
 return function(control)
 ---@class Container : Control
-local Container = control:new{}
-Container.type = "Container"
+local Container = control:newClass()
+Container.__type = "Container"
 
 Container.mouseIgnore = false
 Container.text = ""
 Container.visible = true
 Container.rendering = false
-Container.sortOnTransformChanged = false
+Container.sortOnTransformChanged = true
+Container.fitToText = false
 
 function Container:childrenChanged()
 	self:sort()

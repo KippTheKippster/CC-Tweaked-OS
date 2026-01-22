@@ -5,8 +5,8 @@
 ---@return ProgramViewport
 return function(control, multiProgram, input)
 ---@class ProgramViewport : Control
-local ProgramViewport = control:new{}
-ProgramViewport.type = "ProgramViewport"
+local ProgramViewport = control:newClass()
+ProgramViewport.__type = "ProgramViewport"
 
 ProgramViewport.rendering = false
 ProgramViewport.mouseIgnore = false
@@ -20,7 +20,7 @@ ProgramViewport.queueResizeEvent = false
 ---@type table
 ProgramViewport.focusKeys = nil
 
-function ProgramViewport:treeEntered()
+function ProgramViewport:init()
     self.oldW = self.w
     self.oldH = self.h
     self.focusKeys = {}

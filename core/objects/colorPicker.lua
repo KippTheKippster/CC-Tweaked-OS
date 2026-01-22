@@ -1,11 +1,10 @@
 ---@return ColorPicker
 return function(control, input, style, engine)
 ---@class ColorPicker : Control
-local ColorPicker = control:new{}
-ColorPicker.type = "ColorPicker"
+local ColorPicker = control:newClass()
+ColorPicker.__type = "ColorPicker"
 ColorPicker.list = nil
 ColorPicker.h = 1
-ColorPicker._fitToText = true
 ColorPicker.list = nil
 ColorPicker.open = false
 ColorPicker.dragSelectable = true
@@ -21,7 +20,7 @@ ColorPicker.color = 0
 local function addColor(picker, color)
     ---@type Control
     local b = picker.list:addControl()
-    local colorStyle = style:new{}
+    local colorStyle = style:new()
     colorStyle.backgroundColor = color
     colorStyle.textColor = colors.black
     b.inheritStyle = false
@@ -33,6 +32,7 @@ local function addColor(picker, color)
     b.propogateFocusUp = true
     b.click = function (self)
         picker.style = self.style
+        picker:colorClicked(self.style.backgroundColor)
     end
     b.up = function (self)
         picker.color = color
@@ -42,7 +42,7 @@ local function addColor(picker, color)
     end
 end
 
-function ColorPicker:ready()
+function ColorPicker:init()
     ---@type FlowContainer
     self.list = self:addFlowContainer()
     self.list.topLevel = true
@@ -62,8 +62,6 @@ function ColorPicker:ready()
     input.addMouseEventListener(self)
     self:_expandChildren()
     self.list:_expandChildren()
-    local msg = tostring(self.w) .. " : " .. tostring(self.list.w)
-    --error(msg)
 end
 
 function ColorPicker:sizeChanged()
@@ -87,6 +85,7 @@ function ColorPicker:mouseEvent(event, button)
 end
 
 function ColorPicker:colorPressed(color) end
+function ColorPicker:colorClicked(color) end
 
 return ColorPicker
 end

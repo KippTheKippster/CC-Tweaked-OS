@@ -1,8 +1,8 @@
 ---@return Icon
 return function(control)
 ---@class Icon : Control
-local Icon = control:new{}
-Icon.type = "Icon"
+local Icon = control:newClass()
+Icon.__type = "Icon"
 
 ---@type table
 Icon.texture = nil

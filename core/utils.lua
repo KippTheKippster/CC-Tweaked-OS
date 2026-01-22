@@ -31,6 +31,7 @@ local function move(tb, object, position)
 	end
 end
 
+--[[
 local function split(s, c)
     local strings = {}
     local start = 1
@@ -39,11 +40,23 @@ local function split(s, c)
             local str = s:sub(start, i)
 			str = str:gsub(' ', '')
             table.insert(strings, str)
-            start = i 
+            start = i
         end
     end
     return strings
 end
+]]--
+local function split(inputstr, sep)
+  if sep == nil then
+    sep = "%s"
+  end
+  local t = {}
+  for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+    table.insert(t, str)
+  end
+  return t
+end
+
 
 local function printTable(table, recursive, prefix)
 	if table == nil then error("Atempting to print a nil value", 2) end
