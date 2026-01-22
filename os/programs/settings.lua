@@ -23,13 +23,13 @@ scrollContainer.expandH = true
 
 local main = scrollContainer:addVContainer()
 main.expandW = true
-main.style = buttonStyle
+main.expandH = true
 main.rendering = true
+main.style = buttonStyle
 
 
-local settingsButton = engine.Button:new{}
+local settingsButton = engine.Button:new()
 settingsButton.h = 1
-settingsButton.fitToText = true
 settingsButton.normalStyle = buttonStyle
 settingsButton.clickedStyle = clickedStyle
 
@@ -49,7 +49,6 @@ end
 local function addLabel(text)
     ---@type Control
     local label = main:addControl()
-    label.fitToText = true
     label.text = text
     label.expandW = true
     label.h = 1
@@ -74,12 +73,11 @@ end
 local function addSettingsInfo(text, infoText)
     local label = addLabel(text)
     ---@type Button
-    local info = engine.Control:new{}
+    local info = engine.Control:new()
     label:addChild(info)
     info.text = infoText
     info.style = buttonStyle
     info.h = 1
-    info.fitToText = true
     info.anchorW = info.Anchor.RIGHT
     return info
 end
@@ -89,7 +87,7 @@ local function addSettingsButton(text, buttonText)
     local label = addLabel(text)
 
     ---@type Button
-    local button = settingsButton:new{}
+    local button = settingsButton:new()
     label:addChild(button)
     button.text = buttonText
     button.dragSelectable = true
@@ -108,7 +106,6 @@ local function addSettingsColor(text)
     --picker.normalStyle = pickerStyle
     --picker.clickedStyle = pickerStyle
     picker.text = "[      ]"
-    picker.fitToText = true
     picker.anchorW = picker.Anchor.RIGHT
     picker.dragSelectable = true
 
@@ -143,27 +140,31 @@ end
 local versionButton = addSettingsButton("Installer", installerText)
 function versionButton:pressed()
     if fs.exists("/mosInstaller.lua") then
-        mos.openProgram("MOS Installer", "mosInstaller.lua")
+        mos.openProgram("mosInstaller.lua").text = "MOS Installer"
     else
-        mos.openProgram("Downloading MOS Installer", "/rom/programs/http/pastebin.lua", false, "get", "Wa0niW8x", "mosInstaller.lua")
+        mos.openProgram("/rom/programs/http/pastebin.lua", "get", "Wa0niW8x", "mosInstaller.lua").text = "Downloading MOS Installer"
         versionButton.text = "[Run]"
         versionButton.parent:_expandChildren()
     end
 end
 
 addSeperator("-Computer-")
-addSettingsInfo("ID", "#" .. tostring(os.getComputerID()))
 local labelEdit = addSettingsLineEdit("Label", os.getComputerLabel())
+local freeSpace = math.floor(fs.getFreeSpace("") / 1000.0)
+local capacity = math.floor(fs.getCapacity("") / 1000.0)
+addSettingsInfo("ID", "#" .. tostring(os.getComputerID()))
+addSettingsInfo("Space", capacity - freeSpace .. "/" .. capacity  .. "KB")
 function labelEdit:textSubmitted()
     os.setComputerLabel(labelEdit.text)
 end
+
 
 addSeperator("-Appearance-")
 
 local changeTheme = addSettingsButton("Theme", "[Browse]")
 
 function changeTheme:pressed()
-    fileExplorer = mos.launchProgram("Choose .thm", "/mos/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
+    fileExplorer = mos.openFileDialogue("Choose .thm", function (path)
         local suffix = ".thm"
         if path:sub(-#suffix) == suffix then
             mos.loadTheme(path)
@@ -171,7 +172,7 @@ function changeTheme:pressed()
             engine.root:redraw()
             fileExplorer:close()
         end
-    end, "/mos/os/themes/")
+    end, false, "/mos/os/themes/")
 end
 
 local changeBackground = addSettingsButton("Background Image", "[Browse]")
@@ -181,11 +182,11 @@ imageReset.visible = mos.profile.backgroundIcon ~= nil
 
 
 function changeBackground:pressed()
-    fileExplorer = mos.launchProgram("Choose .nfp", "/mos/os/programs/fileExplorer.lua", 3, 3, 24, 12, function (name, path)
+    fileExplorer = mos.openFileDialogue("Choose .nfp", function (path)
         mos.backgroundIcon.texture = paintutils.loadImage(path)
         mos.profile.backgroundIcon = path
         imageReset.visible = true
-    end, "/mos/os/textures/backgrounds/")
+    end, false)
 end
 
 function imageReset:pressed()
@@ -213,9 +214,10 @@ colorReset.pressed = function (o)
 end
 
 
-function picker:colorPressed(color)
+function picker:colorClicked(color)
     mos.profile.backgroundColor = color
     mos.engine.backgroundColor = color
+    mos.engine.root:redraw()
     colorReset.visible = true
 end
 
@@ -267,7 +269,5 @@ romFiles.pressed = function (o)
         o.text = "[ ]"
     end
 end
-
-local test = addSettingsColor("Background Color")
 
 engine.start()

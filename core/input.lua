@@ -5,6 +5,7 @@ local targetTerm = term.current()
 local inputConsumed = false
 local mouse = {}
 mouse.current = nil
+mouse.currentClick = nil
 mouse.cursorControl = nil
 mouse.clickTime = os.clock()
 mouse.doublePressed = false
@@ -150,23 +151,22 @@ function mouse.click(button, x, y)
     mouse.dragX = x
     mouse.dragY = y
     local c = mouse.getControlInPoint(x, y)
+    mouse.currentClick = c
     if mouse.current ~= c then -- If user clicks on a new control (or nothing)
         mouse.clickTime = os.clock()
         mouse.changeFocus(c)
-    elseif c ~= nil then -- If user clicks on the same control
+        if c then
+            c:click(x - c.globalX, y - c.globalY, button)
+        end
+    elseif c then -- If user clicks on the same control
+        c:click(x - c.globalX, y - c.globalY, button)
 		local time = os.clock()
 		local delta = time - mouse.clickTime
 		mouse.clickTime = time
 		if delta < 0.33 then
-			c:doublePressed(delta)
+			c:doublePressed()
 		end
 	end
-
-    if c == nil then
-       return
-    end
-
-    c:click(x - c.globalX, y - c.globalY, button)
 end
 
 local function grabControlFocus(c)
@@ -190,6 +190,7 @@ local function getCursorControl()
 end
 
 function mouse.up(button, x, y)
+    mouse.currentClick = nil
     if isValid(mouse.current) == false then return end
     mouse.current:up(x, y, button)
     mouse.current:pressed(x, y, button)
@@ -259,8 +260,8 @@ local function key(k)
     sendEvent(keyListeners, "key", k)
 end
 
-local function keyUp(key)
-    keys[key] = false
+local function keyUp(k)
+    keys[k] = false
 end
 
 local function addKeyListener(o)
@@ -409,6 +410,11 @@ local function processInput()
         )
     elseif event == "term_resize" then
         resizeEvent()
+    elseif event == "mos_window_focus" then
+        if mouse.currentClick then
+            mouse.currentClick:up()
+            mouse.currentClick = nil
+        end
     end
 
     rawEvent(data)
@@ -425,7 +431,7 @@ local function processInput()
 end
 
 local function setTargetTerm(t)
-   targetTerm = t 
+   targetTerm = t
 end
 
 ---@class Input

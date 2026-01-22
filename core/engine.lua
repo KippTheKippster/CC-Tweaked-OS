@@ -20,7 +20,7 @@ engine.freeQueue = {}
 ---@type Style
 local style = require(coreDotPath .. ".styles.style")(object)
 ---@type Style
-local clickedStyle = require(coreDotPath .. ".styles.style")(style)
+local clickedStyle = require(coreDotPath .. ".styles.clickedStyle")(style)
 ---@type Style
 local editStyle = style:new()
 editStyle.backgroundColor = colors.gray
@@ -102,7 +102,7 @@ if _G.__Global == nil then
 end
 
 ---@type Control
-local root = engine.Control:new{}
+local root = engine.Control:new()
 root.rendering = false
 root.text = "root"
 root.w = initialW
@@ -258,7 +258,7 @@ end
 
 ---@return Style
 engine.newStyle = function ()
-    return style:new{}
+    return style:new()
 end
 
 ---@return Style

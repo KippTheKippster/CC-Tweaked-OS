@@ -1,8 +1,8 @@
 ---@return FlowContainer
 return function(container)
 ---@class FlowContainer : Container 
-local FlowContainer = container:new{}
-FlowContainer.type = "FlowContainer"
+local FlowContainer = container:newClass()
+FlowContainer.__type = "FlowContainer"
 
 function FlowContainer:sort()
 	local w = 0

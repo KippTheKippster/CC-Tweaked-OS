@@ -1,13 +1,11 @@
 ---@return ScrollContainer
 return function(container, input)
 ---@class ScrollContainer : Container
-local ScrollContainer = container:new{}
-ScrollContainer.type = "ScrollContainer"
+local ScrollContainer = container:newClass()
+ScrollContainer.__type = "ScrollContainer"
 
 ScrollContainer.ScrollMode = { VERTICAL = 0, HORIZONTAL = 1 }
 ScrollContainer.scrollMode = ScrollContainer.ScrollMode.VERTICAL
-ScrollContainer.scrollY = 0
-ScrollContainer.scrollX = 0
 ScrollContainer.rendering = true
 
 function ScrollContainer:render()
@@ -29,27 +27,41 @@ function ScrollContainer:render()
     startY = startY - round(offset)
     endY = startY + size
 
-    paintutils.drawLine(startX, startY, endX, endY, colors.green)
+    paintutils.drawLine(startX, startY, endX, endY, colors.lightGray)
 
 end
 
-function ScrollContainer:scroll(dir, x, y)
+function ScrollContainer:sort()
     local child = self.children[1]
-    child.y = child.y - dir
-
-    if child.y > 0 then
-        child.y = 0
+    if child == nil then
         return
     end
 
-    term.setTextColor(colors.red)
+    child:_expandChildren()
+    if child.y >= 0 then
+        child.y = 0
+        return
+    end
 
     local dif = self.h - child.h
     if child.y < self.h - child.h then
         child.y = dif
         return
     end
-
 end
+
+function ScrollContainer:scroll(dir, x, y)
+    local child = self.children[1]
+    child.y = child.y - dir
+    self:sort()
+end
+
+function ScrollContainer:setScroll(position)
+    local child = self.children[1]
+    child.y = position
+    self:sort()
+end
+
+
 return ScrollContainer
 end

@@ -4,9 +4,10 @@
 ---@param input Input
 return function(windowControl, input)
 ---@class ProgramWindow : WindowControl
-local ProgramWindow = windowControl:new{}
-ProgramWindow.type = "ProgramWindow"
+local ProgramWindow = windowControl:newClass()
+ProgramWindow.__type = "ProgramWindow"
 
+---@type ProgramViewport
 ProgramWindow.programViewport = nil
 ProgramWindow.minimizeButton = nil
 ProgramWindow.focusedStyle = nil
@@ -59,8 +60,8 @@ local function addSplit (wi, h, fn)
     return split
 end
 
-function ProgramWindow:ready()
-    windowControl.ready(self)
+function ProgramWindow:init()
+    windowControl.init(self)
 
     self.minimizeButton = addButton(self)
     self.minimizeButton.w = 1

@@ -1,25 +1,27 @@
 ---@return Dropdown
 return function(button, input, utils, engine)
 ---@class Dropdown : Button
-local Dropdown = button:new{}
-Dropdown.type = "Dropdown"
+local Dropdown = button:newClass()
+Dropdown.__type = "Dropdown"
 
 Dropdown.text = "Drop-down"
 Dropdown.h = 1
-Dropdown._fitToText = true
 Dropdown.list = nil
 Dropdown.open = false
 Dropdown.dragSelectable = true
-Dropdown.listQueue = nil
 Dropdown.shortcutSelection = nil
 Dropdown.optionNormalStyle = Dropdown.normalStyle
 Dropdown.optionClickedStyle = Dropdown.clickedStyle
 Dropdown.optionShadow = false
 
-function Dropdown:ready()
+function Dropdown:init()
     self.list = self:addVContainer()
     self.list.inheritStyle = false
     self.list.style = self.normalStyle
+    self.list.minW = 0
+    self.list.minH = 0
+    self.list.fitToChildrenW = true
+    self.list.fitToChildrenH = true
     self.list.render = function (o)
         o:drawShadow()
     end
@@ -35,19 +37,9 @@ function Dropdown:ready()
     self.list.shadow = self.optionShadow
     self.list.mouseIgnore = true
 
-    self.fitToText = true
-
-    --self.list.rendering = true
+    self.list.rendering = true
 
     input.addRawEventListener(self)
-
-    self.listQueue = self.listQueue or {}
-    for i = 1, #self.listQueue do
-        local option = self.listQueue[i]
-        self:addToList(option.text, option.clickable)
-    end
-
-    self.listQueue = {}
 end
 
 function Dropdown:isOpened()
@@ -83,12 +75,6 @@ function Dropdown:addToList(text, clickable)
         clickable = true
     end
 
-    if self.list == nil then
-        self.listQueue = self.listQueue or {}
-        table.insert(self.listQueue, { text = text, clickable = clickable })
-        return nil
-    end
-
     local b = nil
     if clickable == true then
         b = self.list:addButton()
@@ -103,7 +89,6 @@ function Dropdown:addToList(text, clickable)
     b.clickedStyle = self.optionClickedStyle
     b.text = text
     b.h = 1
-    b.fitToText = true
     b.dragSelectable = true
     b.propogateFocusUp = true
     b.marginL = 1

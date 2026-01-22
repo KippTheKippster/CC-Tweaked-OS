@@ -4,65 +4,61 @@
 ---@param style Style
 return function(object, engine, style)
 ---@class Control : Object
-local Control = object:new{}
-Control.type = "Control"
+local Control = object:newClass()
+Control.__type = "Control"
 
----@name globalX
 ---@type number
 Control.globalX = nil
 Control._globalX = 0
 
----@name globalY
 ---@type number
 Control.globalY = nil
 Control._globalY = 0
 
----@name x
 ---@type number
 Control.x = nil
 Control._x = 0
 
----@name y
 ---@type number
 Control.y = nil
 Control._y = 0
 
----@name w
 ---@type number
 Control.w = nil
-Control._w = 13
+Control._w = 1
 
----@name h
 ---@type number
 Control.h = nil
-Control._h = 5
+Control._h = 1
 
----@name expandW
+---@type number
+Control.minW = nil
+Control._minW = 1
+
+---@type number
+Control.minH = nil
+Control._minH = 1
+
 ---@type boolean
 Control.expandW = nil
 Control._expandW = false
 
----@name expandH
 ---@type boolean
 Control.expandH = nil
 Control._expandH = false
 
----@name fitToText
 ---@type boolean
 Control.fitToText = nil
-Control._fitToText = false
+Control._fitToText = true
 
----@name text
 ---@type string
 Control.text = nil
 Control._text = "Control"
 
----@name style
 ---@type Style
 Control.style = nil
 Control._style = style
 
----@name visible
 ---@type boolean
 Control.visible = nil
 Control._visible = true
@@ -158,7 +154,7 @@ Control:defineProperty('y', {
     get = function(o) return o._y end,
     set = function(o, value) 
         local same = o._y == value
-        o._y = value 
+        o._y = value
         if same == false then
             o:updatePosition()
             o:transformChanged()
@@ -207,6 +203,29 @@ Control:defineProperty('h', {
         end
     end
 })
+
+Control:defineProperty('minW', {
+    get = function(o) return o._minW end,
+    set = function(o, value) 
+        local same = o._minW == value
+        o._minW = value
+        if same == false then
+            o:_resize()
+        end
+    end
+})
+
+Control:defineProperty('minH', {
+    get = function(o) return o._minH end,
+    set = function(o, value) 
+        local same = o._minH == value
+        o._minH = value
+        if same == false then
+            o:_resize()
+        end
+    end
+})
+
 
 Control:defineProperty('expandW', {
     get = function(o) return o._expandW end,
@@ -258,25 +277,31 @@ end
 
 function Control:_resize()
     self.w, self.h = self:getMinimumSize()
+    if self.parent then
+        self.parent:_expandChildren()
+    end
 end
 
 function Control:getMinimumSize()
+    local minW = self.minW + self.marginL + self.marginR
+    local minH = self.minH
     if self._fitToText then
-        return #self.text + self.marginL + self.marginR, 1
-    else
-        return 0, 0
+        minW = math.max(#self.text + self.marginL + self.marginR, minW)
+        minH = math.max(1, minH)
     end
+
+    return minW, minH
 end
+
 
 Control:defineProperty('fitToText', {
     get = function(o) return o._fitToText end,
     set = function(o, value)
         o._fitToText = value
-        if value == true then
-            o.w = #o.text + o.marginL + o.marginR
-        end
+        o:_resize()
     end
 })
+
 
 
 Control:defineProperty('text', {
@@ -285,9 +310,7 @@ Control:defineProperty('text', {
         local same = o._text == value
         o._text = value
         if same == false then
-            if o._fitToText == true then
-                o.w = #o.text + o.marginL + o.marginR
-            end
+            o:_resize()
             o:redraw()
         end
     end
@@ -526,6 +549,13 @@ function Control:removeChild(o)
     o.parent = nil
     self:childrenChanged()
     self:redraw()
+end
+
+function Control:clearAndFreeChildren()
+    for i, b in ipairs(self.children) do
+        b:queueFree()
+    end
+    self.children = {}
 end
 
 ---@param x number
