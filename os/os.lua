@@ -82,6 +82,8 @@ local function validateTable(tbl, default)
     end
 end
 
+---comment
+---@param file string|nil
 function mos.loadProfile(file)
     file = file or "/.mosdata/profiles/profile.sav"
     local profile = engine.utils.loadTable(file)
@@ -92,16 +94,26 @@ function mos.loadProfile(file)
     end
 end
 
+---comment
+---@param file string|nil
 function mos.saveProfile(file)
     file = file or "/.mosdata/profiles/profile.sav"
     engine.utils.saveTable(mos.profile, file)
 end
 
+---comment
+---@param file string
+---@param profile Profile|nil
+---@return boolean
 function mos.isFileFavorite(file, profile)
     profile = profile or mos.profile
     return profile.favorites[file] ~= nil
 end
 
+---comment
+---@param file string
+---@param settings table|nil
+---@param profile Profile|nil
 function mos.addFileFavorite(file, settings, profile)
     profile = profile or mos.profile
     if profile.favorites[file] ~= nil then return end
@@ -109,11 +121,16 @@ function mos.addFileFavorite(file, settings, profile)
     profile.favorites[file] = settings
 end
 
+---comment
+---@param file string
+---@param profile Profile|nil
 function mos.removeFileFavorite(file, profile)
     profile = profile or mos.profile
     profile.favorites[file] = nil
 end
 
+---comment
+---@param file string
 function mos.loadTheme(file)
     local theme = engine.utils.loadTable(file)
     if theme == nil then
@@ -134,14 +151,14 @@ local programWindow = require(coreDotPath .. ".multiProcess.programWindow")(engi
 
 local style = engine.getDefaultStyle()
 local clickStyle = engine.getDefaultClickedStyle()
-local optionNormalStyle = style:new{}
-local optionClickStyle = clickStyle:new{}
+local optionNormalStyle = style:new()
+local optionClickStyle = clickStyle:new()
 local windowStyle = engine.newStyle()
 windowStyle.shadowOffsetU = 0
 ---@type Style
-local normalWindowStyle = windowStyle:new{}
+local normalWindowStyle = windowStyle:new()
 ---@type Style
-local focusWindowStyle = windowStyle:new{}
+local focusWindowStyle = windowStyle:new()
 local clickWindowStyle = engine.newStyle()
 local exitButtonClickStyle = engine.newStyle()
 
@@ -282,12 +299,12 @@ local function removeFromToolbar(control)
 end
 
 ---@type Dropdown
-local windowDropdown = dropdown:new{}
+local windowDropdown = dropdown:new()
 addToToolbar(windowDropdown)
 windowDropdown.text = "="
 
 ---@type Dropdown
-local mosDropdown = dropdown:new{}
+local mosDropdown = dropdown:new()
 addToToolbar(mosDropdown)
 mosDropdown.text = "MOS"
 
@@ -304,9 +321,17 @@ mos.refreshMosDropdown = function ()
     if l > -1 then
         mosDropdown:addToList("-------------", false)
         for k, v in pairs(mos.profile.favorites) do
-            local option = mosDropdown:addToList(v.name .. "  ")
+            local option = mosDropdown:addToList(v.name .. " ")
             option.pressed = function (o)
-                mos.openProgram(v.name, k, false)
+                if fs.isDir(k) then
+                    mos.openDir(k)
+                elseif engine.input.isKey(keys.leftCtrl) then
+                    mos.editProgram(k)
+                elseif engine.input.isKey(keys.leftAlt) then
+                    mos.openProgramWithArgs(k)
+                else
+                    mos.openProgram(k)
+                end
             end
             local x = option:addButton()
             x.text = string.char(3)
@@ -406,10 +431,14 @@ local function windowVisibilityChanged(w)
     end
 end
 
+---comment
+---@param window ProgramWindow
 local function windowFocusChanged(window)
+    multiProgram.resumeProcess(window.programViewport.program, { "mos_window_focus", window.focus })
     if window.focus == false then
         return
     end
+
 
     if currentWindow ~= window then
         if customTools[currentWindow] ~= nil then
@@ -461,11 +490,20 @@ local function addWindow(w)
     w:redraw()
 end
 
+---Creates a new window running the program of path, unless you want to specify the position of the window use 'openProgram' instead
+---@param name string
+---@param path string
+---@param x integer
+---@param y integer
+---@param w integer
+---@param h integer
+---@param ... any
+---@return ProgramWindow
 local function launchProgram(name, path, x, y, w, h, ...)
-    local window = programWindow:new{}
+    local window = programWindow:new()
     windowContainer:addChild(window)
 
-    local viewport = programViewport:new{}
+    local viewport = programViewport:new()
     window:addViewport(viewport)
 
     window.x = x
@@ -501,7 +539,7 @@ end
 mos.windowStartX = 1
 mos.windowStartY = 2
 
-local function openProgram(name, path, edit, ...)
+local function nextWindowTransform()
     local screenW, screenH = mos.root.w, mos.root.h
     local x, y, w, h = mos.windowStartX, mos.windowStartY, math.floor(screenW * 0.66), math.floor(screenH * 0.75)
     mos.windowStartX = mos.windowStartX + 1
@@ -513,29 +551,72 @@ local function openProgram(name, path, edit, ...)
     if y + h > screenH - 2 then
         mos.windowStartY = 2
     end
+    return x, y, w, h
+end
 
-    if edit == true then
-        return launchProgram("Edit '" .. name .. "'", "/rom/programs/edit.lua", x, y, w, h, path)
-    else
-        for k, v in pairs(mos.profile.fileExecptions) do
-            local suffix = k
-            if name:sub(-#suffix) == suffix then
-                local program = v.program or path
-                if v.fullscreen then
-                    x, y = 0, 0
-                    w, h = engine.root.w, engine.root.h
-                end
-
-                local wi = launchProgram(name, program, x, y, w, h, path, ...)
-                if v.fullscreen then
-                    wi:setFullscreen(true)
-                end
-                return wi
+---Opens a new window running the program expected for the file type (i.e. paint for nfp files, for lua files it will run as expected)
+---@param path string
+---@param ... any
+---@return ProgramWindow
+local function openProgram(path, ...)
+    local x, y, w, h = nextWindowTransform()
+    local file = fs.getName(path)
+    for k, v in pairs(mos.profile.fileExecptions) do
+        local suffix = k
+        if file:sub(-#suffix) == suffix then
+            local program = v.program or path
+            if v.fullscreen then
+                x, y = 0, 0
+                w, h = engine.root.w, engine.root.h
             end
-        end
 
-        return launchProgram(name, path, x, y, w, h, ...)
+            local wi = launchProgram(file, program, x, y, w, h, path, ...)
+            if v.fullscreen then
+                wi:setFullscreen(true)
+            end
+            return wi
+        end
     end
+
+    return launchProgram(file, path, x, y, w, h, ...)
+end
+
+---@param path string
+---@return WindowControl
+function mos.editProgram(path)
+    local x, y, w, h = nextWindowTransform()
+    return launchProgram("Edit '" .. fs.getName(path) .. "'", "/rom/programs/edit.lua", x, y, w, h, path)
+end
+
+---comment
+---@param path string
+---@return WindowControl
+function mos.openProgramWithArgs(path)
+    return mos.launchProgram("Args '" .. fs.getName(path) .. "'", "/mos/os/programs/writeArgs.lua", 3, 3, 24, 2, function (data)
+        mos.openProgram(path, table.unpack(data))
+    end, path)
+end
+
+---comment
+---@param path string
+---@param callback function|nil
+---@return ProgramWindow
+function mos.openDir(path, callback)
+    local w = mos.openProgram("/mos/os/programs/files.lua", callback, { dir =  path })
+    w.text = "File Explorer"
+    return w
+end
+
+---comment
+---@param title string
+---@param callback function
+---@param saveMode boolean|nil
+---@param dir string|nil
+---@return ProgramWindow
+function mos.openFileDialogue(title, callback, saveMode, dir)
+    local w = mos.openProgram("/mos/os/programs/files.lua", callback, { saveMode = saveMode, dir = dir })
+    w.text = title
+    return w
 end
 
 mos.createPopup = function (title, text, x, y, w, h, parent)
@@ -563,19 +644,17 @@ end
 function mosDropdown:optionPressed(i)
     local text = mosDropdown:getOptionText(i)
     mos.latestMosOption = text
-    if text == "Test" then
-        openProgram("Shell", "test")
-    elseif text == "Shell" then
-        openProgram("Shell", "/rom/programs/advanced/multishell.lua")
+    if text == "Shell" then
+        openProgram("/rom/programs/advanced/multishell.lua").text = "Shell"
     elseif text == "Exit" then
         multiProgram.exit()
     elseif text == "Reboot" then
         multiProgram.exit()
         shell.run(osPath .. "/os.lua")
     elseif text == "File Explorer" then
-        openProgram("File Explorer", osPath .. "/programs/fileExplorer.lua", false, openProgram)
+        mos.openDir("")
     elseif text == "Settings" then
-        openProgram("Settings", osPath .. "/programs/settings.lua")
+        openProgram(osPath .. "/programs/settings.lua").text = "Settings"
     end
 end
 

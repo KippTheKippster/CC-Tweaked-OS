@@ -1,0 +1,840 @@
+local corePath = ".mos.core"
+
+if _G.__Global then
+    corePath =_G.__Global.coreDotPath
+end
+
+---@type Engine
+local engine = require(corePath .. ".engine")
+---@type MOS
+local mos = __mos
+---@type ProgramWindow
+local mosWindow = __window
+
+local args = {...}
+
+local fe = {}
+fe.currentPath = ""
+fe.mountPaths = {
+    "top",
+    "bottom",
+    "front",
+    "back",
+    "right",
+    "left",
+}
+fe.mountedDisks = {}
+fe.selection = {}
+---@enum PasteMode
+fe.PasteMode = {
+    COPY = 1,
+    CUT = 2,
+}
+
+---@type PasteMode
+fe.pasteMode = fe.PasteMode.COPY
+fe.clipboard = {}
+
+---comment
+---@param path string
+fe.openFileCallback = function (path, edit, withArgs, ...)
+    if mos then
+        if edit then
+            mos.editProgram(path)
+        elseif withArgs then
+            mos.openProgramWithArgs(path)
+        else
+            mos.openProgram(path, ...)
+        end
+    end
+end
+
+if type(args[1]) == "function" then
+    fe.openFileCallback = args[1]
+end
+
+local settings = args[2] or {}
+local styles = {
+    style = engine.getDefaultStyle(),
+    clickStyle = engine.getDefaultClickedStyle(),
+    windowStyle = engine.newStyle()
+}
+
+if mos then
+    styles = mos.styles
+end
+
+local fileStyle = styles.style
+local dirStyle = fileStyle:new()
+dirStyle.textColor = colors.blue
+local clickedStyle = styles.clickStyle
+styles.windowStyle.backgroundColor = dirStyle.textColor
+
+engine.background = true
+engine.backgroundColor = styles.style.backgroundColor
+
+local inputReader = {}
+engine.input.addRawEventListener(inputReader)
+engine.input.addCharListener(inputReader)
+
+local main = engine.root:addVContainer()
+main.expandW = true
+main.expandH = true
+
+local top = main:addHContainer()
+top.expandW = true
+top.h = 1
+top.topLevel = true
+
+local backButton = top:addButton()
+backButton.text = "<"
+backButton.h = 1
+backButton.dragSelectable = true
+
+local topSpacer = top:addControl()
+topSpacer.text = ""
+
+local pathContainer = top:addHContainer()
+pathContainer.expandW = true
+pathContainer.h = 1
+pathContainer.rendering = true
+
+local searchbar = main:addLineEdit()
+searchbar.topLevel = true
+searchbar.expandW = true
+searchbar.visible = false
+
+searchbar.trueTextChanged = function (self)
+    engine.LineEdit.trueTextChanged(self)
+    if self.text == "" then
+        self.visible = false
+        self:releaseFocus()
+    else
+        self.visible = true
+    end
+    main:sort()
+    fe.filter(self.text)
+end
+
+--[[
+searchbar.focusChanged = function (self)
+    engine.LineEdit.focusChanged(self)
+    if self.focus then
+        self.visible = true
+    else
+        self.visible = false
+    end
+end
+]]--
+
+local scrollContainer = main:addScrollContainer()
+scrollContainer.expandW = true
+scrollContainer.expandH = true
+scrollContainer.rendering = false
+
+local fileContainer = scrollContainer:addVContainer()
+fileContainer.expandW = true
+fileContainer.expandH = true
+
+
+---@class SaveContainer : HContainer
+local SaveContainer = engine.HContainer:newClass()
+SaveContainer.expandW = true
+---@type LineEdit
+SaveContainer.saveEdit = nil
+---@type Button
+SaveContainer.saveButton = nil
+
+---@type SaveContainer
+local saveContainer = nil
+
+if settings.saveMode then
+    saveContainer = SaveContainer:new()
+    saveContainer.expandW = true
+
+    saveContainer.saveEdit = saveContainer:addLineEdit()
+    saveContainer.saveEdit.expandW = true
+    saveContainer.saveEdit.trueText = args[3]
+    saveContainer.saveEdit.text = args[3]
+
+    saveContainer.saveButton = saveContainer:addButton()
+    saveContainer.saveButton.text = "Save"
+    saveContainer.saveButton.pressed = function ()
+        fe.openFile(fe.nameToPath(saveContainer.saveEdit.text), false, false)
+    end
+
+    main:addChild(saveContainer)
+end
+
+---comment
+---@param err string
+---@return WindowControl
+function fe.popupError(err)
+    err = " " .. err .. " "
+
+    local w, h = engine.root.w, engine.root.h
+    local window = engine.root:addWindowControl()
+    window.text = "Error"
+    window.style = styles.windowStyle
+    window.minW = math.min(24, #err)
+    window.minH = 2
+    window.x = math.floor((w - window.w) / 2)
+    window.y = math.floor((h - window.h) / 2)
+    window:refreshMinSize()
+
+    local message = window:addControl()
+    message.y = 1
+    message.expandW = true
+    message.expandH = true
+
+    message.text = err
+    message.centerText = true
+
+    return window
+end
+
+function fe.pPopupError(f, ...)
+    local ok, err = pcall(f, ...)
+    if ok == false then
+        for i = 1, 3 do
+            local idx = err:find(":")
+            if idx ~= nil then
+                err = err:sub(idx + 1)
+            end
+        end
+
+        err = err:sub(2)
+
+        local w = fe.popupError(err)
+    end
+    return ok, err
+end
+
+---@class FileButton : Button
+local FileButton = engine.Button:newClass()
+FileButton.selected = false
+function FileButton:click()
+    engine.Button.click(self)
+    fe.selectFileButton(self, engine.input.isKey(keys.leftCtrl) == false)
+end
+
+function FileButton:refreshStyle()
+    if self.isClicked then
+        self.style = self.clickedStyle
+    elseif self.selected then
+        self.style = self.selectedStyle
+    else
+        self.style = self.normalStyle
+    end
+end
+
+---comment
+---@param b FileButton
+---@param clearSelection boolean
+function fe.selectFileButton(b, clearSelection)
+    if clearSelection then
+        fe.clearSelection()
+    end
+
+    if saveContainer and saveContainer.saveEdit then
+        saveContainer.saveEdit.text = b.text
+        saveContainer.saveEdit.trueText = b.text
+    end
+
+    fe.addToSelection(b)
+end
+
+---comment
+---@param b FileButton
+function fe.addToSelection(b)
+    b.selected = true
+    table.insert(fe.selection, b)
+end
+
+---comment
+---@param b FileButton
+function fe.removeFromSelection(b)
+    b.selected = false
+    table.remove(fe.selection, engine.utils.find(fe.selection, b))
+end
+
+function fe.clearSelection()
+    for i, b in ipairs(fe.selection) do
+        if b:isValid() == true then
+            b.selected = false
+            b:refreshStyle()
+        end
+    end
+
+    fe.selection = {}
+end
+
+---comment
+---@param name string
+---@return FileButton
+function fe.newFileButton(name)
+    local fileButton = FileButton:new()
+    fileButton.__name = name
+    local path = fe.nameToPath(name)
+    if fs.isDir(path) then
+        fileButton.normalStyle = dirStyle
+    else
+        fileButton.normalStyle = fileStyle
+    end
+    fileButton.clickedStyle = clickedStyle
+    fileButton.style = fileButton.normalStyle
+    fileButton.h = 1
+    fileButton.expandW = true
+    fileButton.dragSelectable = true
+    fileButton.text = name
+    fileButton.path = path
+    return fileButton
+end
+
+---comment
+---@param name string
+---@return FileButton
+function fe.addFileButton(name)
+    local fileButton = fe.newFileButton(name)
+    fileContainer:addChild(fileButton)
+    if fs.isDir(fileButton.path) then
+        fileButton.doublePressed = function (o)
+            fe.openDir(o.path)
+        end
+    else
+        fileButton.doublePressed = function (o)
+            fe.openFile(o.path,
+                engine.input.isKey(keys.leftCtrl),
+                engine.input.isKey(keys.leftAlt)
+            )
+        end
+    end
+
+    return fileButton
+end
+
+
+---comment
+---@param text string
+---@param callback function
+---@return LineEdit
+function fe.newFileEdit(text, callback)
+    local edit = engine.LineEdit:new()
+    edit.expandW = true
+    edit:grabFocus()
+    edit.trueText = text
+    edit.text = text
+    edit.textSubmitted = function()
+        callback(edit)
+    end
+    return edit
+end
+
+---comment
+---@param callback function
+---@return LineEdit
+function fe.addFileEdit(callback)
+    local edit = fe.newFileEdit("", callback)
+    fileContainer:addChild(edit)
+    fe.clearSelection()
+    mosWindow:grabFocus()
+    return edit
+end
+
+---Combines the current path and the filename
+---@param name string
+---@return string
+function fe.nameToPath(name)
+    return fs.combine(fe.currentPath, name)
+end
+
+function fe.formatName(name)
+    local path = fe.nameToPath(name)
+    return fs.getName(path)
+end
+
+---comment
+---@param path string
+function fe.openDir(path)
+    if not fs.exists(path) then
+        error("Attemting to open non existent dir '" .. path .. "'")
+    end
+
+    fe.currentPath = path
+    fe.clearSelection()
+
+    fileContainer:clearAndFreeChildren()
+    pathContainer:clearAndFreeChildren()
+    scrollContainer:setScroll(0)
+
+    searchbar.text = ""
+    searchbar.trueText = ""
+
+
+    local bRoot = pathContainer:addButton()
+    bRoot.text = "/"
+    bRoot.dragSelectable = true
+    bRoot.pressed = function ()
+        fe.openDir("")
+    end
+
+    local split = engine.utils.split(path, "/")
+    local bPath = ""
+    for i, v in ipairs(split) do
+        bPath = fs.combine(bPath, v)
+
+        local b = pathContainer:addButton()
+        b.dragSelectable = true
+        b.text = v .. "/"
+        local ok = bPath
+        b.pressed = function ()
+            fe.openDir(ok)
+        end
+    end
+
+
+    local dirNames = {}
+    local fileNames = {}
+    for _, file in ipairs(fs.list(path)) do
+        local filePath = fe.nameToPath(file)
+        if fs.isDir(filePath) then
+            table.insert(dirNames, file)
+        else
+            table.insert(fileNames, file)
+        end
+    end
+
+    for _, dirName in ipairs(dirNames) do
+        local b = fe.addFileButton(dirName)
+    end
+
+    for _, fileName in ipairs(fileNames) do
+        local b = fe.addFileButton(fileName)
+    end
+
+    fileContainer:_expandChildren()
+    scrollContainer:_expandChildren()
+    main:_expandChildren()
+end
+
+---comment
+---@param filter string
+function fe.filter(filter)
+    for _, v in ipairs(fileContainer.children) do
+        if filter == "" or v.path:find(filter) ~= nil then
+            v.visible = true
+        else
+            v.visible = false
+        end
+    end
+    fileContainer:sort()
+end
+
+---comment
+---@param path string
+---@param edit boolean
+---@param wArgs boolean
+function fe.openFile(path, edit, wArgs, ...)
+    fe.openFileCallback(path, edit, wArgs, ...)
+end
+
+function fe.refresh()
+    fe.openDir(fe.currentPath)
+end
+
+---comment
+---@param name string
+function fe.makeFile(name)
+    name = fe.formatName(name)
+    fe.pPopupError(fs.open, fe.nameToPath(name), "w")
+    fe.refresh()
+end
+
+---comment
+---@param name string
+function fe.makeDir(name)
+    name = fe.formatName(name)
+    fe.pPopupError(fs.makeDir, fe.nameToPath(name))
+    fe.refresh()
+end
+
+---comment
+---@param b FileButton
+function fe.favorite(b)
+    if mos.isFileFavorite(b.path) then
+        mos.removeFileFavorite(b.path)
+    else
+        mos.addFileFavorite(b.path)
+    end
+    mos.refreshMosDropdown()
+end
+
+function fe.favoriteSelection()
+    for i, v in ipairs(fe.selection) do
+        fe.favorite(v)
+    end
+    mos.refreshMosDropdown()
+end
+
+---comment
+---@param b FileButton
+function fe.delete(b)
+    fe.pPopupError(fs.delete, b.path)
+    fe.refresh()
+end
+
+function fe.deleteSelection()
+    for i, v in ipairs(fe.selection) do
+        fe.delete(v)
+    end
+end
+
+function fe.clearClipboard()
+    fe.clipboard = {}
+end
+
+function fe.copySelectionToClipboard()
+    fe.clearClipboard()
+    for i, v in ipairs(fe.selection) do
+        table.insert(fe.clipboard, v.path)
+    end
+end
+
+---comment
+---@param pasteMode PasteMode
+function fe.pasteClipboard(pasteMode)
+    local fn = fs.copy
+    if pasteMode == fe.PasteMode.CUT then
+        fn = fs.cut
+    end
+
+    for i, v in ipairs(fe.clipboard) do
+        fn(v, fe.nameToPath(fs.getName(v)))
+    end
+
+    fe.clearClipboard()
+    fe.refresh()
+end
+
+---comment
+---@param b FileButton
+---@param name string
+function fe.rename(b, name)
+    name = fe.formatName(name)
+    if b.text == name then
+        return
+    end
+
+    fe.pPopupError(fs.move, b.path, fe.nameToPath(name))
+    fe.refresh()
+end
+
+---comment
+---@param b FileButton
+function fe.addRenameFileEdit(b)
+    fe.selectFileButton(b, true)
+    local edit = fe.newFileEdit(b.text, function (o)
+        fe.rename(b, o.text)
+        o:queueFree()
+    end)
+    edit.inheritStyle = false
+    b:addChild(edit)
+end
+
+---comment
+---@return FileButton|nil
+function fe.getFocusFileButton()
+    if #fe.selection == 0 then
+        return nil 
+    else
+        return fe.selection[#fe.selection]
+    end
+end
+
+
+local function newAudioDropdown(name)
+    ---@type Dropdown
+    local dropdown = mos.engine.Dropdown:new()
+    dropdown.text = disk.getAudioTitle(name) or disk.getMountPath(name)
+    dropdown.text = "[" .. dropdown.text .. "]"
+    dropdown.w = #dropdown.text
+    dropdown:addToList("Play Audio")
+    dropdown:addToList("Stop Audio")
+    dropdown:addToList("----------", false)
+    dropdown:addToList("Info")
+    dropdown:addToList("----------", false)
+    dropdown:addToList("Eject")
+
+    dropdown.optionPressed = function (o, i)
+        local text = o:getOptionText(i)
+        if text == "Play Audio" then
+            disk.playAudio(name)
+        elseif text == "Stop Audio" then
+            disk.stopAudio(name)
+        elseif text == "Info" then
+            mos.launchProgram("Disk Info", "/os/programs/diskInfo.lua", 3, 3, 20, 6, name)
+        elseif text == "Eject" then
+            fe.ejectDisk(name)
+        end
+    end
+
+    return dropdown
+end
+
+local function newDiskDropdown(name)
+    ---@type Dropdown
+    local dropdown = mos.engine.Dropdown:new()
+    dropdown.text = disk.getMountPath(name)
+    dropdown.text = "[" .. dropdown.text .. "]"
+    dropdown.w = #dropdown.text
+    dropdown:addToList("Install Folder")
+    dropdown:addToList("Install Here")
+    dropdown:addToList("--------------", false)
+    dropdown:addToList("Set Label")
+    dropdown:addToList("Info")
+    dropdown:addToList("--------------", false)
+    dropdown:addToList("Eject")
+
+    dropdown.optionPressed = function (o, idx)
+        local text = o:getOptionText(idx)
+        if text == "Install Folder" then
+            createEditFile("", function (edit)
+                local dest = fs.combine(currentPath, edit.text)
+                if fs.isReadOnly(dest) then return false end
+                if fs.exists(dest) then return false end
+                pPopupError(fs.copy, disk.getMountPath(name), dest)
+                return true
+            end)
+        elseif text == "Install Here" then
+            if fs.isReadOnly(currentPath) then
+                mos.createPopup("Warning", "Folder is read only!")
+                return
+            end
+            
+            local mountPath = disk.getMountPath(name)
+            local names = fs.list(mountPath, "r")
+            for i = 1, #names do
+                local path = fs.combine(mountPath, names[i])
+                local dest = fs.combine(currentPath, names[i])
+                if path == dest then
+                    break
+                end
+
+                if fs.exists(dest) then
+                    pPopupError(fs.delete, dest)
+                end
+                pPopupError(fs.copy, path, dest)
+            end
+
+            refreshFiles()
+        elseif text == "Set Label" then
+            mos.launchProgram("Set Label", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function (label)
+                disk.setLabel(name, label)
+                refreshFiles()
+            end, disk.getLabel(name), false)
+            return
+        elseif text == "Info" then
+            mos.launchProgram("Disk Info", "/os/programs/diskInfo.lua", 3, 3, 20, 9, name)
+            return
+        elseif text == "Eject" then
+            ejectDisk(name)
+        end
+
+        __window:grabFocus()
+    end
+
+    return dropdown
+end
+
+---comment
+---@param mountPath string
+function fe.mountDisk(mountPath)
+    
+end
+
+---comment
+---@param mountPath string
+function fe.unmountDisk(mountPath)
+    
+end
+
+---comment
+---@param mountPath string
+function fe.ejectDisk(mountPath)
+    fe.unmountDisk(mountPath)
+    disk.eject(mountPath)
+end
+
+
+function fe.scanMounts()
+    for i, path in ipairs(fe.mountPaths) do
+        if disk.isPresent(path) then
+            fe.mountDisk(path)
+        end
+    end
+end
+
+function fe.clearMounts()
+    for path, _ in pairs(fe.mountedDisks) do
+        fe.unmountDisk(path)
+    end
+end
+
+function backButton:pressed()
+    if fe.currentPath == "" then
+        fe.openDir("")
+    else
+        fe.openDir(fs.getDir(fe.currentPath))
+    end
+end
+
+if mos and mosWindow then
+    local fileDropdown = mos.engine.Dropdown:new()
+    fileDropdown.text = "File"
+    fileDropdown:addToList("New File")
+    fileDropdown:addToList("New Dir")
+    fileDropdown:addToList("------------", false)
+    fileDropdown:addToList("Open")
+    fileDropdown:addToList("Open w/ args")
+    fileDropdown:addToList("------------", false)
+    fileDropdown:addToList("Edit")
+    fileDropdown:addToList("------------", false)
+    fileDropdown:addToList("Close")
+
+    function fileDropdown:optionPressed(i)
+        local focusFileButton = fe.getFocusFileButton()
+        local focusPath = nil
+        if focusFileButton then
+            focusPath = focusFileButton.path
+        end
+
+        local text = fileDropdown:getOptionText(i)
+        if     text == "New File" then
+            fe.addFileEdit(function (edit)
+                edit:queueFree()
+                fe.makeFile(edit.text)
+            end)
+        elseif text == "New Dir" then
+            fe.addFileEdit(function (edit)
+                edit:queueFree()
+                fe.makeDir(edit.text)
+            end)
+        elseif text == "Open" then
+            if focusPath then
+                if fs.isDir(focusPath) then
+                    fe.openDir(focusPath)
+                else
+                    fe.openFile(focusPath, false, false)
+                end
+            end
+        elseif text == "Open w/ args" then
+            if focusPath and fs.isDir(focusPath) == false then
+                fe.openFile(focusPath, false, true)
+            end
+        elseif text == "Edit" then
+            if focusPath then
+                if fs.isDir(focusPath) == false then
+                    fe.openFile(focusPath, true, false)
+                end
+            end
+        elseif text == "Close" then
+            if __window then
+                __window:close()
+            end
+        end
+    end
+
+    local editDropdown = mos.engine.Dropdown:new()
+    editDropdown.text = "Edit"
+    editDropdown:addToList("Cut")
+    editDropdown:addToList("Copy")
+    editDropdown:addToList("Paste")
+    editDropdown:addToList("--------", false)
+    editDropdown:addToList("Rename")
+    editDropdown:addToList("Favorite")
+    editDropdown:addToList("--------", false)
+    editDropdown:addToList("Delete")
+
+    function editDropdown:optionPressed(i)
+        local focusFileButton = fe.getFocusFileButton()
+        if not focusFileButton then
+            return
+        end
+        local focusPath = focusFileButton.path
+        local text = editDropdown:getOptionText(i)
+        if     text == "Cut" then
+            fe.pasteMode = fe.PasteMode.CUT
+            fe.copySelectionToClipboard()
+        elseif text == "Copy" then
+            fe.pasteMode = fe.PasteMode.COPY
+            fe.copySelectionToClipboard()
+        elseif text == "Paste" then
+            fe.pasteClipboard(fe.currentPath, fe.pasteMode)
+        elseif text == "Rename" then
+            fe.addRenameFileEdit(focusFileButton)
+            __window:grabFocus()
+        elseif text == "Favorite" then
+            fe.favoriteSelection()
+        elseif text == "Delete" then
+            fe.deleteSelection()
+        end
+    end
+
+    mos.bindTool(mosWindow, function (focus)
+        if focus then
+            mos.addToToolbar(fileDropdown)
+            mos.addToToolbar(editDropdown)
+        else
+            mos.removeFromToolbar(fileDropdown)
+            mos.removeFromToolbar(editDropdown)
+        end
+    end)
+end
+
+
+local ia = 0
+
+function inputReader:rawEvent(data)
+    local event = data[1]
+    if     event == "paste" then
+        fe.pasteClipboard(fe.pasteMode)
+    elseif event == "disk" then
+        fe.scanDisks()
+    elseif event == "disk_eject" then
+        fe.clearDisks()
+    elseif event == "mos_favorite_remove" then
+        fe.refresh()
+    elseif event == "mos_refresh_files" then
+        fe.refresh()
+    elseif event == "key" then
+        if engine.input.isKey(keys.leftCtrl) then
+            if     data[2] == keys.x then
+                fe.pasteMode = fe.PasteMode.CUT
+                fe.copySelectionToClipboard()
+            elseif data[2] == keys.c then
+                fe.pasteMode = fe.PasteMode.COPY
+                fe.copySelectionToClipboard()
+            end
+        elseif data[2] == keys.delete then
+            fe.deleteSelection()
+        end
+    end
+end
+
+function inputReader:char()
+    local focus = engine.input.getFocus()
+    if focus == nil or focus.__type ~= "LineEdit" then
+        searchbar:grabFocus()
+    end
+end
+
+if settings.dir then
+    fe.currentPath = settings.dir
+end
+
+fe.openDir(fe.currentPath)
+
+engine:start()
+
+-- Ideas
+-- When opening a folder just add more files to the container instead of replacing them
