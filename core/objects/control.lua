@@ -133,7 +133,7 @@ function Control:updateGlobalPosition()
         c.globalY = self.globalY + c.y
     end
 
-    self:redraw()
+    self:queueDraw()
 end
 
 Control:defineProperty('x', {
@@ -171,7 +171,7 @@ function Control:updatePosition()
 
     self.globalX = self.parent.globalX + self.x
     self.globalY = self.parent.globalY + self.y
-    self:redraw()
+    self:queueDraw()
 end
 
 Control:defineProperty('w', {
@@ -180,7 +180,7 @@ Control:defineProperty('w', {
         local same = o._w == value
         o._w = value 
         if same == false then
-            o:redraw()
+            o:queueDraw()
             o:transformChanged()
             o:_expandChildren()
             o:sizeChanged()
@@ -195,7 +195,7 @@ Control:defineProperty('h', {
         local same = o._h == value
         o._h = value 
         if same == false then
-            o:redraw()
+            o:queueDraw()
             o:transformChanged()
             o:_expandChildren()
             o:sizeChanged()
@@ -276,13 +276,18 @@ function Control:_expandChildren()
 end
 
 function Control:_resize()
-    self.w, self.h = self:getMinimumSize()
+    local minW, minH = self:getMinimumSize()
+    self.w, self.h = math.max(minW, self.w), math.max(minH, self.h)
     if self.parent then
         self.parent:_expandChildren()
     end
 end
 
 function Control:getMinimumSize()
+    if not self.visible then
+        return 0, 0
+    end
+
     local minW = self.minW + self.marginL + self.marginR
     local minH = self.minH
     if self._fitToText then
@@ -311,7 +316,7 @@ Control:defineProperty('text', {
         o._text = value
         if same == false then
             o:_resize()
-            o:redraw()
+            o:queueDraw()
         end
     end
 })
@@ -337,7 +342,7 @@ Control:defineProperty('visible', {
             o:visibilityChanged()
             o:emitSignal(o.visibilityChangedSignal)
             propogateVisiblity(o)
-            o:redraw()
+            o:queueDraw()
         end
     end
 })
@@ -354,7 +359,7 @@ Control:defineProperty('style', {
                     c.style = o._style
                 end
             end
-            o:redraw()
+            o:queueDraw()
             o:styleChanged();
         end
     end
@@ -386,7 +391,7 @@ Control.shadow = false -- Change this to style
 
 function Control:add()
     self:ready()
-    self:redraw()
+    self:queueDraw()
     self.add = function () end -- A bit of a ugly hack to prevent add being called multiple times
 end
 
@@ -398,7 +403,7 @@ function Control:queueFree()
     table.insert(engine.freeQueue, self)
 end
 
-function Control:redraw()
+function Control:queueDraw()
     engine.queueRedraw = true
 end
 
@@ -415,7 +420,7 @@ function Control:render() -- Determines how the control object is drawn
     self:write()
 end
 
-function Control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'redraw' instead
+function Control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'queueDraw' instead
     if self.visible == false or self.rendering == false or self.parent == nil then
         return
     end
@@ -528,7 +533,7 @@ function Control:addChild(o)
     o.treeEntered(o) -- TODO Maybe make recursive
     self:childrenChanged()
     self:_expandChildren()
-    self:redraw()
+    self:queueDraw()
 end
 
 ---@return Control
@@ -548,7 +553,7 @@ function Control:removeChild(o)
 
     o.parent = nil
     self:childrenChanged()
-    self:redraw()
+    self:queueDraw()
 end
 
 function Control:clearAndFreeChildren()
@@ -570,13 +575,13 @@ end
 function Control:toFront()
     if self.parent.children[#self.parent.children] == self then return end
     engine.utils.pushBottom(self.parent.children, self)
-    self:redraw()
+    self:queueDraw()
 end
 
 function Control:toBack()
     if self.parent.children[1] == self then return end
     engine.utils.pushTop(self.parent.children, self)
-    self:redraw()
+    self:queueDraw()
 end
 
 ---@return boolean

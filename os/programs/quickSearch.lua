@@ -14,7 +14,7 @@ qs._skip = true
 
 qs.programs = {}
 
-table.insert(qs.programs, { name = "File Explorer", path = "/mos/os/programs/fileExplorer.lua" })
+table.insert(qs.programs, { name = "File Explorer", path = "/mos/os/programs/files.lua" })
 table.insert(qs.programs, { name = "Shell", path = "/rom/programs/advanced/multishell.lua" })
 table.insert(qs.programs, { name = "Settings", path = "/mos/os/programs/settings.lua" })
 table.insert(qs.programs, { name = "Paint", path = "/mos/os/programs/paint.lua" })
@@ -153,7 +153,7 @@ function qs:refreshList ()
     list:clearList()
     for i, program in ipairs(qs.programs) do
         if count >= 10 then
-            break;
+            break
         end
 
         local continue = true

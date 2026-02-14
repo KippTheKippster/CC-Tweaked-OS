@@ -10,6 +10,7 @@ _G.__wrapper = nil
 
 local n = multishell.getFocus()
 local path = args[1]
+
 local name = fs.getName(path)
 if name:sub(-4) == ".lua" then
     name = name:sub(1, -5)
@@ -20,13 +21,12 @@ multishell.setTitle(n, name)
 term.clear()
 term.setCursorPos(1, 1)
 
-shell.exit()
 
 env._G = _G
 
+shell.exit()
 if fs.exists(path) then
    local ok, err = pcall(mp.runProgram, env, table.unpack(args))
-
     if ok == false then
         error(err, 3)
     end

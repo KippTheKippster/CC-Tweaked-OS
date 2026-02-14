@@ -168,8 +168,8 @@ function changeTheme:pressed()
         local suffix = ".thm"
         if path:sub(-#suffix) == suffix then
             mos.loadTheme(path)
-            mos.engine.root:redraw()
-            engine.root:redraw()
+            mos.engine.root:queueDraw()
+            engine.root:queueDraw()
             fileExplorer:close()
         end
     end, false, "/mos/os/themes/")
@@ -217,7 +217,7 @@ end
 function picker:colorClicked(color)
     mos.profile.backgroundColor = color
     mos.engine.backgroundColor = color
-    mos.engine.root:redraw()
+    mos.engine.root:queueDraw()
     colorReset.visible = true
 end
 

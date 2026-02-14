@@ -28,8 +28,6 @@ function Dropdown:init()
     self.list.rendering = true
     self.list.topLevel = true
     self.list.y = self.h
-    self.list.w = 0
-    self.list.h = 0
     self.list.inheritStyle = false
     self.list.visible = false
     self.list.propogateFocusUp = true
@@ -111,7 +109,7 @@ function Dropdown:addToList(text, clickable)
         end
     end
 
-    self.list:sort()
+    self.list:queueSort()
 
     return b
 end

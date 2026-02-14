@@ -58,7 +58,7 @@ function LineEdit:trueTextChanged()
 	local w = #self.trueText - self.w + self.marginL + 1
 	w = math.max(0, w)
 	self.text = self.trueText:sub(w + 1, #self.trueText)
-    self:redraw()
+    self:queueDraw()
 end
 
 function LineEdit:addText(text, offset)
@@ -94,13 +94,13 @@ function LineEdit:key(key)
         if self.cursorOffset < -#self.text then 
             self.cursorOffset = -#self.text
         end
-        self:redraw()
+        self:queueDraw()
 	elseif key == 262 then --Right
 		self.cursorOffset = self.cursorOffset + 1
         if self.cursorOffset > 0 then
             self.cursorOffset = 0
         end
-        self:redraw()
+        self:queueDraw()
 	end
 end
 

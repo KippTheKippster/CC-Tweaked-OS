@@ -15,7 +15,7 @@ function VContainer:sort()
 	local x = 0
 	for i = 1, #self.children do
 		local c = self.children[i]
-		if c.visible then			
+		if c.visible then
 			c.y = h
 			if self.center == true then
 				x = self.globalX + math.ceil((self.w - c.w) / 2)

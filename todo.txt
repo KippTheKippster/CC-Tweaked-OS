@@ -1,11 +1,10 @@
-If a window opens another window something strange happens with its term (see event_test.lua)
+If a window opens another window something strange happens with its term (see event_test.lua) (some kind of multishellWrapper issue)
 key_up is sent to unfocused windows
 __Globals isn't sent if a program is run through edit mode
 When dragging window the programViewport should not get the mouse_drag event
-Move open with args to mos instead of file explorer (fix so that holding alt for mos favorites works)
-If a directory is selected through favorites open file explorer
 Make a copy theme function
 Delete key in files is weird
 VContainer size is not set to zero when it has no children and fitToChildren is true
 V/HContainer does not respect margin
 If two toplevel objects lay on top of each other the click order is wrong
+LineEdit: if you are trying to erase with cursor to the far left then it will copy all text

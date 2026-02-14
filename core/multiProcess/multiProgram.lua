@@ -7,6 +7,10 @@ local mp = {}
 local tProcesses = {}
 local endQueue = {}
 
+---comment
+---@param p Process
+---@param data table
+---@return ...
 mp.resumeProcess = function (p, data)
     term.redirect(p.window)
     local status = table.pack(coroutine.resume(p.co, table.unpack(data)))
@@ -14,11 +18,23 @@ mp.resumeProcess = function (p, data)
     return table.unpack(status)
 end
 
+---comment
+---@param parentTerm table
+---@param process function
+---@param resume function
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param ... ...
+---@return Process
 mp.launchProcess = function (parentTerm, process, resume, x, y, w, h, ...)
+    ---@class Process
     local p = {}
     local args = table.pack(...)
+    ---@type table
     p.window = window.create(parentTerm, x, y, w, h, true)
-    p.parentTerm = parentTerm
+    p.parentTerm = parentTerm 
     p.co = coroutine.create(function()
         term.redirect(p.window)
         process(p, table.unpack(args))
@@ -32,6 +48,12 @@ mp.launchProcess = function (parentTerm, process, resume, x, y, w, h, ...)
     return p
 end
 
+---comment
+---@param env table
+---@param programPath string
+---@param ... ...
+---@return boolean
+---@return string?
 mp.runProgram = function (env, programPath, ...)
     setmetatable(env, { __index = _G })
 
@@ -62,9 +84,20 @@ local function createMultishellWrapper(p, env, ...)
         _G = _G
     }
 
-    mp.runProgram(env, "rom/programs/advanced/multishell.lua")
+    mp.runProgram(env, "/rom/programs/advanced/multishell.lua")
 end
 
+---comment
+---@param parentTerm table
+---@param programPath string
+---@param extraEnv table
+---@param resume function
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param ... ...
+---@return Process
 mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
     local env = { shell = shell, multishell = multishell }
     env.require, env.package = dofile("/rom/modules/main/cc/require.lua").make(env, "")
@@ -87,11 +120,16 @@ mp.launchProgram = function (parentTerm, programPath, extraEnv, resume, x, y, w,
     return p
 end
 
+---comment
+---@param p Process
 mp.endProcess = function (p)
     p.dead = true
     table.insert(endQueue, p)
 end
 
+---comment
+---@param p Process
+---@param err string
 mp.forceError = function (p, err)
     debug.sethook(p.co, function() error(err) end, "l")
     mp.resumeProcess(p, {"force_error"})

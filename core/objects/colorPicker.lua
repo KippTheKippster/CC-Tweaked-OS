@@ -65,7 +65,7 @@ function ColorPicker:init()
 end
 
 function ColorPicker:sizeChanged()
-    self.list:sort()
+    self.list:queueSort()
 end
 
 function ColorPicker:click()

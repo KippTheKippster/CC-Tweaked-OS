@@ -53,13 +53,13 @@ end
 function ScrollContainer:scroll(dir, x, y)
     local child = self.children[1]
     child.y = child.y - dir
-    self:sort()
+    self:queueSort()
 end
 
 function ScrollContainer:setScroll(position)
     local child = self.children[1]
     child.y = position
-    self:sort()
+    self:queueSort()
 end
 
 

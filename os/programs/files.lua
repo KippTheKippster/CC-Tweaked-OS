@@ -112,7 +112,7 @@ searchbar.trueTextChanged = function (self)
     else
         self.visible = true
     end
-    main:sort()
+    main:queueSort()
     fe.filter(self.text)
 end
 
@@ -213,6 +213,7 @@ end
 ---@class FileButton : Button
 local FileButton = engine.Button:newClass()
 FileButton.selected = false
+FileButton.path = ""
 function FileButton:click()
     engine.Button.click(self)
     fe.selectFileButton(self, engine.input.isKey(keys.leftCtrl) == false)
@@ -242,6 +243,7 @@ function fe.selectFileButton(b, clearSelection)
     end
 
     fe.addToSelection(b)
+    b:refreshStyle()
 end
 
 ---comment
@@ -421,13 +423,13 @@ end
 ---@param filter string
 function fe.filter(filter)
     for _, v in ipairs(fileContainer.children) do
-        if filter == "" or v.path:find(filter) ~= nil then
+        if filter == "" or v.path:find(filter, 1, true) ~= nil then
             v.visible = true
         else
             v.visible = false
         end
     end
-    fileContainer:sort()
+    fileContainer:queueSort()
 end
 
 ---comment
@@ -545,7 +547,7 @@ end
 ---@return FileButton|nil
 function fe.getFocusFileButton()
     if #fe.selection == 0 then
-        return nil 
+        return nil
     else
         return fe.selection[#fe.selection]
     end
@@ -817,6 +819,56 @@ function inputReader:rawEvent(data)
             end
         elseif data[2] == keys.delete then
             fe.deleteSelection()
+        end
+        
+        if data[2] == keys.down then
+            if #fileContainer.children == 0 then
+                return
+            end
+
+            local focus = fe.getFocusFileButton()
+            if focus == nil then
+                fe.selectFileButton(fileContainer:getChild(1), true)
+            else
+                local start = engine.utils.find(fileContainer.children, focus) + 1
+                for i = start, #fileContainer.children do
+                    local c = fileContainer:getChild(i)
+                    if c.visible then
+                        fe.selectFileButton(c, true)
+                        return
+                    end
+                end
+                fe.clearSelection()
+            end
+        elseif data[2] == keys.up then
+            if #fileContainer.children == 0 then
+                return
+            end
+
+            local focus = fe.getFocusFileButton()
+            if focus == nil then
+                fe.selectFileButton(fileContainer:getChild(#fileContainer.children), true)
+            else
+                local start = engine.utils.find(fileContainer.children, focus)
+                for i = 1, start - 1 do
+                    local index = start - i
+                    local c = fileContainer:getChild(index)
+                    if c.visible then
+                        fe.selectFileButton(c, true)
+                        return
+                    end
+                end
+                fe.clearSelection()
+            end
+        elseif data[2] == keys.enter then
+            local focus = fe.getFocusFileButton()
+            if focus then
+                if fs.isDir(focus.path) then
+                    fe.openDir(focus.path)
+                else
+                    fe.openFile(focus.path, engine.input.isKey(keys.leftCtrl), engine.input.isKey(keys.leftAlt))
+                end
+            end
         end
     end
 end

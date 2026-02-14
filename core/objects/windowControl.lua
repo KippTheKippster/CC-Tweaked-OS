@@ -69,11 +69,11 @@ function WindowControl:init()
     self.scaleButton.propogateFocusUp = true
 
     self.scaleButton.drag = function(o, relativeX, relativeY, x, y)
-        o.parent:setFullscreen(false, relativeX, relativeY, x, y)
+        o.parent:setWindow(false, relativeX, relativeY, x, y)
     end
 
     self.scaleButton.doublePressed = function(o)
-        o.parent:setFullscreen(true)
+        o.parent:setWindow(true)
     end
 end
 
@@ -85,7 +85,7 @@ function WindowControl:close()
     self:queueFree() --TODO Re-add
 end
 
-function WindowControl:setFullscreen(fullscreen, relativeX, relativeY, x, y)
+function WindowControl:setWindow(fullscreen, relativeX, relativeY, x, y)
     if fullscreen == true then
         local w, h = term.getSize()
         local wi = self
@@ -129,10 +129,6 @@ function WindowControl:setFullscreen(fullscreen, relativeX, relativeY, x, y)
             wi:emitSignal(wi.fullscreenChangedSignal)
         end
     end
-end
-
-function WindowControl:click()
-    --self:toFront()
 end
 
 function WindowControl:drag(x, y)

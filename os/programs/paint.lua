@@ -327,7 +327,7 @@ paint.newImage = function (w, h)
     paint.canvas = paint.createCanvas(w, h)
     paint.fitSprite()
     paint.centerSprite()
-    sprite:redraw()
+    sprite:queueDraw()
 end
 
 paint.openImage = function (file)
@@ -336,7 +336,7 @@ paint.openImage = function (file)
     paint.squareCanvas(paint.canvas)
     paint.fitSprite()
     paint.centerSprite()
-    sprite:redraw()
+    sprite:queueDraw()
     __window.text = "Paint " .. fs.getName(file)
 end
 
@@ -351,13 +351,13 @@ paint.setEdited = function (edited)
     if paint.edited == false and edited then
         paint.edited = true
         __window.text = __window.text .. "*"
-        __window:redraw()
+        __window:queueDraw()
     end
 
     if paint.edited == true and edited == false then
         paint.edited = false
         __window.text = __window.text:sub(1, #__window.text - 1)
-        __window:redraw()
+        __window:queueDraw()
     end
 end
 --#endregion
@@ -468,7 +468,7 @@ function sprite:rawEvent(data)
             elseif key == keys.delete then
                 if paint.selectionCanvas then
                     paint.clearCanvas(paint.selectionCanvas)
-                    selectionBox:redraw()
+                    selectionBox:queueDraw()
                 end
             end
         end
@@ -588,7 +588,7 @@ function sprite:click(x, y, button)
         local color = paint.getCanvasPixel(paint.canvas, x, y)
         if color ~= fillColor then    
             pcall(fill, paint.canvas, color, fillColor, queue)
-            self:redraw()
+            self:queueDraw()
         end
     end
 end
@@ -748,7 +748,7 @@ for i = 0, 16 do
             paint.colorR = c.colorIndex
             colorR.style = c.style
         end
-        c:redraw()
+        c:queueDraw()
     end
 end
 
@@ -885,15 +885,15 @@ if mos then
         elseif text == "Trim" then
             paint.trimCanvas(paint.canvas)
             paint.fitSprite()
-            sprite:redraw()
+            sprite:queueDraw()
             paint.setEdited()
         elseif text == "Fill" then
             paint.fillCanvas(paint.canvas, paint.colorL)
-            sprite:redraw()
+            sprite:queueDraw()
             paint.setEdited()
         elseif text == "Clear" then
             paint.clearCanvas(paint.canvas)
-            sprite:redraw()
+            sprite:queueDraw()
             paint.setEdited()
         end
 

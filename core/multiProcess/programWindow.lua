@@ -93,10 +93,6 @@ function ProgramWindow:init()
         self:close()
     end
 
-    self.scaleButton.up = function(o)
-        o.parent:redraw()
-    end
-
     self.minimizeButton.dragSelectable = true
     self.exitButton.dragSelectable = true
     self.splitLeftButton.dragSelectable = true

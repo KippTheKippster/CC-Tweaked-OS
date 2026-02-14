@@ -47,7 +47,9 @@ end
 function ProgramViewport:launchProgram(parentTerm, programPath, extraEnv, ...)
     self.parentTerm = parentTerm
     self.program = multiProgram.launchProgram(parentTerm, programPath, extraEnv, function (data)
-        return self:unhandledEvent(data)
+        if self:isValid() then
+            return self:unhandledEvent(data)
+        end
     end, self.globalX + 1, self.globalY + 1, self.w, self.h, ...)
 end
 
@@ -142,7 +144,7 @@ function ProgramViewport:unhandledEvent(data)
             return true
         end
 
-        self:redraw()
+        self:queueDraw()
 
         return table.unpack(result)
     end

@@ -10,13 +10,25 @@ Container.visible = true
 Container.rendering = false
 Container.sortOnTransformChanged = true
 Container.fitToText = false
+Container._sortQueued = false
 
 function Container:childrenChanged()
-	self:sort()
+	self:queueSort()
 end
 
 function Container:transformChanged()
 	if self.sortOnTransformChanged == true then
+		self:queueSort()
+	end
+end
+
+function Container:queueSort()
+	self._sortQueued = true
+end
+
+function Container:draw()
+	control.draw(self)
+	if self._sortQueued then
 		self:sort()
 	end
 end

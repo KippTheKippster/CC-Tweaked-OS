@@ -9,13 +9,32 @@ end
 mos.latestMosOption = ""
 
 local runningProgram = shell.getRunningProgram()
-local mosPath = fs.getDir(fs.getDir(runningProgram))
+local mosPath =  "/" .. fs.getDir(fs.getDir(runningProgram))
 local mosDotPath = "." .. mosPath:gsub("/", ".")
 local corePath = mosPath .. "/core"
 _G.corePath = corePath
 local coreDotPath = mosDotPath .. ".core"
 local osPath = mosPath .. "/os"
 local osDotPath = mosDotPath .. ".os"
+
+---comment
+---@param name string
+---@return string
+local function toMosPath(name)
+    return fs.combine(mosPath, name)
+end
+
+---@param name string
+---@return string
+local function toOsPath(name)
+    return fs.combine(osPath, name)
+end
+
+---@param name string
+---@return string
+local function toCorePath(name)
+    return fs.combine(corePath, name)
+end
 
 ---@type Engine
 local engine = require(coreDotPath .. ".engine")
@@ -55,11 +74,11 @@ local defaultTheme = {
 
 ---@class Profile
 local defaultProfile = {
-    backgroundIcon = osPath .. "/textures/backgrounds/tux.nfp",
+    backgroundIcon = toOsPath("/textures/backgrounds/tux.nfp"),
     backgroundUpdateTime = 0.1,
     fileExecptions = {
         [".nfp"] = {
-            program = osPath .."/programs/paint.lua",
+            program = toOsPath("/programs/paint.lua"),
             fullscreen = false
         },
         [".txt"] = { program = "/rom/programs/edit.lua" }
@@ -248,7 +267,7 @@ mos.profile = nil
 
 mos.loadProfile()
 mos.loadTheme(mos.profile.theme)
-engine.utils.saveTable(defaultTheme, osPath .. "/themes/defaultTheme.thm")
+engine.utils.saveTable(defaultTheme, toOsPath("/themes/defaultTheme.thm"))
 
 --Objects
 --Background
@@ -450,10 +469,10 @@ local function windowFocusChanged(window)
     end
 
     currentWindow = window
-    if isFullscreen() == false then
+    if not isFullscreen() then
         windowContainer:toFront()
     end
-    window:redraw()
+    window:queueDraw()
 end
 
 local function addWindow(w)
@@ -487,7 +506,7 @@ local function addWindow(w)
     w:connectSignal(w.focusChangedSignal, windowFocusChanged, w)
     w:grabFocus()
 
-    w:redraw()
+    w:queueDraw()
 end
 
 ---Creates a new window running the program of path, unless you want to specify the position of the window use 'openProgram' instead
@@ -529,7 +548,7 @@ local function launchProgram(name, path, x, y, w, h, ...)
     extraEnv.__Global = __Global
 
     viewport:launchProgram(engine.screenBuffer, path, extraEnv, ...)
-    viewport:unhandledEvent({}) -- Forces program to start
+    --viewport:unhandledEvent({}) -- Forces program to start
 
     addWindow(window)
 
@@ -592,7 +611,7 @@ end
 ---@param path string
 ---@return WindowControl
 function mos.openProgramWithArgs(path)
-    return mos.launchProgram("Args '" .. fs.getName(path) .. "'", "/mos/os/programs/writeArgs.lua", 3, 3, 24, 2, function (data)
+    return mos.launchProgram("Args '" .. fs.getName(path) .. "'", toOsPath("programs/writeArgs.lua"), 3, 3, 24, 2, function (data)
         mos.openProgram(path, table.unpack(data))
     end, path)
 end
@@ -602,7 +621,7 @@ end
 ---@param callback function|nil
 ---@return ProgramWindow
 function mos.openDir(path, callback)
-    local w = mos.openProgram("/mos/os/programs/files.lua", callback, { dir =  path })
+    local w = mos.openProgram(toOsPath("/programs/files.lua"), callback, { dir =  path })
     w.text = "File Explorer"
     return w
 end
@@ -614,7 +633,7 @@ end
 ---@param dir string|nil
 ---@return ProgramWindow
 function mos.openFileDialogue(title, callback, saveMode, dir)
-    local w = mos.openProgram("/mos/os/programs/files.lua", callback, { saveMode = saveMode, dir = dir })
+    local w = mos.openProgram(toOsPath("programs/files.lua"), callback, { saveMode = saveMode, dir = dir })
     w.text = title
     return w
 end
@@ -654,7 +673,7 @@ function mosDropdown:optionPressed(i)
     elseif text == "File Explorer" then
         mos.openDir("")
     elseif text == "Settings" then
-        openProgram(osPath .. "/programs/settings.lua").text = "Settings"
+        openProgram(toOsPath("/programs/settings.lua")).text = "Settings"
     end
 end
 
@@ -750,6 +769,9 @@ mos.backgroundIcon = backgroundIcon
 mos.bindTool = bindTool
 mos.addToToolbar = addToToolbar
 mos.removeFromToolbar = removeFromToolbar
+mos.toMosPath = toMosPath
+mos.toOsPath = toOsPath
+mos.toCorePath = toCorePath
 ---@type ProgramWindow|nil
 mos.fullscreenWindow = nil
 mos.quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
