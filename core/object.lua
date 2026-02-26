@@ -145,7 +145,10 @@ function Object:free()
     setmetatable(self, mt)
 end
 
---Defines a new property
+---Defines a new get set property
+---@param key string
+---@param methods table
+---@param redefine boolean|nil
 function Object:defineProperty(key, methods, redefine)
     if self.__properties[key] ~= nil and redefine ~= true then
         error("Attempting to define an already defined property: " .. key .. " " .. tostring(self) .. " . " .. tostring(redefine) , 2)

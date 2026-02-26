@@ -7,34 +7,42 @@ return function(object, engine, style)
 local Control = object:newClass()
 Control.__type = "Control"
 
+---Global X, the x offset in the term irrelevant of the parent's position
 ---@type number
-Control.globalX = nil
-Control._globalX = 0
+Control.gx = nil
+Control._gx = 0
 
+---Global Y, the y position in the term irrelevant of the parent's position
 ---@type number
-Control.globalY = nil
-Control._globalY = 0
+Control.gy = nil
+Control._gy = 0
 
+---Local X, the x offset from the parent
 ---@type number
 Control.x = nil
 Control._x = 0
 
+---Local Y, the y offset from the parent
 ---@type number
 Control.y = nil
 Control._y = 0
 
+---Width
 ---@type number
 Control.w = nil
 Control._w = 1
 
+---Height
 ---@type number
 Control.h = nil
 Control._h = 1
 
+---Minimum Width, the absolute minimum width of the object, note that the actual minimum width can be higher (see control.getMinimumSize)
 ---@type number
 Control.minW = nil
 Control._minW = 1
 
+---Minimum Height, the absolute minimum height of the object, note that the actual minimum height can be higher (see control.getMinimumSize)
 ---@type number
 Control.minH = nil
 Control._minH = 1
@@ -98,40 +106,43 @@ Control.visibilityChangedSignal = Control:createSignal()
 Control.focusChangedSignal = Control:createSignal()
 Control.transformChangedSignal = Control:createSignal()
 
-Control:defineProperty('globalX', {
-    get = function(o) return o._globalX end,
+Control:defineProperty('gx', {
+    get = function(o) return o._gx end,
     set = function(o, value)
-        local same = o._globalX == value
-        o._globalX = value
+        local same = o._gx == value
+        o._gx = value
         if same == false then
+            --o._x = o.parent._globalX - o._globalX
             o:updateGlobalPosition()
             o:transformChanged()
-            o:globalPositionChanged()
-            o:emitSignal(o.transformChanged)
+            o:emitSignal(o.transformChangedSignal)
         end
     end
 })
 
-Control:defineProperty('globalY', {
-    get = function(o) return o._globalY end,
-    set = function(o, value) 
-        local same = o._globalY == value
-        o._globalY = value 
+Control:defineProperty('gy', {
+    get = function(o) return o._gy end,
+    set = function(o, value)
+        local same = o._gy == value
+        o._gy = value
         if same == false then
+            --o._y = o.parent._globalY - o._globalY
             o:updateGlobalPosition()
             o:transformChanged()
-            o:globalPositionChanged()
-            o:emitSignal(o.transformChanged)
+            o:emitSignal(o.transformChangedSignal)
         end
-    end 
+    end
 })
 
 function Control:updateGlobalPosition()
     for i = 1, #self.children do
-        local c = self.children[i]
-        c.globalX = self.globalX + c.x
-        c.globalY = self.globalY + c.y
+        local c = self:getChild(i)
+        c.gx = self.gx + c.x
+        c.gy = self.gy + c.y
     end
+
+    --self._x = self.parent.globalX - self.globalX
+    --self._y = self.parent.globalY - self.globalY
 
     self:queueDraw()
 end
@@ -144,7 +155,6 @@ Control:defineProperty('x', {
         if same == false then
             o:updatePosition()
             o:transformChanged()
-            o:positionChanged()
             o:emitSignal(o.transformChanged)
         end
     end
@@ -158,7 +168,6 @@ Control:defineProperty('y', {
         if same == false then
             o:updatePosition()
             o:transformChanged()
-            o:positionChanged()
             o:emitSignal(o.transformChanged)
         end
     end
@@ -169,14 +178,14 @@ function Control:updatePosition()
         error("Unable to update position of orphan control (parent == nil)", 2)
     end
 
-    self.globalX = self.parent.globalX + self.x
-    self.globalY = self.parent.globalY + self.y
+    self.gx = self.parent.gx + self.x
+    self.gy = self.parent.gy + self.y
     self:queueDraw()
 end
 
 Control:defineProperty('w', {
     get = function(o) return o._w end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._w == value
         o._w = value 
         if same == false then
@@ -251,6 +260,14 @@ Control:defineProperty('expandH', {
     end
 })
 
+---@param text string?
+function Control:init(text)
+    object.init(self, text)
+    if text then
+        self.text = text
+    end
+end
+
 function Control:_expandChildren()
     for i = 1, #self.children do
         local c = self.children[i]
@@ -317,6 +334,7 @@ Control:defineProperty('text', {
         if same == false then
             o:_resize()
             o:queueDraw()
+            o:textChanged()
         end
     end
 })
@@ -407,20 +425,22 @@ function Control:queueDraw()
     engine.queueRedraw = true
 end
 
-function Control:render() -- Determines how the control object is drawn
+-- Determines how the control object is drawn
+function Control:render()
     --SHADOW
     self:drawShadow()
     --PANEL
-    local left = self._globalX + 1
-    local up = self._globalY + 1
-    local right = self._globalX + self._w
-    local down = self._globalY + self._h    
+    local left = self._gx + 1
+    local up = self._gy + 1
+    local right = self._gx + self._w
+    local down = self._gy + self._h    
     self:drawPanel(left, up, right, down)
     --TEXT
     self:write()
 end
 
-function Control:draw() -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'queueDraw' instead
+-- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'queueDraw' instead
+function Control:draw()
     if self.visible == false or self.rendering == false or self.parent == nil then
         return
     end
@@ -436,12 +456,12 @@ function Control:drawShadow()
     term.setBackgroundColor(self._style.shadowColor)
 
     for i = 2 - self._style.shadowOffsetU, self.h + 1 + self._style.shadowOffsetD do
-        term.setCursorPos(self.globalX + self.w + 1, self.globalY + i)
+        term.setCursorPos(self.gx + self.w + 1, self.gy + i)
         term.write(string.char(127))
     end
 
     for i = 2 - self._style.shadowOffsetL, self.w + self._style.shadowOffsetR do
-        term.setCursorPos(self.globalX + i, self.globalY + self.h + 1)
+        term.setCursorPos(self.gx + i, self.gy + self.h + 1)
         term.write(string.char(127))
     end
 end
@@ -487,7 +507,7 @@ local function getTextPosition(_x, _y, _w, _h, center, text)
 end
 
 function Control:getTextPosition()
-    return getTextPosition(self._globalX, self._globalY, self._w, self._h, self.centerText, self.text)
+    return getTextPosition(self._gx, self._gy, self._w, self._h, self.centerText, self.text)
 end
 
 function Control:write()
@@ -528,8 +548,8 @@ function Control:addChild(o)
     o:add()
 	o.parent = self
     o.style = self.style
-    o.globalX = self.globalX + o.x
-    o.globalY = self.globalY + o.y
+    o.gx = self.gx + o.x
+    o.gy = self.gy + o.y
     o.treeEntered(o) -- TODO Maybe make recursive
     self:childrenChanged()
     self:_expandChildren()
@@ -563,13 +583,15 @@ function Control:clearAndFreeChildren()
     self.children = {}
 end
 
+---@param button integer
+---@param rx number
+---@param ry number
 ---@param x number
 ---@param y number
----@param button integer
-function Control:drag(x, y, button)
+function Control:drag(button, x, y, rx, ry)
     if not self.draggable then return end
-    self.x = self.x + x
-    self.y = self.y + y
+    self.gx = self.gx + rx
+    self.gy = self.gy + ry
 end
 
 function Control:toFront()
@@ -608,10 +630,11 @@ end
 function Control:isOnScreen()
     local w, h = engine.screenBuffer.getSize()
     return (
-        self.globalX >= 0 and
-        self.globalY >= 0 and
-        self.globalX + self.w <= w and
-        self.globalY + self.h <= h)
+        self.gx >= 0 and
+        self.gy >= 0 and
+        self.gx + self.w <= w and
+        self.gy + self.h <= h
+    )
 end
 
 function Control:grabFocus()
@@ -622,49 +645,60 @@ function Control:releaseFocus()
     engine.input.releaseControlFocus(self)
 end
 
-function Control:grabCursorControl()
+function Control:grabCursor()
     engine.input.setCursorControl(self)
     self:updateCursor()
 end
 
-function Control:releaseCursorControl()
+function Control:releaseCursor()
     engine.input.setCursorControl(nil)
+end
+
+function Control:grabInput()
+    engine.input.setInputControl(self)
+end
+
+function Control:releaseInput()
+    engine.input.setInputControl(nil)
 end
 
 --Event Functions that should be overwritten
 function Control:ready() end
 function Control:treeEntered() end
 function Control:childrenChanged() end
-function Control:click(button, x, y) end
+function Control:down(button, x, y) end
+function Control:up(button, x, y) end
 function Control:pressed(button, x, y) end
-function Control:doublePressed() end
-function Control:up() end
-function Control:scroll(dir) end
+function Control:doublePressed(button, x, y) end
+function Control:scroll(dir, x, y) end
 function Control:focusChanged() end
 function Control:updateCursor() end
-function Control:positionChanged() end
-function Control:globalPositionChanged() end
-function Control:sizeChanged()  end
+function Control:input(data) end
+
+function Control:textChanged() end
+function Control:sizeChanged() end
 function Control:transformChanged()  end
 function Control:styleChanged() end
 function Control:visibilityChanged() end
 
 ---@param p Control
 ---@param c Control
-local function addControl(p, c)
-    local child = c:new()
+local function addControl(p, c, ...)
+    local child = c:new(...)
     p:addChild(child)
     return child
 end
 
+---@param text string?
 ---@return Control
-function Control:addControl()
-    return addControl(self, engine.Control)
+function Control:addControl(text)
+    return addControl(self, engine.Control, text)
 end
 
+---@param text string?
 ---@return Button
-function Control:addButton()
-    return addControl(self, engine.Button)
+function Control:addButton(text)
+    return addControl(self, engine.Button, text)
 end
 
 ---@return ColorPicker
@@ -677,9 +711,10 @@ function Control:addContainer()
     return addControl(self, engine.Container)
 end
 
+---@param text string?
 ---@return Dropdown
-function Control:addDropdown()
-    return addControl(self, engine.Dropdown)
+function Control:addDropdown(text)
+    return addControl(self, engine.Dropdown, text)
 end
 
 ---@return FlowContainer

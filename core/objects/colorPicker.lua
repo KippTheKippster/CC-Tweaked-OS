@@ -1,5 +1,8 @@
+---@param control Control
+---@param input Input
+---@param style Style
 ---@return ColorPicker
-return function(control, input, style, engine)
+return function(control, input, style)
 ---@class ColorPicker : Control
 local ColorPicker = control:newClass()
 ColorPicker.__type = "ColorPicker"
@@ -10,8 +13,6 @@ ColorPicker.open = false
 ColorPicker.dragSelectable = true
 ColorPicker.listQueue = nil
 ColorPicker.shortcutSelection = nil
-ColorPicker.optionNormalStyle = ColorPicker.normalStyle
-ColorPicker.optionClickedStyle = ColorPicker.clickedStyle
 ColorPicker.optionShadow = false
 ColorPicker.color = 0
 
@@ -30,7 +31,7 @@ local function addColor(picker, color)
     b.text = ""
     b.dragSelectable = true
     b.propogateFocusUp = true
-    b.click = function (self)
+    b.down = function (self)
         picker.style = self.style
         picker:colorClicked(self.style.backgroundColor)
     end
@@ -58,17 +59,21 @@ function ColorPicker:init()
         addColor(self, 2 ^ i)
     end
 
-    ---@type Input
-    input.addMouseEventListener(self)
+    input.addRawEventListener(self)
     self:_expandChildren()
     self.list:_expandChildren()
+end
+
+function ColorPicker:queueFree()
+    input.removeRawEventListener(self)
+    control.queueFree(self)
 end
 
 function ColorPicker:sizeChanged()
     self.list:queueSort()
 end
 
-function ColorPicker:click()
+function ColorPicker:down()
     self.list.visible = true
 end
 
@@ -78,8 +83,8 @@ function ColorPicker:focusChanged()
     end
 end
 
-function ColorPicker:mouseEvent(event, button)
-    if event == "mouse_up" then
+function ColorPicker:rawEvent(data)
+    if data[1] == "mouse_up" then
         self.list.visible = false
     end
 end

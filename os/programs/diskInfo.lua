@@ -9,6 +9,10 @@ if not disk.isPresent(diskName) then
     error("Disk '" .. diskName .. "' is not present", 0)
 end
 
+if __mos then
+    __mos.applyTheme(engine)
+end
+
 local style = engine.getDefaultStyle()
 style.backgroundColor = colors.white
 
@@ -17,12 +21,15 @@ main.rendering = true
 main.expandW = true
 main.expandH = true
 
+local Line = engine.Control:new()
+Line.expandW = true
+Line.h = 1
+Line.text = text
+
 local function newLine(text)
-    local line = main:addControl()
-    line.expandW = true
-    line.h = 1
-    line.text = text
-    return line
+    local l = Line:new()
+    l.text = text
+    return l
 end
 
 newLine("")

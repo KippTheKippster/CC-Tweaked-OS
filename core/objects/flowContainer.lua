@@ -14,7 +14,7 @@ function FlowContainer:sort()
 		c.y = h
 		w = w + c.w
 		nextH = math.max(nextH, h + c.h)
-		if w > self.w then
+		if w >= self.w then
 			w = 0
 			h = nextH
 			self._h = h

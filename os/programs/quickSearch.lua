@@ -7,10 +7,12 @@ local qs = engine.LineEdit:new()
 qs.h = 1
 qs.expandW = true
 qs.visible = false
-qs.focusStyle = mos.styles.style
-
-qs.marginL = 2
+qs.focusStyle = mos.engine.normalStyle
+--qs.marginL = 2
 qs._skip = true
+function qs:init()
+    qs.x = 2
+end
 
 qs.programs = {}
 
@@ -40,21 +42,27 @@ while index <= #dirs do
 end
 
 
-function qs:trueTextChanged ()
-    engine.LineEdit.trueTextChanged(self)
+function qs:textChanged()
+    engine.LineEdit.textChanged(self)
     qs:refreshList()
 end
 
-function qs:char (char)
-    if self._skip == false then
-        engine.LineEdit.char(self, char)
+function qs:input(data)
+    if data[1] == "char" then
+        if self._skip == false then
+            engine.LineEdit.input(self, data)
+        end
+        self._skip = false
+    else
+        engine.LineEdit.input(self, data)
     end
-    self._skip = false
 end
+
 
 function qs:open()
     self._skip = true
-    self.trueText = ""
+    self.cursorX = 0
+    self.text = ""
     self:grabFocus()
     self:refreshList()
     self.list.shortcutSelection = self.list.children[1]
@@ -103,47 +111,13 @@ list.mouseIgnore = true
 qs.list = list
 
 local icon = qs:addControl()
-icon.w = 1
-icon.h = 1
 icon.text = string.char(187)
-
+icon.fitToText = false
+icon.w = 2
+icon.h = 1
+icon.x = -2
 
 function qs:refreshList ()
-    --[[
-    local function getFiles(dir, list)
-        local files = fs.list(dir)
-        local dirs = {}
-        for k, file in ipairs(files) do
-            if fs.isDir(fs.combine(dir, file)) then
-                table.insert(dirs, file)
-            else
-                table.insert(list, fs.combine(dir, file))
-            end
-        end
-
-        for _, newDir in ipairs(dirs) do
-            if newDir ~= "rom" and string.sub(newDir, 0, 1) ~= "." then
-                getFiles(fs.combine(dir, newDir), list)
-            end
-        end
-
-        return list
-    end
-
-    if fs.exists("/.mosdata/paths") == false then
-        return
-    end
-
-    local shortcuts = {}
-    for path, fav in pairs(mos.profile.favorites) do
-        table.insert(shortcuts, { name = fav.name, file = path })
-    end
-
-    for _, file in ipairs(fs.list("/.mosdata/paths")) do
-        table.insert(shortcuts, { name = file, path = fs.combine("/.mosdata/paths", file) })
-    end
-    ]]--
-
     local pathSelection = ""
     if list.shortcutSelection then
         pathSelection = list.shortcutSelection.text
@@ -162,7 +136,7 @@ function qs:refreshList ()
             continue = false
         end
 
-        if program.name:lower():find(qs.trueText:lower()) == nil then --and fs.isDir(files[i]) == false then
+        if program.name:lower():find(qs.text:lower()) == nil then --and fs.isDir(files[i]) == false then
             continue = false
         end
 
@@ -175,7 +149,7 @@ function qs:refreshList ()
 
             if option.text == pathSelection then
                 list.shortcutSelection = option
-                option:click()
+                option:down()
             end
 
             count = count + 1

@@ -1,4 +1,7 @@
-local corePath = _G.__Global.coreDotPath
+local corePath = ".mos.core"
+if _G.__Global then
+    corePath = _G.__Global.coreDotPath
+end
 
 ---@type Engine
 local engine = require(corePath .. ".engine")
@@ -422,7 +425,7 @@ selectionBox.style.border = true
 selectionBox.style.background = false
 selectionBox.style.borderColor = colors.white
 
-function background:click()
+function background:down()
     if selectionBox.visible and paint.selectionCanvas then
         selectionBox.visible = false
         paint.pasteCanvasArea(paint.selectionCanvas, paint.canvas, selectionBox.x, selectionBox.y)
@@ -534,14 +537,14 @@ function sprite:setPixel(x, y, button)
     if color == -1 then
         term.setBackgroundColor(colors.gray)
         term.setTextColor(colors.lightGray)
-        term.setCursorPos(x + self.globalX, y + self.globalY)
+        term.setCursorPos(x + self.gx, y + self.gy)
         term.write(string.char(127))
     else
-        paintutils.drawPixel(x + self.globalX, y + self.globalY, color)
+        paintutils.drawPixel(x + self.gx, y + self.gy, color)
     end
 end
 
-function sprite:click(x, y, button)
+function sprite:down(x, y, button)
     if paint.tool == "pen" then
         sprite:setPixel(x, y, button)
     elseif paint.tool == "selection" then
@@ -593,7 +596,7 @@ function sprite:click(x, y, button)
     end
 end
 
-function sprite:drag(relativeX, relativeY, x, y, button)
+function sprite:drag(button, x, y, rx, ry)
     if x < 1 or y < 1 or x > self.w or y > self.h then return end
     if paint.tool == "pen" then
         sprite:setPixel(x, y, button)
@@ -628,14 +631,14 @@ function sprite:up()
     end
 end
 
-function selectionBox:drag(relativeX, relativeY)
-    self.x = self.x + relativeX
-    self.y = self.y + relativeY
+function selectionBox:drag(button, x, y, rx, ry)
+    self.x = self.x + rx
+    self.y = self.y + ry
 end
 
 function selectionBox:render()
     if paint.selectionCanvas ~= nil then
-        paintutils.drawImage(paint.selectionCanvas, self.globalX + 1, self.globalY + 1)
+        paintutils.drawImage(paint.selectionCanvas, self.gx + 1, self.gy + 1)
     end
 
     engine.Control.render(self)
@@ -786,7 +789,7 @@ local function createEditField(fieldName, text, parent)
     edit.inheritStyle = false
     edit.h = 1
     edit.expandW = true
-    edit.trueText = text
+    edit.text = text
     edit.normalStyle = editStyle
     edit.focusStyle = editFocusStyle
     edit.style = editStyle
@@ -825,8 +828,8 @@ local function createResizeDialogue(fn)
     wi.ok.centerText = true
     wi.ok.anchorH = wi.Anchor.DOWN
     wi.ok.pressed = function ()
-        local w = tonumber(wi.wEdit.trueText) or _w
-        local h = tonumber(wi.hEdit.trueText) or _h
+        local w = tonumber(wi.wEdit.text) or _w
+        local h = tonumber(wi.hEdit.text) or _h
         fn(w, h)
         wi:queueFree()
         --wi.wEdit:queueFree()

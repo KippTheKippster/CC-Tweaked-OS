@@ -1,12 +1,18 @@
+---@param engine Engine
+---@param collision Collision
 return function(engine, collision)
-
 local targetTerm = term.current()
-
 local inputConsumed = false
+local consumedEvents = {}
 local mouse = {}
+---@type Control?
 mouse.current = nil
-mouse.currentClick = nil
+---@type Control?
+mouse.clickControl = nil
+---@type Control?
 mouse.cursorControl = nil
+---@type Control?
+mouse.inputControl = nil
 mouse.clickTime = os.clock()
 mouse.doublePressed = false
 mouse.dragX = 0
@@ -15,6 +21,8 @@ mouse.dragY = 0
 local function isValid(o)
     if o == nil then
         return false
+    elseif type(o) == "function" then
+        return true
     elseif o.isValid == nil or o:isValid() == true then
         return true
     else
@@ -22,10 +30,15 @@ local function isValid(o)
     end
 end
 
+---comment
+---@param c Control
+---@param x number
+---@param y number
+---@return boolean
 local function isControlInPoint(c, x, y)
     return collision.inArea(
-        x, y, math.floor(c.globalX) + 1, math.floor(c.globalY) + 1, math.floor(c.w) - 1, math.floor(c.h) - 1
-        )
+        x, y, math.floor(c.gx) + 1, math.floor(c.gy) + 1, math.floor(c.w) - 1, math.floor(c.h) - 1
+    )
 end
 
 local function getBranchInPoint(root, x, y)
@@ -34,7 +47,7 @@ local function getBranchInPoint(root, x, y)
     end
 
     for i = 1, #root.children do
-        local child = root.children[#root.children - i + 1]
+        local child = root:getChild(#root.children - i + 1)
         local branchInPoint = getBranchInPoint(child, x, y)
         if branchInPoint then
             return branchInPoint
@@ -49,12 +62,13 @@ local function getBranchInPoint(root, x, y)
 end
 
 ---Returns a list with all the root top level controls
----@param parent Control
+---@param root Control
 ---@param list table
 ---@return table
-local function getTopLevelControls(parent, list)
-    for i, child in ipairs(parent.children) do
-        if child.topLevel then
+local function getTopLevelControls(root, list)
+    for i = 1, #root.children do
+        local child = root:getChild(#root.children - i + 1)
+        if child.topLevel and child:isVisible() then
             table.insert(list, child)
         else
             getTopLevelControls(child, list)
@@ -80,7 +94,7 @@ function mouse.getControlInPoint(x, y)
     return getBranchInPoint(engine.root, x, y)
 end
 
----Returns the focus owner of control c 
+---Returns the focus owner of control c
 ---@param c Control
 ---@return Control|nil
 function mouse.getFocusOwner(c)
@@ -92,22 +106,6 @@ function mouse.getFocusOwner(c)
         return c
     else
         return mouse.getFocusOwner(c.parent)
-    end
-end
-
-local focusChangedListeners = {}
-
-local function addFocusChangedListener(o)
-    table.insert(focusChangedListeners, o)
-end
-
-local function focusChangedEvent(o)
-    for i = 1, #focusChangedListeners do
-        if type(focusChangedListeners[i]) == "table" then
-            focusChangedListeners[i]:focusChangedEvent(o)
-        elseif type(focusChangedListeners[i]) == "function" then
-            focusChangedListeners[i](o)
-        end
     end
 end
 
@@ -134,7 +132,6 @@ function mouse.changeFocus(o)
     end
 
     if owner ~= nil then
-        focusChangedEvent(owner)
         owner:focusChanged()
         owner:emitSignal(owner.focusChangedSignal)
     end
@@ -151,22 +148,22 @@ function mouse.click(button, x, y)
     mouse.dragX = x
     mouse.dragY = y
     local c = mouse.getControlInPoint(x, y)
-    mouse.currentClick = c
+    mouse.clickControl = c
     if mouse.current ~= c then -- If user clicks on a new control (or nothing)
         mouse.clickTime = os.clock()
         mouse.changeFocus(c)
         if c then
-            c:click(x - c.globalX, y - c.globalY, button)
+            c:down(button, x - c.gx, y - c.gy)
         end
     elseif c then -- If user clicks on the same control
-        c:click(x - c.globalX, y - c.globalY, button)
-		local time = os.clock()
-		local delta = time - mouse.clickTime
-		mouse.clickTime = time
-		if delta < 0.33 then
-			c:doublePressed()
-		end
-	end
+        c:down(button, x - c.gx, y - c.gy)
+        local time = os.clock()
+        local delta = time - mouse.clickTime
+        mouse.clickTime = time
+        if delta < 0.33 then
+            c:doublePressed(button, x, y)
+        end
+    end
 end
 
 local function grabControlFocus(c)
@@ -189,32 +186,44 @@ local function getCursorControl()
     end
 end
 
-function mouse.up(button, x, y)
-    mouse.currentClick = nil
-    if isValid(mouse.current) == false then return end
-    mouse.current:up(x, y, button)
-    mouse.current:pressed(x, y, button)
+local function setInputControl(c)
+    mouse.inputControl = c
 end
 
-function mouse.drag(button, x, y) 
+local function getInputControl()
+    if isValid(mouse.inputControl) then
+        return mouse.inputControl
+    else
+        return nil
+    end
+end
+
+function mouse.up(button, x, y)
+    mouse.clickControl = nil
+    if isValid(mouse.current) == false then return end
+    mouse.current:up(button, x, y)
+    mouse.current:pressed(button, x, y)
+end
+
+function mouse.drag(button, x, y)
     if isValid(mouse.current) == false then return end
     local relativeX = x - mouse.dragX
     local relativeY = y - mouse.dragY
     local c = mouse.getControlInPoint(x, y)
     if c ~= nil and c ~= mouse.current and c.dragSelectable == true and mouse.current.dragSelectable == true then
-        mouse.current:up()
+        mouse.current:up(button, x, y)
         mouse.changeFocus(c)
-        c:click(x - c.globalX, y - c.globalY, button)
+        c:down(button, x - c.gx, y - c.gy)
     end
     mouse.dragX = x
     mouse.dragY = y
-    mouse.current:drag(relativeX, relativeY, x - mouse.current.globalX, y - mouse.current.globalY, button)
+    mouse.current:drag(button, x - mouse.current.gx, y - mouse.current.gy, relativeX, relativeY)
 end
 
 function mouse.scroll(dir, x, y)
     local function scrollControl(c)
         if isControlInPoint(c, x, y) == true then
-            c:scroll(dir)
+            c:scroll(dir, x, y)
         end
 
         for i = 1, #c.children do
@@ -229,27 +238,11 @@ local function getFocus()
     return mouse.getFocusOwner(mouse.current)
 end
 
-local keys = {}
-local keyListeners = {}
-local charListeners = {}
-local scrollListeners = {}
-local mouseEventListeners = {}
-
-local function sendEvent(listeners, fun, ...)
-    for i = 1, #listeners do
-        if inputConsumed == true then -- This doesn't seem to work
-            return
-        end
-
-        if isValid(listeners[i]) == true then
-            if type(listeners[i]) == "table" then
-                listeners[i][fun](listeners[i], ...)
-            elseif type(listeners[i]) == "function" then
-                listeners[i](...)
-            end
-        end
-    end
+local function getCurrentControl()
+    return mouse.current
 end
+
+local keys = {}
 
 local function isKey(key)
     return keys[key] == true
@@ -257,24 +250,12 @@ end
 
 local function key(k)
     keys[k] = true
-    sendEvent(keyListeners, "key", k)
 end
 
 local function keyUp(k)
     keys[k] = false
 end
 
-local function addKeyListener(o)
-    table.insert(keyListeners, o)
-end
-
-local function char(c)
-    sendEvent(charListeners, "char", c)
-end
-
-local function addCharListener(o)
-    table.insert(charListeners, o)
-end
 
 local function mouseClick(button, x, y)
     if mouse.inTerm(x, y) == false then return end
@@ -284,13 +265,6 @@ end
 local function mouseScroll(dir, x, y) -- NOTE: This is bad, TODO remake how objects recieve input
     if mouse.inTerm(x, y) == false then return end
     mouse.scroll(dir, x, y)
-    for i = 1, #scrollListeners do
-        scrollListeners[i].scroll(scrollListeners[i], dir, x, y)
-    end
-end
-
-local function addScrollListener(o)
-    table.insert(scrollListeners, o)
 end
 
 local function mouseUp(button, x, y)
@@ -301,41 +275,31 @@ end
 local function mouseDrag(button, x, y)
     if mouse.inTerm(x, y) == false then
         if mouse.current then
-            mouse.current:up()
+            mouse.current:up(button, x, y)
         end
     else
         mouse.drag(button, x, y)
     end
 end
 
-local function mouseEvent(event, data)
-    for i = 1, #mouseEventListeners do
-        mouseEventListeners[i]:mouseEvent(event, data)
-    end
+local function consumeInput()
+    inputConsumed = true
 end
 
-local function addMouseEventListener(o)
-    table.insert(mouseEventListeners, o)
+local function isInputConsumed()
+    return inputConsumed
 end
 
-local resizeEventListeners = {}
-
-local function addResizeEventListener(o)
-    table.insert(resizeEventListeners, o)
+local function consumeEvent(event)
+    consumedEvents[event] = true
 end
 
-local function resizeEvent()
-    for i = 1, #resizeEventListeners do 
-        if type(resizeEventListeners[i]) == "table" then
-            resizeEventListeners[i]:resizeEvent()
-        elseif type(resizeEventListeners[i]) == "function" then
-            resizeEventListeners[i]()
-        end
-    end
+local function isEventConsumed(event)
+    return consumedEvents[event] == true
 end
+
 
 local rawEventListeners = {}
-
 local function addRawEventListener(o)
     table.insert(rawEventListeners, o)
 end
@@ -347,21 +311,13 @@ end
 local function rawEvent(data)
     for _, listener in ipairs(rawEventListeners) do
         if isValid(listener) then
-        if type(listener) == "table" then
-            listener:rawEvent(data)
-        elseif type(listener) == "function" then
-            listener(data)
+            if type(listener) == "table" then
+                listener:rawEvent(data)
+            elseif type(listener) == "function" then
+                listener(data)
+            end
         end
     end
-    end
-end
-
-local function consumeInput()
-    inputConsumed = true
-end
-
-local function isInputConsumed()
-    return inputConsumed
 end
 
 ---comment
@@ -378,12 +334,12 @@ local function processInput()
         mouse.cursorControl = nil
     end
 
+    consumedEvents[event] = false
+
     if event == 'key' then
         key(data[2])
     elseif event == 'key_up' then
         keyUp(data[2])
-    elseif event == 'char' then
-        char(data[2])
     elseif event == 'mouse_click' then
         mouseClick(
             data[2],
@@ -408,22 +364,20 @@ local function processInput()
             data[3],
             data[4]
         )
-    elseif event == "term_resize" then
-        resizeEvent()
     elseif event == "mos_window_focus" then
-        if mouse.currentClick then
-            mouse.currentClick:up()
-            mouse.currentClick = nil
+        if mouse.clickControl then -- Is this used?
+            mouse.clickControl:up(0, 0, 0)
+            mouse.clickControl = nil
+        end
+    end
+
+    if isValid(mouse.inputControl) then
+        if isInputConsumed() == false then
+            mouse.inputControl:input(data)
         end
     end
 
     rawEvent(data)
-
-    if event then -- HACK, an empty event should never be sent (problem from multiProgram.launchProgram)
-        if string.find(event, "mouse") ~= nil then
-            mouseEvent(event, data)
-        end
-    end
 
     inputConsumed = false
 
@@ -431,29 +385,30 @@ local function processInput()
 end
 
 local function setTargetTerm(t)
-   targetTerm = t
+    targetTerm = t
 end
 
 ---@class Input
 local Input = {
+    isControlInPoint = isControlInPoint,
+    getBranchInPoint = mouse.getControlInPoint,
     isKey = isKey,
-    addKeyListener = addKeyListener,
-    addCharListener = addCharListener,
     processInput = processInput,
-    addScrollListener = addScrollListener,
-    addMouseEventListener = addMouseEventListener,
-    addResizeEventListener = addResizeEventListener,
     addRawEventListener = addRawEventListener,
     removeRawEventListener = removeRawEventListener,
     grabControlFocus = grabControlFocus,
     releaseControlFocus = releaseControlFocus,
     getFocus = getFocus,
-    addFocusChangedListener = addFocusChangedListener,
+    getCurrentControl = getCurrentControl,
     setCursorControl = setCursorControl,
     getCursorControl = getCursorControl,
+    setInputControl = setInputControl,
+    getInputControl = getInputControl,
     consumeInput = consumeInput,
     isInputConsumed = isInputConsumed,
-    setTargetTerm = setTargetTerm
+    setTargetTerm = setTargetTerm,
+    isEventConsumed = isEventConsumed,
+    consumeEvent = consumeEvent
 }
 
 return Input

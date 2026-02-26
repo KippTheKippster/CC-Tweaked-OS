@@ -27,10 +27,10 @@ function Container:queueSort()
 end
 
 function Container:draw()
-	control.draw(self)
 	if self._sortQueued then
 		self:sort()
 	end
+	control.draw(self)
 end
 
 function Container:sort() end

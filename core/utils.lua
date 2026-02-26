@@ -7,6 +7,10 @@ local function contains(t, v)
     return false
 end
 
+---Returns index of value in table or nil
+---@param t table
+---@param v any
+---@return integer|nil
 local function find(t, v)
     for i, o in ipairs(t) do
 		if o == v then
@@ -142,6 +146,20 @@ local function loadTable(file)
     return textutils.unserialise(data)
 end
 
+-- https://stackoverflow.com/questions/640642/how-do-you-copy-a-lua-table-by-value
+local function deepCopy(from, to)
+    if type(from) ~= 'table' then return end
+    if type(to) ~= 'table' then return end
+    for k, v in pairs(from) do
+		if type(v) == "table" then
+			--dasdaskopdas
+		else
+			to[k] = v
+		end
+	end
+end
+
+
 ---@class Utils
 local Utils = {
 	contains = contains,
@@ -158,7 +176,8 @@ local Utils = {
 	pushTop = pushTop,
 	pushBottom = pushBottom,
 	saveTable = saveTable,
-	loadTable = loadTable
+	loadTable = loadTable,
+	deepCopy = deepCopy,
 }
 
 ---@type Utils

@@ -1,5 +1,5 @@
 ---@return WindowControl
-return function(control, button)
+return function(control, button, normalStyle, focusStyle, clickStyle, exitButtonStyle)
 ---@class WindowControl : Control
 local WindowControl = control:newClass()
 WindowControl.__type = "WindowControl"
@@ -14,11 +14,13 @@ WindowControl.minW = 10
 WindowControl.minH = 4
 WindowControl.oldW = 0
 WindowControl.oldH = 0
-WindowControl.oldX = 0
-WindowControl.oldY = 0
 WindowControl.fullscreen = false
 WindowControl.closedSignal = WindowControl:createSignal()
 WindowControl.fullscreenChangedSignal = WindowControl:createSignal()
+WindowControl.shadow = true
+
+WindowControl.focusedStyle = focusStyle
+WindowControl.unfocusedStyle = normalStyle
 
 WindowControl:defineProperty('text', {
     get = function(o)
@@ -49,13 +51,14 @@ function WindowControl:init()
     self.label.clipText = true
     self.label.w = self.w - 2
 
-    self.exitButton = button:new()
-    self:addChild(self.exitButton)
+    self.exitButton = self:addButton()
     self.exitButton.text = "x"
     self.exitButton.x = self.w - 1
     self.exitButton.w = 1
     self.exitButton.h = 1
     self.exitButton.propogateFocusUp = true
+    self.exitButton.normalStyle = normalStyle
+    self.exitButton.clickStyle = exitButtonStyle
 
     self.exitButton.pressed = function(o)
         self:close()
@@ -68,76 +71,70 @@ function WindowControl:init()
     self.scaleButton.text = "%"
     self.scaleButton.propogateFocusUp = true
 
-    self.scaleButton.drag = function(o, relativeX, relativeY, x, y)
-        o.parent:setWindow(false, relativeX, relativeY, x, y)
+    self.scaleButton.drag = function(o, b, x, y, rx, ry)
+        local gx = x + self.gx - 1
+        local gy = y + self.gy - 1
+
+        local dx = self.gx - gx
+        local dy = self.gy - gy
+
+        local w = self.w + dx
+        local h = self.h + dy
+
+        if w >= self.minW then
+            self.gx = gx
+            self.w = self.w + dx
+            self.oldW = self.w
+        end
+
+        if h >= self.minH then
+            self.gy = gy
+            self.h = self.h + dy
+            self.oldH = self.h
+        end
     end
 
     self.scaleButton.doublePressed = function(o)
-        o.parent:setWindow(true)
+        o.parent:setFullscreen(true)
     end
 end
 
 function WindowControl:close()
     self:closed()
     self:emitSignal(self.closedSignal)
-    --self.parent:removeChild(self)
-    --self:remove()
-    self:queueFree() --TODO Re-add
+    self:queueFree()
 end
 
-function WindowControl:setWindow(fullscreen, relativeX, relativeY, x, y)
+function WindowControl:setFullscreen(fullscreen)
+    local wi = self
+    if wi.fullscreen == fullscreen then
+        return
+    end
+
+    wi.fullscreen = fullscreen
     if fullscreen == true then
         local w, h = term.getSize()
-        local wi = self
-        wi.oldX = wi.x
-        wi.oldY = wi.y
-        wi.x = 0
-        wi.y = 0
+        wi.gx = 0
+        wi.gy = 0
         wi.w = w
         wi.h = h
         wi:toFront()
         wi:grabFocus()
-        if wi.fullscreen == false then
-            wi.fullscreen = true
-            self:emitSignal(self.fullscreenChangedSignal)
-        end
+        self:emitSignal(self.fullscreenChangedSignal)
     else
-        local wi = self
-        local w = wi.w
-        local h = wi.h
-        if relativeX ~= nil and relativeY ~= nil then
-            wi.w = wi.w - relativeX
-            wi.h = wi.h - relativeY
-            wi.w = math.max(wi.w, wi.minW)
-            wi.h = math.max(wi.h, wi.minH)
-            local deltaW = w - wi.w
-            local deltaH = h - wi.h
-            wi.x = wi.x + deltaW
-            wi.y = wi.y + deltaH
-
-            wi.oldW = wi.w
-            wi.oldH = wi.h
-        else
-            wi.w = wi.oldW
-            wi.h = wi.oldH
-            wi.x = wi.oldX
-            wi.y = wi.oldY
-        end
-
-        if wi.fullscreen == true then
-            wi.fullscreen = false
-            wi:emitSignal(wi.fullscreenChangedSignal)
-        end
+        wi.w = self.oldW
+        wi.h = self.oldH
+        wi:emitSignal(wi.fullscreenChangedSignal)
     end
 end
 
-function WindowControl:drag(x, y)
-    control.drag(self, x, y)
-    self.w = self.oldW
-    self.h = self.oldH
+function WindowControl:drag(b, x, y, rx, ry)
+    control.drag(self, b, x, y, rx, ry)
     if self.fullscreen == true then
-        self.fullscreen = false
-        self:emitSignal(self.fullscreenChangedSignal)
+        local tw = self.w
+        self:setFullscreen(false)
+        local gx = x + self.gx - 1
+        self.gx = math.floor(gx - self.w * (x / tw) + 0.5)
     end
 end
 
@@ -149,6 +146,21 @@ end
 function WindowControl:refreshMinSize()
     self.minW, self.minH = math.min(self.minW, self.w), math.min(self.minH, self.h)
     self.oldW, self.oldH = self.w, self.h
+end
+
+function WindowControl:focusChanged()
+    self:updateFocus()
+end
+
+function WindowControl:updateFocus()
+    if self:inFocus() then
+        self.style = self.focusedStyle
+        self:toFront()
+        self:grabCursor()
+    else
+        self.style = self.unfocusedStyle
+        self:releaseCursor()
+    end
 end
 
 function WindowControl:closed() end

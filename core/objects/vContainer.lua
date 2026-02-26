@@ -14,21 +14,30 @@ function VContainer:sort()
 	local h = 0
 	local x = 0
 	for i = 1, #self.children do
-		local c = self.children[i]
+		local c = self:getChild(i)
 		if c.visible then
 			c.y = h
 			if self.center == true then
-				x = self.globalX + math.ceil((self.w - c.w) / 2)
+				x = self.gx + math.ceil((self.w - c.w) / 2)
 			else
-				x = self.globalX
+				x = self.gx
 			end
-			c.globalX = x
+			c.gx = x
 			h = h + c.h + self.separation
 		end
 	end
 end
 
 function VContainer:_expandChildren()
+	if #self.children == 0 then
+		if self.fitToChildrenW then
+			self.w = 0
+		end
+		if self.fitToChildrenH then
+			self.h = 0
+		end
+	end
+
 	local minW, minH = self.w, 0
 	local expandCount = 0
 	for i, c in ipairs(self.children) do

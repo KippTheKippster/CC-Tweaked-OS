@@ -1,4 +1,7 @@
-local corePath = __Global.coreDotPath
+local corePath = ".mos.core"
+if _G.__Global then
+    corePath =_G.__Global.coreDotPath
+end
 
 ---@type Engine
 local engine = require(corePath .. ".engine")
@@ -11,9 +14,9 @@ if mos == nil then
     return
 end
 
-local buttonStyle = mos.styles.style
-local clickedStyle = mos.styles.clickStyle
-local seperatorStyle = mos.styles.style:new()
+mos.applyTheme(engine)
+
+local seperatorStyle = engine.newStyle()
 seperatorStyle.textColor = colors.gray
 
 local scrollContainer = engine.root:addScrollContainer()
@@ -25,13 +28,10 @@ local main = scrollContainer:addVContainer()
 main.expandW = true
 main.expandH = true
 main.rendering = true
-main.style = buttonStyle
 
 
 local settingsButton = engine.Button:new()
 settingsButton.h = 1
-settingsButton.normalStyle = buttonStyle
-settingsButton.clickedStyle = clickedStyle
 
 
 local function addSeperator(text)
@@ -52,8 +52,6 @@ local function addLabel(text)
     label.text = text
     label.expandW = true
     label.h = 1
-    label.style = buttonStyle
-
     return label
 end
 
@@ -65,8 +63,6 @@ local function addReset(o)
     reset.w = 1
     reset.text = "x"
     reset.inheritStyle = false
-    reset.normalStyle = buttonStyle
-    reset.clickedStyle = clickedStyle
     return reset
 end
 
@@ -76,7 +72,6 @@ local function addSettingsInfo(text, infoText)
     local info = engine.Control:new()
     label:addChild(info)
     info.text = infoText
-    info.style = buttonStyle
     info.h = 1
     info.anchorW = info.Anchor.RIGHT
     return info
@@ -91,23 +86,22 @@ local function addSettingsButton(text, buttonText)
     label:addChild(button)
     button.text = buttonText
     button.dragSelectable = true
-    button.style = buttonStyle
     button.anchorW = button.Anchor.RIGHT
     return button
 end
 
-local function addSettingsColor(text)
+local function addSettingsColor(text, defaultColor)
     local label = addLabel(text)
 
     local picker = label:addColorPicker()
- 
-    local pickerStyle = buttonStyle:new()
-    picker.style = pickerStyle
-    --picker.normalStyle = pickerStyle
-    --picker.clickedStyle = pickerStyle
+
     picker.text = "[      ]"
     picker.anchorW = picker.Anchor.RIGHT
     picker.dragSelectable = true
+    picker.style = engine.newStyle(picker.style)
+    if defaultColor then
+        picker.style.backgroundColor = defaultColor
+    end
 
     return picker
 end
@@ -118,7 +112,7 @@ local function addSettingsLineEdit(text, editText)
 
     local edit = label:addLineEdit()
     edit.w = 16
-    edit.trueText = editText
+    edit.text = editText
     edit.dragSelectable = true
     edit.normalStyle.backgroundColor = colors.gray
     edit.normalStyle.textColor = colors.white
@@ -149,11 +143,11 @@ function versionButton:pressed()
 end
 
 addSeperator("-Computer-")
-local labelEdit = addSettingsLineEdit("Label", os.getComputerLabel())
 local freeSpace = math.floor(fs.getFreeSpace("") / 1000.0)
 local capacity = math.floor(fs.getCapacity("") / 1000.0)
 addSettingsInfo("ID", "#" .. tostring(os.getComputerID()))
-addSettingsInfo("Space", capacity - freeSpace .. "/" .. capacity  .. "KB")
+addSettingsInfo("Space", capacity - freeSpace .. "/" .. capacity  .. " KB")
+local labelEdit = addSettingsLineEdit("Label", os.getComputerLabel())
 function labelEdit:textSubmitted()
     os.setComputerLabel(labelEdit.text)
 end
@@ -172,7 +166,7 @@ function changeTheme:pressed()
             engine.root:queueDraw()
             fileExplorer:close()
         end
-    end, false, "/mos/os/themes/")
+    end, false, mos.toOsPath("/themes/"))
 end
 
 local changeBackground = addSettingsButton("Background Image", "[Browse]")
@@ -186,7 +180,8 @@ function changeBackground:pressed()
         mos.backgroundIcon.texture = paintutils.loadImage(path)
         mos.profile.backgroundIcon = path
         imageReset.visible = true
-    end, false)
+        fileExplorer:close()
+    end, false, mos.toOsPath("/textures/backgrounds/"))
 end
 
 function imageReset:pressed()
@@ -195,7 +190,7 @@ function imageReset:pressed()
     imageReset.visible = false
 end
 
-local picker = addSettingsColor("Background Color")
+local picker = addSettingsColor("Background Color", mos.profile.backgroundColor or mos.theme.backgroundColor)
 
 local colorReset = addReset(picker)
 
@@ -210,7 +205,7 @@ colorReset.pressed = function (o)
     mos.engine.backgroundColor = mos.theme.backgroundColor
     mos.refreshTheme()
     o.visible = false
-    picker.style.backgroundColor = colors.white
+    picker.style.backgroundColor = mos.theme.backgroundColor
 end
 
 
@@ -268,6 +263,28 @@ romFiles.pressed = function (o)
     else
         o.text = "[ ]"
     end
+end
+
+local dirColorPicker = addSettingsColor("Dir Color", mos.theme.fileColors.dirText)
+local dirColorReset = addReset(dirColorPicker)
+dirColorReset.visible = mos.profile.dirColor ~= nil
+if mos.profile.dirColor ~= nil then
+    picker.style.backgroundColor = mos.profile.dirColor
+end
+
+dirColorReset.pressed = function (o)
+    ---@type Profile
+    mos.profile.dirColor = nil
+    --mos.engine.backgroundColor = mos.theme.backgroundColor
+    mos.refreshTheme()
+    o.visible = false
+    dirColorPicker.style.backgroundColor = mos.theme.fileColors.dirText
+end
+
+function dirColorPicker:colorClicked(color)
+    mos.profile.dirColor = color
+    mos.engine.root:queueDraw()
+    dirColorReset.visible = true
 end
 
 engine.start()

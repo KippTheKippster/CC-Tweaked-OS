@@ -13,14 +13,14 @@ function HContainer:sort()
 	local w = 0
 	local y = 0
 	for i = 1, #self.children do
-		local c = self.children[i]
+		local c = self:getChild(i)
 		c.x = w
 		if self.center == true then
-			y = self.globalY + math.ceil((self.h - c.h) / 2)
+			y = self.gy + math.ceil((self.h - c.h) / 2)
 		else
-			y = self.globalY
+			y = self.gy
 		end
-		c.globalY = y
+		c.gy = y
 		w = w + c.w + self.separation
 	end
 end

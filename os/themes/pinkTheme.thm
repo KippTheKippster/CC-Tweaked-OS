@@ -2,11 +2,17 @@
   palette = {
     [ 1 ] = 0xfff9fb,
     [ 4 ] = 0xffc1dc,
-    [ 64 ] = 0xffdfed
+    [ 64 ] = 0xffdfed,
+    [ 1024 ] = 0xdd7aba
+  },
+  fileColors = {
+    dirText = 1024,
   },
   shadow = true,
-  toolbarColors = {
+  mainColors = {
     clickBackground = 4,
+    focusText = 32768,
+    focusBackground = 64,
     text = 32768,
     background = 1,
     clickText = 32768,
@@ -19,6 +25,8 @@
     focusText = 32768,
     clickBackground = 1,
     clickText = 32768,
+    exitBackground = 1,
+    exitText = 32768,
   },
   backgroundColor = 64,
 }

@@ -1,128 +1,173 @@
+---@param control Control
+---@param input Input
+---@param editStyle Style
+---@param editFocusStyle Style
 ---@return LineEdit
-return function(control, editStyle, editFocusStyle, ghostStyle, input)
+return function(control, input, editStyle, editFocusStyle)
 ---@class LineEdit : Control
 local LineEdit = control:newClass()
 LineEdit.__type = "LineEdit"
 
 LineEdit.normalStyle = editStyle
 LineEdit.focusStyle = editFocusStyle
-LineEdit.ghostStyle = ghostStyle
 
 LineEdit.h = 1
 LineEdit.w = 12
+LineEdit.minH = 1
 LineEdit.text = ""
-LineEdit.cursorOffset = 0
-LineEdit._trueText = ""
+LineEdit._cursorX = 0
+---@type integer
+LineEdit.cursorX = nil
 LineEdit.inheritStyle = false
-control:defineProperty('trueText', {
-    get = function(o) return o._trueText end,
-    set = function(o, value) 
-        local same = o._trueText == value
-        o._trueText = value 
-        if same == false then
-            o:trueTextChanged()
-        end
-    end
-})
 LineEdit.clipText = true
 LineEdit.lineScroll = 0
----@type Style
-LineEdit.ghostStyle = nil
 LineEdit.fitToText = false
 
+LineEdit:defineProperty("cursorX", {
+    get = function (o)
+        return o._cursorX
+    end,
+    set = function (o, x)
+        x = math.max(x, 0)
+        x = math.min(x, #o.text)
+        o._cursorX = x
+        o:queueDraw()
+    end
+})
+
 function LineEdit:ready()
-    input.addCharListener(self)
-	input.addKeyListener(self)
-    input.addRawEventListener(self)
     self.style = self.normalStyle
 end
 
-function LineEdit:queueFree()
-    input.removeRawEventListener(self)
-    control.queueFree(self)
+function LineEdit:draw()
+    local w = self.w - 1
+    if self.cursorX - self.offsetTextX > w then
+        self.offsetTextX = self.cursorX - (w)
+    end
+    if self.cursorX - self.offsetTextX < 0 then
+        self.offsetTextX = self.offsetTextX + (self.cursorX - self.offsetTextX)
+    end
+
+    self.offsetTextX = math.min(self.offsetTextX, math.max(0, #self.text - self.w + 1))
+
+    control.draw(self)
 end
 
-
 function LineEdit:updateCursor()
-    term.setCursorBlink(true)
-    term.setCursorPos(self.globalX + #self.text + self.cursorOffset + 1 + self.marginL, self.globalY + 1)
+    --term.setCursorPos(self.gx + #self.text + self.cursorOffset + self.marginL + 1, self.gy + 1)
+    term.setCursorPos(self.cursorX - self.offsetTextX + self.gx + 1, self.gy + 1)
     term.setTextColor(self.style.textColor)
     term.setBackgroundColor(self.style.backgroundColor)
+    term.setCursorBlink(true)
 end
 
 function LineEdit:treeEntered()
     self.style = self.normalStyle
 end
 
-function LineEdit:trueTextChanged()
-	local w = #self.trueText - self.w + self.marginL + 1
-	w = math.max(0, w)
-	self.text = self.trueText:sub(w + 1, #self.trueText)
-    self:queueDraw()
-end
-
-function LineEdit:addText(text, offset)
-    self.trueText = (
-        self.trueText:sub(0, #self.trueText + offset) ..
+function LineEdit:addText(text, x)
+    self.text = (
+        self.text:sub(0, x) ..
         text ..
-        self.trueText:sub(#self.trueText + offset + 1)
+        self.text:sub(x + 1)
     )
 end
 
-function LineEdit:char(char)
-    if self.focus == false then return end
-    self:addText(char, self.cursorOffset)
-end
-
-LineEdit.co = nil
-
-function LineEdit:key(key)
-    if self.focus == false then return end
-	if key == 259 then --Backspace
-        if input.isKey(keys.leftCtrl) then
-            self.trueText = self.trueText:sub(#self.trueText + self.cursorOffset + 1)
-        else
-		    self.trueText = (
-                self.trueText:sub(0, #self.trueText + self.cursorOffset - 1) ..
-                self.trueText:sub(#self.trueText + self.cursorOffset + 1)
-            )
-        end
-    elseif key == keys.enter then
-        self:releaseFocus()
-	elseif key == 263 then --Left
-		self.cursorOffset = self.cursorOffset - 1
-        if self.cursorOffset < -#self.text then 
-            self.cursorOffset = -#self.text
-        end
-        self:queueDraw()
-	elseif key == 262 then --Right
-		self.cursorOffset = self.cursorOffset + 1
-        if self.cursorOffset > 0 then
-            self.cursorOffset = 0
-        end
-        self:queueDraw()
-	end
-end
-
-function LineEdit:rawEvent(data)
-    if not self:inFocus() then
+function LineEdit:removeText(from, to)
+    if to == 0 then
         return
     end
 
-    if data[1] == "paste" then
-        self:addText(data[2], self.cursorOffset)
+    self.text = (
+        self.text:sub(0, from) ..
+        self.text:sub(to)
+    )
+end
+
+local function findPrevWord(str, x)
+    local inSpace = true
+    local i = x
+    while i > 0 do
+        if string.byte(str, i, i) == 32 then
+            if inSpace == false then
+                return i
+            end
+        else
+            inSpace = false
+        end
+        i = i - 1
     end
+
+    return i
+end
+
+local function findNextWord(str, x)
+    local inSpace = true
+    local i = x
+    while i <= #str do
+        i = i + 1
+        if string.byte(str, i, i) == 32 then
+            if inSpace == false then
+                return i - 1
+            end
+        else
+            inSpace = false
+        end
+    end
+
+    return i - 1
+end
+
+function LineEdit:input(data)
+    local event = data[1]
+    if event == "char" then
+        self:addText(data[2], self.cursorX)
+        self.cursorX = self.cursorX + #data[2]
+    elseif event == "key" then
+        local k = data[2]
+        local ctrl = input.isKey(keys.leftCtrl)
+        if k == keys.backspace then
+            if ctrl then
+                local i = findPrevWord(self.text, self.cursorX)
+                self:removeText(i, self.cursorX + 1)
+                self.cursorX = i
+            else
+                self:removeText(self.cursorX - 1, self.cursorX + 1)
+                self.cursorX = self.cursorX - 1
+            end
+        elseif k == keys.left then
+            if ctrl then
+                self.cursorX = findPrevWord(self.text, self.cursorX)
+            else
+                self.cursorX = self.cursorX - 1
+            end
+        elseif k == keys.right then
+            if ctrl then
+                self.cursorX = findNextWord(self.text, self.cursorX)
+            else
+                self.cursorX = self.cursorX + 1
+            end
+        elseif k == keys.enter then
+            self:releaseFocus()
+        end
+    end
+end
+
+function LineEdit:down(b, x, y)
+    self.cursorX = x - 1 + self.offsetTextX
 end
 
 function LineEdit:focusChanged()
     if self.focus then
         self.style = self.focusStyle
-        self:grabCursorControl()
+        self:grabCursor()
+        self:grabInput()
     else
+        self:textSubmitted()
         term.setCursorBlink(false)
         self.style = self.normalStyle
-        self:textSubmitted()
-        self:releaseCursorControl()
+        self:releaseCursor()
+        self:releaseInput()
     end
 end
 

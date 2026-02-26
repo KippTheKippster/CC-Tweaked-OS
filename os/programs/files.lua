@@ -1,5 +1,4 @@
 local corePath = ".mos.core"
-
 if _G.__Global then
     corePath =_G.__Global.coreDotPath
 end
@@ -37,11 +36,12 @@ fe.clipboard = {}
 
 ---comment
 ---@param path string
-fe.openFileCallback = function (path, edit, withArgs, ...)
+---@param modifier FileOpenModifier
+fe.openFileCallback = function (path, modifier, ...)
     if mos then
-        if edit then
+        if modifier == mos.FileOpenModifier.EDIT then
             mos.editProgram(path)
-        elseif withArgs then
+        elseif modifier == mos.FileOpenModifier.ARGS then
             mos.openProgramWithArgs(path)
         else
             mos.openProgram(path, ...)
@@ -54,28 +54,20 @@ if type(args[1]) == "function" then
 end
 
 local settings = args[2] or {}
-local styles = {
-    style = engine.getDefaultStyle(),
-    clickStyle = engine.getDefaultClickedStyle(),
-    windowStyle = engine.newStyle()
-}
+local dirColor = colors.blue
 
 if mos then
-    styles = mos.styles
+    mos.applyTheme(engine)
+    dirColor = mos.profile.dirColor or mos.theme.fileColors.dirText
 end
 
-local fileStyle = styles.style
-local dirStyle = fileStyle:new()
-dirStyle.textColor = colors.blue
-local clickedStyle = styles.clickStyle
-styles.windowStyle.backgroundColor = dirStyle.textColor
+local fileStyle = engine.normalStyle
+local dirStyle = engine.newStyle()
+dirStyle.textColor = dirColor
+local dirSelectStyle = engine.newStyle(engine.focusStyle)
+dirSelectStyle.textColor = dirColor
 
 engine.background = true
-engine.backgroundColor = styles.style.backgroundColor
-
-local inputReader = {}
-engine.input.addRawEventListener(inputReader)
-engine.input.addCharListener(inputReader)
 
 local main = engine.root:addVContainer()
 main.expandW = true
@@ -104,8 +96,8 @@ searchbar.topLevel = true
 searchbar.expandW = true
 searchbar.visible = false
 
-searchbar.trueTextChanged = function (self)
-    engine.LineEdit.trueTextChanged(self)
+searchbar.textChanged = function (self)
+    engine.LineEdit.textChanged(self)
     if self.text == "" then
         self.visible = false
         self:releaseFocus()
@@ -116,21 +108,10 @@ searchbar.trueTextChanged = function (self)
     fe.filter(self.text)
 end
 
---[[
-searchbar.focusChanged = function (self)
-    engine.LineEdit.focusChanged(self)
-    if self.focus then
-        self.visible = true
-    else
-        self.visible = false
-    end
-end
-]]--
-
 local scrollContainer = main:addScrollContainer()
+scrollContainer.marginR = 1
 scrollContainer.expandW = true
 scrollContainer.expandH = true
-scrollContainer.rendering = false
 
 local fileContainer = scrollContainer:addVContainer()
 fileContainer.expandW = true
@@ -154,45 +135,19 @@ if settings.saveMode then
 
     saveContainer.saveEdit = saveContainer:addLineEdit()
     saveContainer.saveEdit.expandW = true
-    saveContainer.saveEdit.trueText = args[3]
     saveContainer.saveEdit.text = args[3]
 
     saveContainer.saveButton = saveContainer:addButton()
     saveContainer.saveButton.text = "Save"
     saveContainer.saveButton.pressed = function ()
-        fe.openFile(fe.nameToPath(saveContainer.saveEdit.text), false, false)
+        fe.openFile(fe.nameToPath(saveContainer.saveEdit.text), mos.getFileOpenModifierInput())
     end
 
     main:addChild(saveContainer)
 end
 
----comment
----@param err string
----@return WindowControl
-function fe.popupError(err)
-    err = " " .. err .. " "
 
-    local w, h = engine.root.w, engine.root.h
-    local window = engine.root:addWindowControl()
-    window.text = "Error"
-    window.style = styles.windowStyle
-    window.minW = math.min(24, #err)
-    window.minH = 2
-    window.x = math.floor((w - window.w) / 2)
-    window.y = math.floor((h - window.h) / 2)
-    window:refreshMinSize()
-
-    local message = window:addControl()
-    message.y = 1
-    message.expandW = true
-    message.expandH = true
-
-    message.text = err
-    message.centerText = true
-
-    return window
-end
-
+---@return boolean, string
 function fe.pPopupError(f, ...)
     local ok, err = pcall(f, ...)
     if ok == false then
@@ -202,10 +157,8 @@ function fe.pPopupError(f, ...)
                 err = err:sub(idx + 1)
             end
         end
-
         err = err:sub(2)
-
-        local w = fe.popupError(err)
+        mos.popupError(err)
     end
     return ok, err
 end
@@ -213,17 +166,18 @@ end
 ---@class FileButton : Button
 local FileButton = engine.Button:newClass()
 FileButton.selected = false
+FileButton.selectStyle = engine.focusStyle
 FileButton.path = ""
-function FileButton:click()
-    engine.Button.click(self)
+function FileButton:down()
+    engine.Button.down(self)
     fe.selectFileButton(self, engine.input.isKey(keys.leftCtrl) == false)
 end
 
 function FileButton:refreshStyle()
     if self.isClicked then
-        self.style = self.clickedStyle
+        self.style = self.clickStyle
     elseif self.selected then
-        self.style = self.selectedStyle
+        self.style = self.selectStyle
     else
         self.style = self.normalStyle
     end
@@ -239,7 +193,6 @@ function fe.selectFileButton(b, clearSelection)
 
     if saveContainer and saveContainer.saveEdit then
         saveContainer.saveEdit.text = b.text
-        saveContainer.saveEdit.trueText = b.text
     end
 
     fe.addToSelection(b)
@@ -275,15 +228,16 @@ end
 ---@param name string
 ---@return FileButton
 function fe.newFileButton(name)
+    ---@type FileButton
     local fileButton = FileButton:new()
     fileButton.__name = name
     local path = fe.nameToPath(name)
     if fs.isDir(path) then
         fileButton.normalStyle = dirStyle
+        fileButton.selectStyle = dirSelectStyle
     else
         fileButton.normalStyle = fileStyle
     end
-    fileButton.clickedStyle = clickedStyle
     fileButton.style = fileButton.normalStyle
     fileButton.h = 1
     fileButton.expandW = true
@@ -305,10 +259,7 @@ function fe.addFileButton(name)
         end
     else
         fileButton.doublePressed = function (o)
-            fe.openFile(o.path,
-                engine.input.isKey(keys.leftCtrl),
-                engine.input.isKey(keys.leftAlt)
-            )
+            fe.openFile(o.path, mos.getFileOpenModifierInput())
         end
     end
 
@@ -324,7 +275,6 @@ function fe.newFileEdit(text, callback)
     local edit = engine.LineEdit:new()
     edit.expandW = true
     edit:grabFocus()
-    edit.trueText = text
     edit.text = text
     edit.textSubmitted = function()
         callback(edit)
@@ -370,8 +320,6 @@ function fe.openDir(path)
     scrollContainer:setScroll(0)
 
     searchbar.text = ""
-    searchbar.trueText = ""
-
 
     local bRoot = pathContainer:addButton()
     bRoot.text = "/"
@@ -434,10 +382,9 @@ end
 
 ---comment
 ---@param path string
----@param edit boolean
----@param wArgs boolean
-function fe.openFile(path, edit, wArgs, ...)
-    fe.openFileCallback(path, edit, wArgs, ...)
+---@param openModifier FileOpenModifier
+function fe.openFile(path, openModifier, ...)
+    fe.openFileCallback(path, openModifier, ...)
 end
 
 function fe.refresh()
@@ -447,17 +394,21 @@ end
 ---comment
 ---@param name string
 function fe.makeFile(name)
+    if name == nil or name == "" then return end
     name = fe.formatName(name)
-    fe.pPopupError(fs.open, fe.nameToPath(name), "w")
-    fe.refresh()
+    if fe.pPopupError(fs.open, fe.nameToPath(name), "w") then
+        fe.addFileButton(name)
+    end
 end
 
 ---comment
 ---@param name string
 function fe.makeDir(name)
+    if name == nil or name == "" then return end
     name = fe.formatName(name)
-    fe.pPopupError(fs.makeDir, fe.nameToPath(name))
-    fe.refresh()
+    if fe.pPopupError(fs.makeDir, fe.nameToPath(name)) then
+        fe.addFileButton(name)
+    end
 end
 
 ---comment
@@ -481,14 +432,18 @@ end
 ---comment
 ---@param b FileButton
 function fe.delete(b)
-    fe.pPopupError(fs.delete, b.path)
-    fe.refresh()
+    if fe.pPopupError(fs.delete, b.path) then
+        -- TODO Remove from selection
+        b:queueFree()
+    end
 end
 
 function fe.deleteSelection()
     for i, v in ipairs(fe.selection) do
         fe.delete(v)
     end
+
+    fe.clearSelection()
 end
 
 function fe.clearClipboard()
@@ -511,7 +466,7 @@ function fe.pasteClipboard(pasteMode)
     end
 
     for i, v in ipairs(fe.clipboard) do
-        fn(v, fe.nameToPath(fs.getName(v)))
+        fe.pPopupError(fn, v, fe.nameToPath(fs.getName(v)))
     end
 
     fe.clearClipboard()
@@ -527,8 +482,12 @@ function fe.rename(b, name)
         return
     end
 
-    fe.pPopupError(fs.move, b.path, fe.nameToPath(name))
-    fe.refresh()
+    local path = fe.nameToPath(name)
+    if fe.pPopupError(fs.move, b.path, path) then
+        b.text = name
+        b.path = path
+    end
+    --fe.refresh()
 end
 
 ---comment
@@ -682,12 +641,16 @@ function fe.clearMounts()
     end
 end
 
-function backButton:pressed()
+function fe.backDir()
     if fe.currentPath == "" then
         fe.openDir("")
     else
         fe.openDir(fs.getDir(fe.currentPath))
     end
+end
+
+function backButton:pressed()
+    fe.backDir()
 end
 
 if mos and mosWindow then
@@ -726,17 +689,17 @@ if mos and mosWindow then
                 if fs.isDir(focusPath) then
                     fe.openDir(focusPath)
                 else
-                    fe.openFile(focusPath, false, false)
+                    fe.openFile(focusPath, mos.FileOpenModifier.NONE)
                 end
             end
         elseif text == "Open w/ args" then
             if focusPath and fs.isDir(focusPath) == false then
-                fe.openFile(focusPath, false, true)
+                fe.openFile(focusPath, mos.FileOpenModifier.ARGS)
             end
         elseif text == "Edit" then
             if focusPath then
                 if fs.isDir(focusPath) == false then
-                    fe.openFile(focusPath, true, false)
+                    fe.openFile(focusPath, mos.FileOpenModifier.EDIT)
                 end
             end
         elseif text == "Close" then
@@ -771,7 +734,7 @@ if mos and mosWindow then
             fe.pasteMode = fe.PasteMode.COPY
             fe.copySelectionToClipboard()
         elseif text == "Paste" then
-            fe.pasteClipboard(fe.currentPath, fe.pasteMode)
+            fe.pasteClipboard(fe.pasteMode)
         elseif text == "Rename" then
             fe.addRenameFileEdit(focusFileButton)
             __window:grabFocus()
@@ -793,11 +756,12 @@ if mos and mosWindow then
     end)
 end
 
-
-local ia = 0
-
-function inputReader:rawEvent(data)
+function main:input(data)
     local event = data[1]
+    if engine.input.isEventConsumed(event) then
+        --return
+    end
+
     if     event == "paste" then
         fe.pasteClipboard(fe.pasteMode)
     elseif event == "disk" then
@@ -808,6 +772,12 @@ function inputReader:rawEvent(data)
         fe.refresh()
     elseif event == "mos_refresh_files" then
         fe.refresh()
+    elseif event == "char" then
+        local focus = engine.input.getFocus() -- This should be replaced with inputConsumed
+        if focus == nil or focus.__type ~= "LineEdit" then
+            searchbar:grabFocus()
+            searchbar:input(data)
+        end
     elseif event == "key" then
         if engine.input.isKey(keys.leftCtrl) then
             if     data[2] == keys.x then
@@ -820,7 +790,7 @@ function inputReader:rawEvent(data)
         elseif data[2] == keys.delete then
             fe.deleteSelection()
         end
-        
+
         if data[2] == keys.down then
             if #fileContainer.children == 0 then
                 return
@@ -866,19 +836,23 @@ function inputReader:rawEvent(data)
                 if fs.isDir(focus.path) then
                     fe.openDir(focus.path)
                 else
-                    fe.openFile(focus.path, engine.input.isKey(keys.leftCtrl), engine.input.isKey(keys.leftAlt))
+                    fe.openFile(focus.path, mos.getFileOpenModifierInput())
                 end
             end
+        elseif data[2] == keys.right then
+            local focus = fe.getFocusFileButton()
+            if focus then
+                if fs.isDir(focus.path) then
+                    fe.openDir(focus.path)
+                end
+            end
+        elseif data[2] == keys.left then
+            fe.backDir()
         end
     end
 end
 
-function inputReader:char()
-    local focus = engine.input.getFocus()
-    if focus == nil or focus.__type ~= "LineEdit" then
-        searchbar:grabFocus()
-    end
-end
+engine.input.addRawEventListener(rawEvent)
 
 if settings.dir then
     fe.currentPath = settings.dir

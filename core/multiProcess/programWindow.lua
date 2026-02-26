@@ -12,17 +12,17 @@ ProgramWindow.programViewport = nil
 ProgramWindow.minimizeButton = nil
 ProgramWindow.focusedStyle = nil
 ProgramWindow.unfocusedStyle = nil
-ProgramWindow._clickedStyle = nil
-ProgramWindow:defineProperty('clickedStyle', {
-    get = function(o) return o._clickedStyle end,
+ProgramWindow._clickStyle = nil
+ProgramWindow:defineProperty('clickStyle', {
+    get = function(o) return o._clickStyle end,
     set = function(o, value)
-        o._clickedStyle = value
+        o._clickStyle = value
         --
-        o.minimizeButton.clickedStyle = value
-        o.splitLeftButton.clickedStyle = value
-        o.splitRightButton.clickedStyle = value
-        o.splitUpButton.clickedStyle = value
-        o.splitDownButton.clickedStyle = value
+        o.minimizeButton.clickStyle = value
+        o.splitLeftButton.clickStyle = value
+        o.splitRightButton.clickStyle = value
+        o.splitUpButton.clickStyle = value
+        o.splitDownButton.clickStyle = value
         --
         o.minimizeButton.normalStyle = o.focusedStyle
         o.splitLeftButton.normalStyle = o.focusedStyle
@@ -37,7 +37,7 @@ ProgramWindow.showShadow = true
 ---@return Button
 local function addButton (wi)
     local b = wi:addButton()
-    b.clickedStyle = wi.clickedStyle
+    b.clickStyle = wi.clickStyle
     return b
 end
 
@@ -60,8 +60,8 @@ local function addSplit (wi, h, fn)
     return split
 end
 
-function ProgramWindow:init()
-    windowControl.init(self)
+function ProgramWindow:init(text)
+    windowControl.init(self, text)
 
     self.minimizeButton = addButton(self)
     self.minimizeButton.w = 1
@@ -89,16 +89,17 @@ function ProgramWindow:init()
         self.visible = false
     end
 
-    self.exitButton.pressed = function(o)
-        self:close()
-    end
-
     self.minimizeButton.dragSelectable = true
     self.exitButton.dragSelectable = true
     self.splitLeftButton.dragSelectable = true
     self.splitRightButton.dragSelectable = true
 
     input.addRawEventListener(self)
+end
+
+function ProgramWindow:queueFree()
+   windowControl.queueFree(self)
+   input.removeRawEventListener(self)
 end
 
 function ProgramWindow:setSplitButtonsVisible(visible)
@@ -120,11 +121,6 @@ function ProgramWindow:rawEvent(data)
             self:setSplitButtonsVisible(false)
         end
     end
-end
-
-function ProgramWindow:queueFree()
-   windowControl.queueFree(self)
-   input.removeRawEventListener(self)
 end
 
 function ProgramWindow:enableLeftSplitScreen()
@@ -176,10 +172,10 @@ function ProgramWindow:render()
         self:drawShadow()
     end
     --PANEL
-    local left = self._globalX + 1
-    local up = self._globalY + 1
-    local right = self._globalX + self._w
-    local down = self._globalY + 1 --draw only the top of the window, the rest is hidden by the program viewport
+    local left = self._gx + 1
+    local up = self._gy + 1
+    local right = self._gx + self._w
+    local down = self._gy + 1 --draw only the top of the window, the rest is hidden by the program viewport
     self:drawPanel(left, up, right, down)
 
     --TEXT
@@ -194,8 +190,8 @@ function ProgramWindow:addViewport(pv)
     pv.propogateFocusUp = true
 end
 
-function ProgramWindow:click()
-    windowControl.click(self)
+function ProgramWindow:down()
+    windowControl.down(self)
     self:toFront()
 end
 
@@ -209,21 +205,6 @@ function ProgramWindow:sizeChanged()
     self.showShadow = true
 end
 
-function ProgramWindow:focusChanged()
-    self:updateFocus()
-end
-
-function ProgramWindow:updateFocus()
-    if self:inFocus() then
-        self.style = self.focusedStyle
-        self:toFront()
-        self:grabCursorControl()
-    else
-        self.style = self.unfocusedStyle
-        self:releaseCursorControl()
-        self:setSplitButtonsVisible(false)
-    end
-end
 
 function ProgramWindow:updateCursor()
     local window = self.programViewport.program.window

@@ -1,5 +1,5 @@
 ---@return Dropdown
-return function(button, input, utils, engine)
+return function(button, input, utils, optionNormalStyle, optionClickStyle)
 ---@class Dropdown : Button
 local Dropdown = button:newClass()
 Dropdown.__type = "Dropdown"
@@ -10,9 +10,9 @@ Dropdown.list = nil
 Dropdown.open = false
 Dropdown.dragSelectable = true
 Dropdown.shortcutSelection = nil
-Dropdown.optionNormalStyle = Dropdown.normalStyle
-Dropdown.optionClickedStyle = Dropdown.clickedStyle
-Dropdown.optionShadow = false
+Dropdown.optionNormalStyle = optionNormalStyle
+Dropdown.optionClickStyle = optionClickStyle
+Dropdown.optionShadow = true
 
 function Dropdown:init()
     self.list = self:addVContainer()
@@ -38,6 +38,11 @@ function Dropdown:init()
     self.list.rendering = true
 
     input.addRawEventListener(self)
+end
+
+function Dropdown:queueFree()
+    input.removeRawEventListener(self)
+    button.queueFree(self)
 end
 
 function Dropdown:isOpened()
@@ -84,7 +89,7 @@ function Dropdown:addToList(text, clickable)
     b.inheritStyle = false
     b.style = self.optionNormalStyle
     b.normalStyle = self.optionNormalStyle
-    b.clickedStyle = self.optionClickedStyle
+    b.clickStyle = self.optionClickStyle
     b.text = text
     b.h = 1
     b.dragSelectable = true
@@ -92,12 +97,12 @@ function Dropdown:addToList(text, clickable)
     b.marginL = 1
     b.marginR = 1
     b.expandW = true
-    local click = b.click
-    b.click = function(o)
+    local down = b.down
+    b.down = function(o)
         if self.shortcutSelection then
             self.shortcutSelection:up()
         end
-        click(o)
+        down(o)
         self.shortcutSelection = o
     end
     b.pressed = function(o)
@@ -135,8 +140,8 @@ function Dropdown:clearList()
     self.shortcutSelection = nil
 end
 
-function Dropdown:click()
-    button.click(self)
+function Dropdown:down()
+    button.down(self)
     self.list.visible = true
     if self.shortcutSelection and self.shortcutSelection ~= self then
         self.shortcutSelection:up()
@@ -192,7 +197,7 @@ function Dropdown:next()
         self.shortcutSelection = self
     end
 
-    self.shortcutSelection:click()
+    self.shortcutSelection:down()
     self.shortcutSelection:grabFocus()
 end
 
@@ -227,7 +232,7 @@ function Dropdown:previous()
         self.shortcutSelection = self
     end
 
-    self.shortcutSelection:click()
+    self.shortcutSelection:down()
     self.shortcutSelection:grabFocus()
 end
 

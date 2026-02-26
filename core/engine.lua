@@ -2,6 +2,10 @@ local coreDotPath = "." .. _G.corePath:gsub("/", ".")
 
 ---@class Engine
 local engine = {}
+---@type MultiProgram?
+engine.mp = nil
+---@type Process?
+engine.p = nil
 
 ---@type Object
 local object = require(coreDotPath .. ".object")
@@ -18,23 +22,42 @@ engine.utils = utils
 engine.freeQueue = {}
 
 ---@type Style
-local style = require(coreDotPath .. ".styles.style")(object)
----@type Style
-local clickedStyle = require(coreDotPath .. ".styles.clickedStyle")(style)
----@type Style
-local editStyle = style:new()
-editStyle.backgroundColor = colors.gray
----@type Style
-local ghostStyle = style:new()
-ghostStyle.backgroundColor = colors.white
-ghostStyle.textColor = colors.gray
----@type Style
-local editFocusStyle = editStyle:new()
-editFocusStyle.backgroundColor = colors.lightGray
+local style = require(coreDotPath .. ".style")(object)
+engine.normalStyle = style
 
+---@param base Style|nil
+---@return Style
+local function newStyle(base)
+    if base then
+        return base:new()
+    end
+    return style:new()
+end
+engine.newStyle = newStyle
+
+engine.clickStyle = newStyle()
+engine.clickStyle.backgroundColor = colors.white
+engine.clickStyle.textColor = colors.orange
+
+engine.focusStyle = newStyle()
+engine.focusStyle.backgroundColor = colors.gray
+
+engine.editStyle = newStyle()
+engine.editStyle.backgroundColor = colors.gray
+
+engine.editFocusStyle = newStyle()
+engine.editFocusStyle.backgroundColor = colors.lightGray
+
+engine.dropdownOptionNormalStyle = newStyle()
+engine.dropdownOptionClickStyle = newStyle(engine.clickStyle)
+
+local windowStyle = newStyle()
+engine.windowNormalStyle = newStyle(windowStyle)
+engine.windowFocusStyle = newStyle(windowStyle)
+engine.windowClickStyle = newStyle()
+engine.windowExitButtonStyle = newStyle()
 
 --Objects
-
 local function requireObject(name, ...)
     return require(coreDotPath .. ".objects." .. name)(...)
 end
@@ -42,11 +65,12 @@ end
 ---@type Control
 engine.Control = requireObject("control", object, engine, style)
 ---@type Button
-engine.Button = requireObject("button", engine.Control, style, clickedStyle)
+engine.Button = requireObject("button", engine.Control, style, engine.clickStyle)
 ---@type Dropdown
-engine.Dropdown = requireObject("dropdown", engine.Button, input, utils, engine)
+engine.Dropdown = requireObject("dropdown", engine.Button, input, utils, engine.dropdownOptionNormalStyle,
+    engine.dropdownOptionClickStyle)
 ---@type ColorPicker
-engine.ColorPicker = requireObject("colorPicker", engine.Control, input, style, utils, engine)
+engine.ColorPicker = requireObject("colorPicker", engine.Control, input, style, utils)
 ---@type Container
 engine.Container = requireObject("container", engine.Control)
 ---@type VContainer
@@ -56,17 +80,32 @@ engine.HContainer = requireObject("hContainer", engine.Container)
 ---@type FlowContainer
 engine.FlowContainer = requireObject("flowContainer", engine.Container)
 ---@type ScrollContainer
-engine.ScrollContainer = requireObject("scrollContainer", engine.Container, input)
+engine.ScrollContainer = requireObject("scrollContainer", engine.Container, collision, input)
 ---@type WindowControl
-engine.WindowControl = requireObject("windowControl", engine.Control, engine.Button)
+engine.WindowControl = requireObject("windowControl", engine.Control, engine.Button, engine.windowNormalStyle,
+    engine.windowFocusStyle, engine.windowClickStyle, engine.windowExitButtonStyle)
 ---@type LineEdit
-engine.LineEdit = requireObject("lineEdit", engine.Control, editStyle, editFocusStyle, ghostStyle, input)
+engine.LineEdit = requireObject("lineEdit", engine.Control, engine.input, engine.editStyle, engine.editFocusStyle)
 ---@type Icon
 engine.Icon = requireObject("icon", engine.Control)
 
 local parentTerm = term.current()
 local initialW, initialH = parentTerm.getSize()
 local screenBuffer = window.create(parentTerm, 1, 1, initialW, initialH)
+
+--[[
+local bufferLines = {}
+local bufferWrite = screenBuffer.write
+screenBuffer.write = function (text)
+    local x, y = screenBuffer.getCursorPos()
+    local c = screenBuffer.getBackgroundColor()
+    if bufferLines[y] == nil or bufferLines[y][x] == nil then
+    else
+        bufferLines[y][x] = c
+    end
+    bufferWrite(text)
+end
+]] --
 
 engine.parentTerm = parentTerm
 engine.screenBuffer = screenBuffer
@@ -88,7 +127,7 @@ if _G.__Global == nil then
     end
 
     _G.__Global.logFile = fs.open(fs.combine(dest, tostring(os.epoch("utc")) .. ".log"), "w")
-    _G.__Global.log = function (...)
+    _G.__Global.log = function(...)
         local line = ""
         local data = table.pack(...)
         for k, v in ipairs(data) do
@@ -104,7 +143,7 @@ end
 ---@type Control
 local root = engine.Control:new()
 root.rendering = false
-root.text = "root"
+root.__name = "root"
 root.w = initialW
 root.h = initialH
 root.mouseIgnore = true
@@ -116,15 +155,26 @@ engine.background = true
 engine.backgroundColor = colors.black
 engine.root = root
 
-local function onResizeEvent ()
-    local w, h = parentTerm.getSize()
+local function resizeBuffer(w, h)
     screenBuffer.reposition(1, 1, w, h)
     engine.root.w, engine.root.h = w, h
+    --[[
+    for y = 1, h do
+        if bufferLines[y] == nil then
+            bufferLines = {}
+        end
+        for x = 1, h do
+            if bufferLines[x] == nil then
+                bufferLines[y] = engine.backgroundColor
+            end
+        end
+    end
+    ]] --
 end
 
 ---@param o Control
 ---@param topLevelList table|nil
-local function drawTree (o, topLevelList)
+local function drawTree(o, topLevelList)
     if o.visible == false then return end
     if o.topLevel and topLevelList then
         table.insert(topLevelList, o) -- TODO make list persistent
@@ -137,7 +187,7 @@ local function drawTree (o, topLevelList)
     end
 end
 
-local function redrawScreen ()
+local function redrawScreen()
     term.redirect(screenBuffer)
     screenBuffer.setVisible(false)
 
@@ -163,12 +213,50 @@ local function redrawScreen ()
     term.redirect(parentTerm)
 end
 
+local drawTimerID = 0
+local function fnDraw()
+    while engine.running do
+        if engine.queueRedraw == true then
+            engine.drawCount = engine.drawCount + 1
+            redrawScreen()
+            engine.queueRedraw = false
+        end
+
+        if engine.mp then
+            drawTimerID = engine.mp.startTimer(engine.p, 0.05)
+        else
+            drawTimerID = os.startTimer(0.05)
+        end
+        coroutine.yield()
+    end
+end
+
+local fnInput = function()
+    while engine.running do
+        term.redirect(parentTerm)
+        local event = input.processInput()
+        if event == "term_resize" then
+            resizeBuffer(parentTerm.getSize())
+        end
+
+        --if event == "term_resize" then -- TODO Check, there might be too many terms being used?
+        --    __Global.log("term:", term.current(), ", screen:", screenBuffer, ", parent:", parentTerm)
+        --end
+    end
+end
+
+
 engine.drawCount = 0
-engine.start = function ()
+function engine.start()
     if engine.running then return end
+    if __mp and __p then
+        engine.mp = __mp
+        engine.p = __p
+    end
+
     engine.running = true
-    engine.input.addResizeEventListener(onResizeEvent)
-    engine.root:_expandChildren() -- HACK this should be called automatically 
+    engine.root:_expandChildren() -- HACK this should be called automatically
+    resizeBuffer(screenBuffer.getSize())
 
     redrawScreen()
 
@@ -192,33 +280,7 @@ engine.start = function ()
         engine.freeQueue = {}
     end
 
-
-    local drawTimerID = 0
-    local id = __Global.nextID
     __Global.nextID = __Global.nextID + 1
-
-    local fnDraw = function ()
-        while engine.running do
-            if engine.queueRedraw == true then
-                engine.drawCount = engine.drawCount + 1
-                redrawScreen()
-                engine.queueRedraw = false
-            end
-
-            drawTimerID = os.startTimer(0.05)
-            coroutine.yield()
-        end
-    end
-
-    local fnInput = function ()
-        while engine.running do
-            term.redirect(parentTerm)
-            local event = input.processInput()
-            --if event == "term_resize" then -- TODO Check, there might be too many terms being used?
-            --    __Global.log("term:", term.current(), ", screen:", screenBuffer, ", parent:", parentTerm)
-            --end
-        end
-    end
 
     local coDraw = coroutine.create(fnDraw)
     local coInput = coroutine.create(fnInput)
@@ -247,33 +309,27 @@ engine.start = function ()
     engine.stop()
 end
 
-engine.stop = function ()
+function engine.stop()
     engine.running = false
 
-    if globalRoot then
+    if globalRoot and _G.__Global then
         _G.__Global.logFile.close()
         _G.__Global = nil
     end
 end
 
----@return Style
-engine.newStyle = function ()
-    return style:new()
+function engine.newMultiProgram()
+    return require(coreDotPath .. ".multiProcess.multiProgram")
 end
 
----@return Style
-engine.getDefaultStyle = function ()
-    return style
-end
+---@param mp MultiProgram
+---@return string?
+function engine.startMultiProgram(mp)
+    engine.mp = mp
+    engine.p = mp.launchProcess(engine.screenBuffer, engine.start, nil, 1, 1, screenBuffer.getSize())
 
----@return Style
-engine.getDefaultClickedStyle = function ()
-    return clickedStyle
-end
-
----@return Control|nil
-engine.getFocus = function ()
-    return input.getFocus()
+    local err = mp.start()
+    return err
 end
 
 ---@return Engine

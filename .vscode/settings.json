@@ -1,5 +1,6 @@
 {
     "Lua.diagnostics.globals": [
-        "colors"
+        "colors",
+        "term"
     ]
 }

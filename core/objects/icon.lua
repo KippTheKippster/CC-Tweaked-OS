@@ -49,7 +49,7 @@ end
 
 function Icon:render()
     if self.texture == nil then return end
-	paintutils.drawImage(self.texture, self.globalX + 1 + self.offsetX, self.globalY + 1 + self.offsetY)
+	paintutils.drawImage(self.texture, self.gx + 1 + self.offsetX, self.gy + 1 + self.offsetY)
 end
 
 function Icon:getTextureSize()

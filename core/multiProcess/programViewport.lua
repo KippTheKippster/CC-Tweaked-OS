@@ -16,7 +16,7 @@ ProgramViewport.terminated = false
 ProgramViewport.skipEvent = false
 ProgramViewport.oldW = 0
 ProgramViewport.oldH = 0
-ProgramViewport.queueResizeEvent = false
+ProgramViewport.resizeQueued = false
 ---@type table
 ProgramViewport.focusKeys = nil
 
@@ -39,7 +39,7 @@ end
 
 function ProgramViewport:transformChanged()
     if self.oldH ~= self.h or self.oldW ~= self.w then
-        self.queueResizeEvent = true
+        self.resizeQueued = true
     end
     self.oldW, self.oldH = self.w, self.h
 end
@@ -50,7 +50,7 @@ function ProgramViewport:launchProgram(parentTerm, programPath, extraEnv, ...)
         if self:isValid() then
             return self:unhandledEvent(data)
         end
-    end, self.globalX + 1, self.globalY + 1, self.w, self.h, ...)
+    end, self.gx + 1, self.gy + 1, self.w, self.h, ...)
 end
 
 function ProgramViewport:endProcess()
@@ -100,9 +100,15 @@ function ProgramViewport:unhandledEvent(data)
         return true
     end
 
-    if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" or  event == "mouse_scroll" then
+    if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
         if self.parent:inFocus() == false then return end
+        if input.getCurrentControl() ~= self then return end
+        local button, x, y = data[2], data[3], data[4]
+        local offsetX, offsetY = self.program.window.getPosition()
 
+        result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
+    elseif event == "mouse_scroll" then
+        if self.parent:inFocus() == false then return end
         local button, x, y = data[2], data[3], data[4]
         local offsetX, offsetY = self.program.window.getPosition()
 
@@ -125,6 +131,8 @@ function ProgramViewport:unhandledEvent(data)
             result = resumeProcess(self, data)
         end
     elseif event == "key_up" then
+        if self.parent:inFocus()  == false then return end
+
         self.focusKeys[data[2]] = nil
         result = resumeProcess(self, data)
     else
@@ -161,10 +169,10 @@ function ProgramViewport:updateWindow()
 
     term.redirect(self.program.window)
 
-    self.program.window.reposition(self.globalX + 1, self.globalY + 1, self.w, self.h) --, self.program.window)
-    if self.queueResizeEvent == true then
+    self.program.window.reposition(self.gx + 1, self.gy + 1, self.w, self.h) --, self.program.window)
+    if self.resizeQueued == true then
         multiProgram.resumeProcess(self.program, {"term_resize"})
-        self.queueResizeEvent = false
+        self.resizeQueued = false
     end
 
     self.program.window.setVisible(true)
