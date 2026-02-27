@@ -1,5 +1,6 @@
 ---@type MOS
 local mos = __mos
+local mosWindow = __mosWindow
 if mos == nil then
     printError("Paint must be opened with MOS!")
     return
@@ -340,27 +341,27 @@ paint.openImage = function(file)
     paint.fitSprite()
     paint.centerSprite()
     sprite:queueDraw()
-    __window.text = "Paint " .. fs.getName(file)
+    mosWindow.text = "Paint " .. fs.getName(file)
 end
 
 paint.saveImage = function(file)
     paint.saveFile = file
     paint.saveCanvas(paint.canvas, file)
-    __window.text = "Paint " .. fs.getName(file)
+    mosWindow.text = "Paint " .. fs.getName(file)
 end
 
 paint.setEdited = function(edited)
     edited = edited or true
     if paint.edited == false and edited then
         paint.edited = true
-        __window.text = __window.text .. "*"
-        __window:queueDraw()
+        mosWindow.text = mosWindow.text .. "*"
+        mosWindow:queueDraw()
     end
 
     if paint.edited == true and edited == false then
         paint.edited = false
-        __window.text = __window.text:sub(1, #__window.text - 1)
-        __window:queueDraw()
+        mosWindow.text = mosWindow.text:sub(1, #mosWindow.text - 1)
+        mosWindow:queueDraw()
     end
 end
 --#endregion
@@ -371,14 +372,14 @@ ui.fileExplorer = nil
 
 ui.new = function()
     paint.newImage(16, 10)
-    __window:grabFocus()
+    mosWindow:grabFocus()
 end
 
 ui.open = function()
     ui.fileExplorer = mos.openFileDialogue("Open File", function(path)
         paint.openImage(path)
         ui.fileExplorer:close()
-        __window:grabFocus()
+        mosWindow:grabFocus()
         paint.setEdited(false)
     end)
 end
@@ -389,7 +390,7 @@ ui.save = function()
     else
         paint.saveImage(paint.saveFile)
         paint.setEdited(false)
-        __window:grabFocus()
+        mosWindow:grabFocus()
     end
 end
 
@@ -401,7 +402,7 @@ ui.saveAs = function()
         end
         paint.saveImage(path)
         ui.fileExplorer:close()
-        __window:grabFocus()
+        mosWindow:grabFocus()
         paint.setEdited(false)
     end, true, paint.saveFile)
 end
@@ -865,7 +866,7 @@ if mos then
         elseif text == "Save As..." then
             ui.saveAs()
         elseif text == "Close" then
-            __window:close()
+            mosWindow:close()
         end
     end
 
@@ -901,10 +902,10 @@ if mos then
             paint.setEdited()
         end
 
-        __window:grabFocus()
+        mosWindow:grabFocus()
     end
 
-    mos.bindTool(__window, function(focus)
+    mos.bindTool(mosWindow, function(focus)
         if focus then
             mos.addToToolbar(fileDropdown)
             mos.addToToolbar(imageDropdown)

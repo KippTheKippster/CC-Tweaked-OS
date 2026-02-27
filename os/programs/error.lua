@@ -1,7 +1,7 @@
 ---@type MOS
 local mos = __mos
 ---@type ProgramWindow
-local window = __window
+local window = __mosWindow
 if mos == nil then
     printError("Settings must be opened with MOS!")
     return

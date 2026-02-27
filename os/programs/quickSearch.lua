@@ -30,8 +30,11 @@ while index <= #dirs do
     local files = fs.list(dirs[index])
     for i, file in ipairs(files) do
         if fs.isDir(file) then
-            if file ~= "rom" and file ~= "mos" and file ~= ".logs" and file ~= ".mosdata" then
-                table.insert(dirs, fs.combine(dir, file))
+            local path = fs.combine(dir, file)
+            if not disk.isPresent(path) then       
+                if file ~= "rom" and file ~= "mos" and file ~= ".logs" and file ~= ".mosdata" then
+                    table.insert(dirs, path)
+                end
             end
         else
             table.insert(qs.programs, { name = file, path = fs.combine(dir, file) })

@@ -1,7 +1,8 @@
 local completion = require("cc.completion")
 local args = {...}
 local callbackFunction = args[1]
-local file = args[2]
+local startText = args[2]
+local file = args[3]
 
 local fnComplete = nil
 local fileInfo = shell.getCompletionInfo()[file]
@@ -52,12 +53,12 @@ local input = read(nil, nil, function (text)
     else
         return nil
     end
-end)
+end, startText)
 
 if callbackFunction then
     callbackFunction(tokenise(input))
 end
 
-if __window then
-    __window:close()
+if __mosWindow then
+    __mosWindow:close()
 end

@@ -1,5 +1,7 @@
 ---@type MOS
 local mos = __mos
+---@type ProgramWindow
+local mosWindow = __mosWindow
 if mos == nil then
     printError("File Explorer must be opened with MOS!")
     return
@@ -8,22 +10,11 @@ end
 ---@type Engine
 local engine = require(mos.mosDotPath .. ".core.engine")
 
----@type ProgramWindow
-local mosWindow = __window
-
 local args = { ... }
 
 local fe = {}
 fe.currentPath = ""
-fe.mountPaths = {
-    "top",
-    "bottom",
-    "front",
-    "back",
-    "right",
-    "left",
-}
-fe.mountedDisks = {}
+
 fe.selection = {}
 ---@enum PasteMode
 fe.PasteMode = {
@@ -34,6 +25,10 @@ fe.PasteMode = {
 ---@type PasteMode
 fe.pasteMode = fe.PasteMode.COPY
 fe.clipboard = {}
+
+fe.mountedDisks = {}
+fe.diskTools = {}
+fe.toolsBound = false
 
 ---comment
 ---@param path string
@@ -598,10 +593,11 @@ function fe.getFocusFileButton()
     end
 end
 
-local function newAudioDropdown(name)
+function fe.newAudioDropdown(path)
     ---@type Dropdown
     local dropdown = mos.engine.Dropdown:new()
-    dropdown.text = disk.getAudioTitle(name) or disk.getMountPath(name)
+    local title = disk.getAudioTitle(path) or disk.getpath(path)
+    dropdown.text = title
     dropdown.text = "[" .. dropdown.text .. "]"
     dropdown.w = #dropdown.text
     dropdown:addToList("Play Audio")
@@ -614,23 +610,24 @@ local function newAudioDropdown(name)
     dropdown.optionPressed = function(o, i)
         local text = o:getOptionText(i)
         if text == "Play Audio" then
-            disk.playAudio(name)
+            disk.playAudio(path)
         elseif text == "Stop Audio" then
-            disk.stopAudio(name)
+            disk.stopAudio(path)
         elseif text == "Info" then
-            mos.launchProgram("Disk Info", "/os/programs/diskInfo.lua", 3, 3, 20, 6, name)
+            mos.openProgram(mos.toOsPath("/programs/diskInfo.lua"), path).text = "Disk Info '" .. title .. "'"
         elseif text == "Eject" then
-            fe.ejectDisk(name)
+            disk.eject(path)
         end
     end
 
     return dropdown
 end
 
-local function newDiskDropdown(name)
+function fe.newDriveDropdown(path)
     ---@type Dropdown
     local dropdown = mos.engine.Dropdown:new()
-    dropdown.text = disk.getMountPath(name)
+    local title = disk.getMountPath(path)
+    dropdown.text = title
     dropdown.text = "[" .. dropdown.text .. "]"
     dropdown.w = #dropdown.text
     dropdown:addToList("Install Folder")
@@ -644,84 +641,106 @@ local function newDiskDropdown(name)
     dropdown.optionPressed = function(o, idx)
         local text = o:getOptionText(idx)
         if text == "Install Folder" then
-            createEditFile("", function(edit)
-                local dest = fs.combine(currentPath, edit.text)
-                if fs.isReadOnly(dest) then return false end
-                if fs.exists(dest) then return false end
-                pPopupError(fs.copy, disk.getMountPath(name), dest)
-                return true
+            local edit = fe.newFileEdit("", function (o)
+                fe.pPopupError(fs.copy, disk.getMountPath(path), fe.nameToPath(o.text))
+                fe.addFileButton(o.text)
+                o:queueFree()
             end)
+            fileContainer:addChild(edit)
         elseif text == "Install Here" then
-            if fs.isReadOnly(currentPath) then
-                mos.createPopup("Warning", "Folder is read only!")
-                return
-            end
-
-            local mountPath = disk.getMountPath(name)
-            local names = fs.list(mountPath, "r")
-            for i = 1, #names do
-                local path = fs.combine(mountPath, names[i])
-                local dest = fs.combine(currentPath, names[i])
-                if path == dest then
-                    break
+            local mountPath = disk.getMountPath(path)
+            local files = fs.list(mountPath, "r")
+            for i = 1, #files do
+                local from = fs.combine(mountPath, files[i])
+                local to = fe.nameToPath(files[i])
+                mos.log(to)
+                local ok = true
+                if fs.exists(to) then
+                    ok = fe.pPopupError(fs.delete, to)
                 end
-
-                if fs.exists(dest) then
-                    pPopupError(fs.delete, dest)
+                if ok then
+                    ok = fe.pPopupError(fs.copy, from, to)
+                    --if ok then
+                    --    fe.addFileButton(files[i])
+                    --end
                 end
-                pPopupError(fs.copy, path, dest)
             end
-
-            refreshFiles()
+            fe.refresh()
         elseif text == "Set Label" then
-            mos.launchProgram("Set Label", "/os/programs/writeArgs.lua", 3, 3, 24, 2, function(label)
-                disk.setLabel(name, label)
-                refreshFiles()
-            end, disk.getLabel(name), false)
+            mos.openArgs(function (data)
+                disk.setLabel(path, data[1]) -- TODO Combine data to one string
+            end, disk.getLabel(path))
             return
         elseif text == "Info" then
-            mos.launchProgram("Disk Info", "/os/programs/diskInfo.lua", 3, 3, 20, 9, name)
+            mos.openProgram(mos.toOsPath("/programs/diskInfo.lua"), path).text = "Disk Info '" .. title .. "'"
             return
         elseif text == "Eject" then
-            ejectDisk(name)
+            fe.ejectDisk(path)
         end
 
-        __window:grabFocus()
+        mosWindow:grabFocus()
     end
 
     return dropdown
 end
 
----comment
----@param mountPath string
-function fe.mountDisk(mountPath)
-
-end
-
----comment
----@param mountPath string
-function fe.unmountDisk(mountPath)
-
-end
-
----comment
----@param mountPath string
-function fe.ejectDisk(mountPath)
-    fe.unmountDisk(mountPath)
-    disk.eject(mountPath)
-end
-
-function fe.scanMounts()
-    for i, path in ipairs(fe.mountPaths) do
-        if disk.isPresent(path) then
-            fe.mountDisk(path)
-        end
+function fe.newDiskDropdown(path)
+    if disk.hasData(path) then
+        return fe.newDriveDropdown(path)
+    elseif disk.hasAudio(path) then
+        return fe.newAudioDropdown(path)
+    else
+        error("Unsupported Disk")
     end
 end
 
-function fe.clearMounts()
-    for path, _ in pairs(fe.mountedDisks) do
-        fe.unmountDisk(path)
+---comment
+---@param path string
+function fe.mountDisk(path)
+    mos.log("mount ", path)
+    fe.mountedDisks[path] = true
+    assert(fe.diskTools[path] == nil, "Trying to add a disk tool that already exists!")
+    local bound = fe.toolsBound
+    if bound then
+        fe.clearTools()
+    end
+    fe.diskTools[path] = fe.newDiskDropdown(path)
+    if bound then
+        fe.addTools()
+    end
+end
+
+---comment
+---@param path string
+function fe.unmountDisk(path)
+    mos.log("unmount ", path)
+    fe.mountedDisks[path] = false
+    assert(fe.diskTools[path] ~= nil, "Trying to remove a non-existent disk tool!")
+    local bound = fe.toolsBound
+    if bound then
+        fe.clearTools()
+    end
+    fe.diskTools[path]:queueFree()
+    fe.diskTools[path] = nil
+    if bound then
+        fe.addTools()
+    end
+end
+
+function fe.scanDisks()
+    local mountPaths = {
+        "top",
+        "bottom",
+        "front",
+        "back",
+        "right",
+        "left"
+    }
+
+    for i, name in ipairs(mountPaths) do
+        if disk.isPresent(name) then
+            fe.mountDisk(name)
+        end
     end
 end
 
@@ -737,108 +756,122 @@ function backButton:pressed()
     fe.backDir()
 end
 
-if mos and mosWindow then
-    local fileDropdown = mos.engine.Dropdown:new()
-    fileDropdown.text = "File"
-    fileDropdown:addToList("New File")
-    fileDropdown:addToList("New Dir")
-    fileDropdown:addToList("------------", false)
-    fileDropdown:addToList("Open")
-    fileDropdown:addToList("Open w/ args")
-    fileDropdown:addToList("------------", false)
-    fileDropdown:addToList("Edit")
-    fileDropdown:addToList("------------", false)
-    fileDropdown:addToList("Close")
+-- MOS
+local fileDropdown = mos.engine.Dropdown:new()
+fileDropdown.text = "File"
+fileDropdown:addToList("New File")
+fileDropdown:addToList("New Dir")
+fileDropdown:addToList("------------", false)
+fileDropdown:addToList("Open")
+fileDropdown:addToList("Open w/ args")
+fileDropdown:addToList("------------", false)
+fileDropdown:addToList("Edit")
+fileDropdown:addToList("------------", false)
+fileDropdown:addToList("Close")
 
-    function fileDropdown:optionPressed(i)
-        local focusFileButton = fe.getFocusFileButton()
-        local focusPath = nil
-        if focusFileButton then
-            focusPath = focusFileButton.path
-        end
-
-        local text = fileDropdown:getOptionText(i)
-        if text == "New File" then
-            fe.addFileEdit(function(edit)
-                edit:queueFree()
-                fe.makeFile(edit.text)
-            end)
-        elseif text == "New Dir" then
-            fe.addFileEdit(function(edit)
-                edit:queueFree()
-                fe.makeDir(edit.text)
-            end)
-        elseif text == "Open" then
-            if focusPath then
-                if fs.isDir(focusPath) then
-                    fe.openDir(focusPath)
-                else
-                    fe.openFile(focusPath, mos.FileOpenModifier.NONE)
-                end
-            end
-        elseif text == "Open w/ args" then
-            if focusPath and fs.isDir(focusPath) == false then
-                fe.openFile(focusPath, mos.FileOpenModifier.ARGS)
-            end
-        elseif text == "Edit" then
-            if focusPath then
-                if fs.isDir(focusPath) == false then
-                    fe.openFile(focusPath, mos.FileOpenModifier.EDIT)
-                end
-            end
-        elseif text == "Close" then
-            if __window then
-                __window:close()
-            end
-        end
+function fileDropdown:optionPressed(i)
+    local focusFileButton = fe.getFocusFileButton()
+    local focusPath = nil
+    if focusFileButton then
+        focusPath = focusFileButton.path
     end
 
-    local editDropdown = mos.engine.Dropdown:new()
-    editDropdown.text = "Edit"
-    editDropdown:addToList("Cut")
-    editDropdown:addToList("Copy")
-    editDropdown:addToList("Paste")
-    editDropdown:addToList("--------", false)
-    editDropdown:addToList("Rename")
-    editDropdown:addToList("Favorite")
-    editDropdown:addToList("--------", false)
-    editDropdown:addToList("Delete")
-
-    function editDropdown:optionPressed(i)
-        local focusFileButton = fe.getFocusFileButton()
-        if not focusFileButton then
-            return
+    local text = fileDropdown:getOptionText(i)
+    if text == "New File" then
+        fe.addFileEdit(function(edit)
+            edit:queueFree()
+            fe.makeFile(edit.text)
+        end)
+    elseif text == "New Dir" then
+        fe.addFileEdit(function(edit)
+            edit:queueFree()
+            fe.makeDir(edit.text)
+        end)
+    elseif text == "Open" then
+        if focusPath then
+            if fs.isDir(focusPath) then
+                fe.openDir(focusPath)
+            else
+                fe.openFile(focusPath, mos.FileOpenModifier.NONE)
+            end
         end
-        local focusPath = focusFileButton.path
-        local text = editDropdown:getOptionText(i)
-        if text == "Cut" then
-            fe.pasteMode = fe.PasteMode.CUT
-            fe.copySelectionToClipboard()
-        elseif text == "Copy" then
-            fe.pasteMode = fe.PasteMode.COPY
-            fe.copySelectionToClipboard()
-        elseif text == "Paste" then
-            fe.pasteClipboard(fe.pasteMode)
-        elseif text == "Rename" then
-            fe.addRenameFileEdit(focusFileButton)
-            __window:grabFocus()
-        elseif text == "Favorite" then
-            fe.favoriteSelection()
-        elseif text == "Delete" then
-            fe.deleteSelection()
+    elseif text == "Open w/ args" then
+        if focusPath and fs.isDir(focusPath) == false then
+            fe.openFile(focusPath, mos.FileOpenModifier.ARGS)
+        end
+    elseif text == "Edit" then
+        if focusPath then
+            if fs.isDir(focusPath) == false then
+                fe.openFile(focusPath, mos.FileOpenModifier.EDIT)
+            end
+        end
+    elseif text == "Close" then
+        if mosWindow then
+            mosWindow:close()
         end
     end
-
-    mos.bindTool(mosWindow, function(focus)
-        if focus then
-            mos.addToToolbar(fileDropdown)
-            mos.addToToolbar(editDropdown)
-        else
-            mos.removeFromToolbar(fileDropdown)
-            mos.removeFromToolbar(editDropdown)
-        end
-    end)
 end
+
+local editDropdown = mos.engine.Dropdown:new()
+editDropdown.text = "Edit"
+editDropdown:addToList("Cut")
+editDropdown:addToList("Copy")
+editDropdown:addToList("Paste")
+editDropdown:addToList("--------", false)
+editDropdown:addToList("Rename")
+editDropdown:addToList("Favorite")
+editDropdown:addToList("--------", false)
+editDropdown:addToList("Delete")
+
+function editDropdown:optionPressed(i)
+    local focusFileButton = fe.getFocusFileButton()
+    if not focusFileButton then
+        return
+    end
+    local focusPath = focusFileButton.path
+    local text = editDropdown:getOptionText(i)
+    if text == "Cut" then
+        fe.pasteMode = fe.PasteMode.CUT
+        fe.copySelectionToClipboard()
+    elseif text == "Copy" then
+        fe.pasteMode = fe.PasteMode.COPY
+        fe.copySelectionToClipboard()
+    elseif text == "Paste" then
+        fe.pasteClipboard(fe.pasteMode)
+    elseif text == "Rename" then
+        fe.addRenameFileEdit(focusFileButton)
+        mosWindow:grabFocus()
+    elseif text == "Favorite" then
+        fe.favoriteSelection()
+    elseif text == "Delete" then
+        fe.deleteSelection()
+    end
+end
+
+function fe.addTools()
+    mos.addToToolbar(fileDropdown)
+    mos.addToToolbar(editDropdown)
+    for _, v in pairs(fe.diskTools) do
+        mos.addToToolbar(v)
+    end
+end
+
+function fe.clearTools()
+    mos.removeFromToolbar(fileDropdown)
+    mos.removeFromToolbar(editDropdown)
+    for _, v in pairs(fe.diskTools) do
+        mos.removeFromToolbar(v)
+    end
+end
+
+mos.bindTool(mosWindow, function(focus)
+    fe.toolsBound = focus
+    if focus then
+        fe.addTools()
+    else
+        fe.clearTools()
+    end
+end)
 
 local function rawEvent(data)
     local event = data[1]
@@ -930,9 +963,9 @@ local function rawEvent(data)
             fe.backDir()
         end
     elseif event == "disk" then
-        fe.scanDisks()
+        fe.mountDisk(data[2])
     elseif event == "disk_eject" then
-        fe.clearDisks()
+        fe.unmountDisk(data[2])
     elseif event == "mos_favorite_add" then
         main:queueDraw()
     elseif event == "mos_favorite_remove" then
@@ -949,8 +982,9 @@ if settings.dir then
 end
 
 fe.openDir(fe.currentPath)
+fe.scanDisks()
 
-engine:start()
+engine.start()
 
 -- Ideas
 -- When opening a folder just add more files to the container instead of replacing them

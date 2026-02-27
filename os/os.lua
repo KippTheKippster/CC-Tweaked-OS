@@ -582,7 +582,7 @@ function mos.launchProgram(name, path, x, y, w, h, ...)
     local extraEnv = {}
 
     extraEnv.__mos = mos
-    extraEnv.__window = window
+    extraEnv.__mosWindow = window
 
     viewport:launchProgram(engine.screenBuffer, path, extraEnv, ...)
     --viewport:unhandledEvent({}) -- Forces program to start
@@ -673,14 +673,25 @@ function mos.editProgram(path)
     return mos.launchProgram("Edit '" .. fs.getName(path) .. "'", "/rom/programs/edit.lua", x, y, w, h, path)
 end
 
+---@param callback function
+---@param startText string?
+---@param workingFile string?
+---@return ProgramWindow
+function mos.openArgs(callback, startText, workingFile)
+    return mos.launchProgram("Args", toOsPath("programs/writeArgs.lua"), 3, 3, 24, 2, callback, startText or "", workingFile or "")
+end
+
 ---comment
 ---@param path string
+---@param startText string?
 ---@return ProgramWindow
-function mos.openProgramWithArgs(path)
-    return mos.launchProgram("Args '" .. fs.getName(path) .. "'", toOsPath("programs/writeArgs.lua"), 3, 3, 24, 2,
+function mos.openProgramWithArgs(path, startText)
+    local args =  mos.openArgs(
         function(data)
             mos.openProgram(path, table.unpack(data))
-        end, path)
+        end, startText, path)
+    args.text = "Args '" .. fs.getName(path) .. "'"
+    return args
 end
 
 ---comment
