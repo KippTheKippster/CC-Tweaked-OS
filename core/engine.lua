@@ -1,4 +1,6 @@
-local coreDotPath = "." .. _G.corePath:gsub("/", ".")
+local src = debug.getinfo(1, "S").source:sub(2)
+local corePath = fs.getDir(src)
+local coreDotPath = "." .. corePath:gsub("/", ".") 
 
 ---@class Engine
 local engine = {}
@@ -25,7 +27,7 @@ engine.freeQueue = {}
 local style = require(coreDotPath .. ".style")(object)
 engine.normalStyle = style
 
----@param base Style|nil
+---@param base Style?
 ---@return Style
 local function newStyle(base)
     if base then
@@ -108,37 +110,7 @@ end
 ]] --
 
 engine.parentTerm = parentTerm
-engine.screenBuffer = screenBuffer
-
-local globalRoot = false
-
-if _G.__Global == nil then
-    globalRoot = true
-    _G.__Global = {}
-    _G.__Global.nextID = 0
-    _G.__Global.coreDotPath = coreDotPath
-    _G.__Global.corePath = corePath
-    local dest = "/.logs/"
-    if fs.exists(dest) then
-        local logs = fs.list(dest)
-        for i = 1, #logs - 4 do
-            fs.delete(fs.combine(dest, logs[i]))
-        end
-    end
-
-    _G.__Global.logFile = fs.open(fs.combine(dest, tostring(os.epoch("utc")) .. ".log"), "w")
-    _G.__Global.log = function(...)
-        local line = ""
-        local data = table.pack(...)
-        for k, v in ipairs(data) do
-            line = line .. tostring(v) .. " "
-        end
-        line = line .. '\n'
-
-        _G.__Global.logFile.write(line)
-        _G.__Global.logFile.flush()
-    end
-end
+engine.screenBuffer = screenBuffer          
 
 ---@type Control
 local root = engine.Control:new()
@@ -173,7 +145,7 @@ local function resizeBuffer(w, h)
 end
 
 ---@param o Control
----@param topLevelList table|nil
+---@param topLevelList table?
 local function drawTree(o, topLevelList)
     if o.visible == false then return end
     if o.topLevel and topLevelList then
@@ -238,26 +210,31 @@ local fnInput = function()
         if event == "term_resize" then
             resizeBuffer(parentTerm.getSize())
         end
-
-        --if event == "term_resize" then -- TODO Check, there might be too many terms being used?
-        --    __Global.log("term:", term.current(), ", screen:", screenBuffer, ", parent:", parentTerm)
-        --end
     end
 end
-
 
 engine.drawCount = 0
 function engine.start()
     if engine.running then return end
+
+    --[[
+        error = function (msg, lvl)
+            term.setBackgroundColor(colors.black)
+            term.redirect(parentTerm)
+            term.setCursorPos(1, 1)
+            lvl = lvl or 1
+            fnError(msg, lvl + 1)
+        end
+        ]] --
+
     if __mp and __p then
         engine.mp = __mp
         engine.p = __p
     end
 
     engine.running = true
-    engine.root:_expandChildren() -- HACK this should be called automatically
+    engine.root:_expandChildren()     -- HACK this should be called automatically
     resizeBuffer(screenBuffer.getSize())
-
     redrawScreen()
 
     local function freeTree(c)
@@ -280,8 +257,6 @@ function engine.start()
         engine.freeQueue = {}
     end
 
-    __Global.nextID = __Global.nextID + 1
-
     local coDraw = coroutine.create(fnDraw)
     local coInput = coroutine.create(fnInput)
 
@@ -297,12 +272,12 @@ function engine.start()
         end
 
         if ok == false then
+            error("Engine: " .. tostring(err), 0)
+            engine.stop()
             local current = term.current()
             term.redirect(engine.screenBuffer)
             term.setCursorPos(1, 1)
-            engine.stop()
             term.redirect(current)
-            error("Engine: " .. tostring(err), 0)
         end
     end
 
@@ -311,11 +286,6 @@ end
 
 function engine.stop()
     engine.running = false
-
-    if globalRoot and _G.__Global then
-        _G.__Global.logFile.close()
-        _G.__Global = nil
-    end
 end
 
 function engine.newMultiProgram()

@@ -177,9 +177,6 @@ function ProgramWindow:render()
     local right = self._gx + self._w
     local down = self._gy + 1 --draw only the top of the window, the rest is hidden by the program viewport
     self:drawPanel(left, up, right, down)
-
-    --TEXT
-    self:write()
 end
 
 function ProgramWindow:addViewport(pv)
@@ -224,7 +221,6 @@ function ProgramWindow:setHeaderVisibility(visible)
     self.scaleButton.visible = visible
     self.exitButton.visible = visible
     self.minimizeButton.visible = visible
-    self.label.visible = visible
 end
 
 function ProgramWindow:closed() end

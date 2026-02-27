@@ -1,9 +1,12 @@
+
 local env = __wrapper.env
 env.shell = shell
 env.multishell = multishell
+env._G = _G
 
 local args = __wrapper.args
 
+---@type MultiProgram
 local mp = __wrapper.mp
 
 _G.__wrapper = nil
@@ -22,13 +25,18 @@ term.clear()
 term.setCursorPos(1, 1)
 
 
-env._G = _G
 
 shell.exit()
+
 if fs.exists(path) then
-   local ok, err = pcall(mp.runProgram, env, table.unpack(args))
-    if ok == false then
+    local fn, err = mp.loadProgram(env, path)
+    if fn == nil then
         error(err, 3)
+    end
+
+    local ok, err = fn(table.unpack(args, 2))
+    if ok == false then
+        error(err)
     end
 else
     error("No such program as \"" .. path .. "\"", 0)

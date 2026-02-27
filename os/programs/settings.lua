@@ -1,18 +1,13 @@
-local corePath = ".mos.core"
-if _G.__Global then
-    corePath =_G.__Global.coreDotPath
-end
-
----@type Engine
-local engine = require(corePath .. ".engine")
-
 ---@type MOS
 local mos = __mos
-
 if mos == nil then
     printError("Settings must be opened with MOS!")
     return
 end
+
+---@type Engine
+local engine = require(mos.mosDotPath .. ".core.engine")
+
 
 mos.applyTheme(engine)
 
@@ -20,19 +15,15 @@ local seperatorStyle = engine.newStyle()
 seperatorStyle.textColor = colors.gray
 
 local scrollContainer = engine.root:addScrollContainer()
-scrollContainer.marginR = 1
 scrollContainer.expandW = true
 scrollContainer.expandH = true
 
 local main = scrollContainer:addVContainer()
 main.expandW = true
 main.expandH = true
-main.rendering = true
-
 
 local settingsButton = engine.Button:new()
 settingsButton.h = 1
-
 
 local function addSeperator(text)
     local seperator = main:addControl()
@@ -52,6 +43,7 @@ local function addLabel(text)
     label.text = text
     label.expandW = true
     label.h = 1
+    label.marginL = 1
     return label
 end
 
@@ -83,6 +75,7 @@ local function addSettingsButton(text, buttonText)
 
     ---@type Button
     local button = settingsButton:new()
+    button.w = 0 -- Why is this needed?
     label:addChild(button)
     button.text = buttonText
     button.dragSelectable = true
@@ -143,10 +136,10 @@ function versionButton:pressed()
 end
 
 addSeperator("-Computer-")
-local freeSpace = math.floor(fs.getFreeSpace("") / 1000.0)
-local capacity = math.floor(fs.getCapacity("") / 1000.0)
+local freeSpace = math.floor(fs.getFreeSpace("") * 1e-4) / 100
+local capacity = math.floor(fs.getCapacity("") * 1e-4) / 100
 addSettingsInfo("ID", "#" .. tostring(os.getComputerID()))
-addSettingsInfo("Space", capacity - freeSpace .. "/" .. capacity  .. " KB")
+addSettingsInfo("Space", capacity - freeSpace .. "/" .. capacity  .. " MB")
 local labelEdit = addSettingsLineEdit("Label", os.getComputerLabel())
 function labelEdit:textSubmitted()
     os.setComputerLabel(labelEdit.text)
@@ -219,14 +212,14 @@ end
 addSeperator("-File Explorer-")
 
 local dotFiles = addSettingsButton("Show dot Files", "[ ]")
-if mos.profile.showDotFiles then
+if mos.profile.dirShowDot then
     dotFiles.text = "[x]"
 end
 
 dotFiles.pressed = function (o)
-    mos.profile.showDotFiles = mos.profile.showDotFiles == false
+    mos.profile.dirShowDot = mos.profile.dirShowDot == false
     os.queueEvent("mos_refresh_files")
-    if mos.profile.showDotFiles then
+    if mos.profile.dirShowDot then
         o.text = "[x]"
     else
         o.text = "[ ]"
@@ -235,14 +228,14 @@ end
 
 
 local mosFiles = addSettingsButton("Show mos Files", "[ ]")
-if mos.profile.showMosFiles then
+if mos.profile.dirShowMos then
     mosFiles.text = "[x]"
 end
 
 mosFiles.pressed = function (o)
-    mos.profile.showMosFiles = mos.profile.showMosFiles == false
+    mos.profile.dirShowMos = mos.profile.dirShowMos == false
     os.queueEvent("mos_refresh_files")
-    if mos.profile.showMosFiles then
+    if mos.profile.dirShowMos then
         o.text = "[x]"
     else
         o.text = "[ ]"
@@ -251,14 +244,29 @@ end
 
 
 local romFiles = addSettingsButton("Show rom Files", "[ ]")
-if mos.profile.showRomFiles then
+if mos.profile.dirShowRom then
     romFiles.text = "[x]"
 end
 
 romFiles.pressed = function (o)
-    mos.profile.showRomFiles = mos.profile.showRomFiles == false
+    mos.profile.dirShowRom = mos.profile.dirShowRom == false
     os.queueEvent("mos_refresh_files")
-    if mos.profile.showRomFiles then
+    if mos.profile.dirShowRom then
+        o.text = "[x]"
+    else
+        o.text = "[ ]"
+    end
+end
+
+local leftHeart = addSettingsButton("Heart on Left Side", "[ ]")
+if mos.profile.dirLeftHeart then
+    leftHeart.text = "[x]"
+end
+
+leftHeart.pressed = function (o)
+    mos.profile.dirLeftHeart = mos.profile.dirLeftHeart == false
+    --os.queueEvent("mos_refresh_files")
+    if mos.profile.dirLeftHeart then
         o.text = "[x]"
     else
         o.text = "[ ]"

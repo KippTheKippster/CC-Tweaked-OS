@@ -1,28 +1,47 @@
+local corePath = fs.getDir(fs.getDir(debug.getinfo(1, "S").source:sub(2)))
+
 -- Handles coroutines of multiple programs
-
-local utils = require(__Global.coreDotPath .. ".utils")
-
 ---@class MultiProgram
 local mp = {}
 local tProcesses = {}
 local endQueue = {}
 local sleepQueue = {}
 
+local file = fs.open("mp.txt", "w")
+
+local function log(...)
+    if true then
+        return
+    end
+    local line = ""
+    local data = table.pack(...)
+    for k, v in ipairs(data) do
+        line = line .. tostring(v) .. " "
+    end
+    line = line .. '\n'
+
+    file.write(line)
+    file.flush()
+end
+
 ---comment
 ---@param p Process
 ---@param data table
----@return ...
+---@return table
 function mp.resumeProcess(p, data)
     term.redirect(p.window)
     local status = table.pack(coroutine.resume(p.co, table.unpack(data)))
+    if data[1] ~= "timer" and p ~= tProcesses[1] then
+        log("Func: ", textutils.serialise(status), debug.traceback())
+    end
     term.redirect(p.parentTerm)
-    return table.unpack(status)
+    return status
 end
 
 ---comment
 ---@param parentTerm table
 ---@param process function
----@param resume function|nil
+---@param resume function?
 ---@param x number
 ---@param y number
 ---@param w number
@@ -52,10 +71,8 @@ end
 ---comment
 ---@param env table
 ---@param programPath string
----@param ... ...
----@return boolean
----@return string?
-function mp.runProgram(env, programPath, ...)
+---@return function?, string?
+function mp.loadProgram(env, programPath)
     setmetatable(env, { __index = _G })
 
     if settings.get("bios.strict_globals", false) then
@@ -67,25 +84,26 @@ function mp.runProgram(env, programPath, ...)
         end
     end
 
-    local fnFile, ok, err = nil, false, nil
-    fnFile, err = loadfile(programPath, nil, env)
-    if fnFile then
-        ok, err = fnFile(...) --pcall(fnFile, ...)
-    end
-
-    return ok, err
+    return loadfile(programPath, nil, env)
 end
 
-local function createMultishellWrapper(p, env, ...)
+local function runMultishellWrapper(p, env, ...)
     local args = table.pack(...)
     _G.__wrapper = {
         env = env,
         args = args,
         mp = mp,
+        p = p,
         _G = _G
     }
 
-    mp.runProgram(env, "/rom/programs/advanced/multishell.lua")
+    local fn = mp.loadProgram(env, "/rom/programs/advanced/multishell.lua")
+    if fn then
+        local ok, err = fn()
+        if ok == false then
+            error(err)
+        end
+    end
 end
 
 ---comment
@@ -110,17 +128,40 @@ function mp.launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w, h,
 
 
     local p = mp.launchProcess(parentTerm, function(p, ...)
-        env.__p = p
-        createMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
+        runMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
         --os.run(env, programPath, ...)
         --mp.runProgram(env, programPath, ...)
+  
+        
+        --[[
+        local fn, err = mp.loadProgram(env, programPath)
+        if fn == nil then
+            error(err)
+        end
+        local ok, err = fn(...)
+        if ok == false then
+            error(err)
+        end
+        ]]--
     end, resume, x, y, w, h, ...)
 
     coroutine.resume(p.co, "start")
-    coroutine.resume(p.co, "paste", __Global.corePath .. "/multiProcess/multishellWrapper.lua")
+    coroutine.resume(p.co, "paste", corePath .. "/multiProcess/multishellWrapper.lua")
     coroutine.resume(p.co, "key", keys.enter)
 
     return p
+end
+
+
+---comment
+---@param p Process
+---@param err string
+function mp.forceError(p, err)
+    local c = term.current()
+    term.redirect(p.window)
+    debug.sethook(p.co, function() error(err) end, "l")
+    mp.resumeProcess(p, { "force_error" })
+    term.redirect(c)
 end
 
 ---comment
@@ -147,46 +188,20 @@ function mp.endProcess(p)
     table.insert(endQueue, p)
 end
 
----comment
----@param p Process
----@param err string
-function mp.forceError(p, err)
-    debug.sethook(p.co, function() error(err) end, "l")
-    mp.resumeProcess(p, { "force_error" })
-end
-
 local running = true
 function mp.exit()
     running = false
 end
 
 ---comment
----@param p Process
----@param err string
-local function throwError(p, err)
-    if __Global and type(__Global.log) == "function" then
-        __Global.log("MP Error", err)
-    end
-    term.redirect(p.parentTerm)
-    term.setCursorPos(1, 1)
-    term.setBackgroundColor(colors.black)
-    term.setTextColor(colors.red)
-    printError("MP: ", err)
-    mp.endProcess(p)
-    mp.exit()
-end
-
----comment
----@return boolean, string?, Process?
+---@return table
 local function process()
     local data = table.pack(os.pullEventRaw())
     if data[1] == "timer" then
         ---@type Process
         local p = sleepQueue[data[2]]
         if p then
-            local ok, err
-            p.resume(data)
-            return ok, err, p
+            return p.resume(data)
         end
     end
 
@@ -195,14 +210,23 @@ local function process()
         ---@type Process
         local p = tProcesses[i]
         if p.dead == false then
-            local ok, err = p.resume(data)
-            if ok == false then
-                return ok, err, p
+            local status = p.resume(data)
+            if status[1] == false then
+                return status
             end
         end
     end
 
-    return true
+    return { true }
+end
+
+local function find(t, v)
+    for i, o in ipairs(t) do
+		if o == v then
+			return i
+		end
+	end
+    return nil
 end
 
 ---comment
@@ -212,24 +236,23 @@ function mp.start()
     running = true
     local parentTerm = term.current()
     while running and #tProcesses > 0 do
-        local ok, err, errP = process()
+        local ok, err, errP = table.unpack(process())
         if ok == false then
-            throwError(errP, err)
+            return err
         end
 
         for _, p in ipairs(endQueue) do
-            local i = utils.find(tProcesses, p)
+            local i = find(tProcesses, p)
             if i == nil then
                 error("Trying to remove non existent process!", 2)
             end
             p.window.setVisible(false)
             debug.sethook(p.co, function() error("killed") end, "l")
-            mp.resumeProcess(p, { "kill" })
             table.remove(tProcesses, i)
         end
 
         endQueue = {}
-        end
+    end
     return nil
 end
 

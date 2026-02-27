@@ -1,14 +1,14 @@
-local corePath = ".mos.core"
-if _G.__Global then
-    corePath = _G.__Global.coreDotPath
+---@type MOS
+local mos = __mos
+if mos == nil then
+    printError("Paint must be opened with MOS!")
+    return
 end
 
 ---@type Engine
-local engine = require(corePath .. ".engine")
----@type MOS
-local mos = __mos
+local engine = require(mos.mosDotPath .. ".core.engine")
 
-local args = {...}
+local args = { ... }
 
 ---@type Control
 local background = nil
@@ -35,11 +35,11 @@ for n = 1, 16 do
     colourLookup[string.byte("0123456789abcdef", n, n)] = 2 ^ (n - 1)
 end
 
-paint.charToColor = function (char)
+paint.charToColor = function(char)
     return colourLookup[char]
 end
 
-paint.colorToChar = function (color)
+paint.colorToChar = function(color)
     if type(color) == "number" then
         local value = math.floor(math.log(color) / math.log(2)) + 1
         if value >= 1 and value <= 16 then
@@ -49,7 +49,7 @@ paint.colorToChar = function (color)
     return " "
 end
 
-paint.createCanvas = function (w, h)
+paint.createCanvas = function(w, h)
     local canvas = {}
     for i = 1, h do
         canvas[i] = {}
@@ -61,7 +61,7 @@ paint.createCanvas = function (w, h)
     return canvas
 end
 
-paint.fillCanvas = function (canvas, color)
+paint.fillCanvas = function(canvas, color)
     for i = 1, #canvas do
         for j = 1, #canvas[i] do
             canvas[i][j] = color
@@ -69,11 +69,11 @@ paint.fillCanvas = function (canvas, color)
     end
 end
 
-paint.clearCanvas = function (canvas)
+paint.clearCanvas = function(canvas)
     paint.fillCanvas(canvas, -1)
 end
 
-paint.clearCanvasArea = function (canvas, x, y, w, h)
+paint.clearCanvasArea = function(canvas, x, y, w, h)
     local _w, _h = paint.getCanvasSize(canvas)
     if x + w > _w then
         w = w - (x + w - _w)
@@ -103,7 +103,7 @@ paint.clearCanvasArea = function (canvas, x, y, w, h)
     end
 end
 
-paint.createCanvasCopy = function (canvas)
+paint.createCanvasCopy = function(canvas)
     local copy = {}
     local w, h = paint.getCanvasSize(canvas)
     for i = 1, h do
@@ -116,7 +116,7 @@ paint.createCanvasCopy = function (canvas)
     return copy
 end
 
-paint.createCanvasAreaCopy = function (canvas, x, y, w, h)
+paint.createCanvasAreaCopy = function(canvas, x, y, w, h)
     local copy = {}
     for i = 1, h do
         copy[i] = {}
@@ -128,7 +128,7 @@ paint.createCanvasAreaCopy = function (canvas, x, y, w, h)
     return copy
 end
 
-paint.pasteCanvasArea = function (from, to, x, y)
+paint.pasteCanvasArea = function(from, to, x, y)
     local fromW, fromH = paint.getCanvasSize(from)
     local toW, toH = paint.getCanvasSize(to)
     local w, h = fromW, fromH
@@ -163,7 +163,7 @@ paint.pasteCanvasArea = function (from, to, x, y)
     end
 end
 
-paint.resizeCanvas = function (canvas, x, y, w, h)
+paint.resizeCanvas = function(canvas, x, y, w, h)
     local _w, _h = paint.getCanvasSize(canvas)
 
     -- Trim
@@ -221,7 +221,7 @@ paint.resizeCanvas = function (canvas, x, y, w, h)
     end
 end
 
-paint.trimCanvas = function (canvas)
+paint.trimCanvas = function(canvas)
     local w, h = paint.getCanvasSize(canvas)
     local l, r, u, d = w, 1, -1, -1
     local uLocked = true
@@ -260,7 +260,7 @@ paint.trimCanvas = function (canvas)
     paint.resizeCanvas(canvas, l, u, r, d)
 end
 
-paint.getCanvasSize = function (canvas)
+paint.getCanvasSize = function(canvas)
     if #canvas == 0 then
         return 0, 0
     end
@@ -268,7 +268,7 @@ paint.getCanvasSize = function (canvas)
     return #canvas[1], #canvas
 end
 
-paint.squareCanvas = function (canvas)
+paint.squareCanvas = function(canvas)
     local w, h = 0, #canvas
     for i = 1, h do
         w = math.max(w, #canvas[i])
@@ -282,7 +282,7 @@ paint.squareCanvas = function (canvas)
 end
 
 
-paint.saveCanvas = function (canvas, file)
+paint.saveCanvas = function(canvas, file)
     local f, err = fs.open(file, "w")
     if not f then
         return false, err
@@ -303,29 +303,29 @@ paint.saveCanvas = function (canvas, file)
     return true
 end
 
-paint.canvasContainsPoint = function (canvas, x, y)
+paint.canvasContainsPoint = function(canvas, x, y)
     local w, h = paint.getCanvasSize(canvas)
     return x > 0 and y > 0 and x < w + 1 and y < h + 1
 end
 
-paint.getCanvasPixel = function (canvas, x, y)
+paint.getCanvasPixel = function(canvas, x, y)
     return canvas[y][x]
 end
 
-paint.setCanvasPixel = function (canvas, x, y, color)
+paint.setCanvasPixel = function(canvas, x, y, color)
     canvas[y][x] = color
 end
 
-paint.fitSprite = function ()
+paint.fitSprite = function()
     sprite.w, sprite.h = paint.getCanvasSize(paint.canvas)
 end
 
-paint.centerSprite = function ()
+paint.centerSprite = function()
     local w, h = engine.root.w, engine.root.h
     sprite.x, sprite.y = math.floor((w - sprite.w) / 2.0), math.floor((h - sprite.h) / 2.0)
 end
 
-paint.newImage = function (w, h)
+paint.newImage = function(w, h)
     paint.saveFile = ""
     paint.canvas = paint.createCanvas(w, h)
     paint.fitSprite()
@@ -333,7 +333,7 @@ paint.newImage = function (w, h)
     sprite:queueDraw()
 end
 
-paint.openImage = function (file)
+paint.openImage = function(file)
     paint.saveFile = file
     paint.canvas = paintutils.loadImage(file) -- FIXME if image isn't stored as a square it will result in canvas not being a square
     paint.squareCanvas(paint.canvas)
@@ -343,13 +343,13 @@ paint.openImage = function (file)
     __window.text = "Paint " .. fs.getName(file)
 end
 
-paint.saveImage = function (file)
+paint.saveImage = function(file)
     paint.saveFile = file
     paint.saveCanvas(paint.canvas, file)
     __window.text = "Paint " .. fs.getName(file)
 end
 
-paint.setEdited = function (edited)
+paint.setEdited = function(edited)
     edited = edited or true
     if paint.edited == false and edited then
         paint.edited = true
@@ -365,17 +365,17 @@ paint.setEdited = function (edited)
 end
 --#endregion
 
---#region Ui 
+--#region Ui
 local ui = {}
 ui.fileExplorer = nil
 
-ui.new = function ()
+ui.new = function()
     paint.newImage(16, 10)
     __window:grabFocus()
 end
 
-ui.open = function ()
-    ui.fileExplorer = mos.openFileDialogue("Open File", function (path)
+ui.open = function()
+    ui.fileExplorer = mos.openFileDialogue("Open File", function(path)
         paint.openImage(path)
         ui.fileExplorer:close()
         __window:grabFocus()
@@ -383,7 +383,7 @@ ui.open = function ()
     end)
 end
 
-ui.save = function ()
+ui.save = function()
     if paint.saveFile == "" then
         ui.saveAs()
     else
@@ -393,10 +393,10 @@ ui.save = function ()
     end
 end
 
-ui.saveAs = function ()
-    ui.fileExplorer = mos.openFileDialogue("Save File", function (path)
+ui.saveAs = function()
+    ui.fileExplorer = mos.openFileDialogue("Save File", function(path)
         local suffix = ".nfp"
-        if path:sub(-#suffix) ~= suffix then
+        if path:sub(- #suffix) ~= suffix then
             path = path .. suffix
         end
         paint.saveImage(path)
@@ -525,11 +525,11 @@ function sprite:render()
     end
 end
 
-function sprite:setPixel(x, y, button)
+function sprite:setPixel(b, x, y)
     paint.setEdited()
 
     local color = paint.colorR
-    if button == 1 then
+    if b == 1 then
         color = paint.colorL
     end
 
@@ -544,9 +544,9 @@ function sprite:setPixel(x, y, button)
     end
 end
 
-function sprite:down(x, y, button)
+function sprite:down(b, x, y)
     if paint.tool == "pen" then
-        sprite:setPixel(x, y, button)
+        sprite:setPixel(b, x, y)
     elseif paint.tool == "selection" then
         if paint.selectionCanvas then
             paint.pasteCanvasArea(paint.selectionCanvas, paint.canvas, selectionBox.x, selectionBox.y)
@@ -561,13 +561,13 @@ function sprite:down(x, y, button)
         selectionBox.visible = true
     elseif paint.tool == "bucket" then
         local dirs = {
-            { x =  1, y =  0},
-            { x =  0, y =  1},
-            { x = -1, y =  0},
-            { x =  0, y = -1}
+            { x = 1,  y = 0 },
+            { x = 0,  y = 1 },
+            { x = -1, y = 0 },
+            { x = 0,  y = -1 }
         }
 
-        local function fill (canvas, colorFrom, colorTo, queue)
+        local function fill(canvas, colorFrom, colorTo, queue)
             local point = queue[#queue]
             table.remove(queue, #queue)
             paint.setCanvasPixel(paint.canvas, point.x, point.y, colorTo)
@@ -584,22 +584,22 @@ function sprite:down(x, y, button)
         end
 
         local fillColor = paint.colorR
-        if button == 1 then
+        if b == 1 then
             fillColor = paint.colorL
         end
         local queue = { { x = x, y = y } }
         local color = paint.getCanvasPixel(paint.canvas, x, y)
-        if color ~= fillColor then    
+        if color ~= fillColor then
             pcall(fill, paint.canvas, color, fillColor, queue)
             self:queueDraw()
         end
     end
 end
 
-function sprite:drag(button, x, y, rx, ry)
+function sprite:drag(b, x, y, rx, ry)
     if x < 1 or y < 1 or x > self.w or y > self.h then return end
     if paint.tool == "pen" then
-        sprite:setPixel(x, y, button)
+        sprite:setPixel(b, x, y)
     elseif paint.tool == "selection" then
         selectionBox.w = x - selectionBox.x
         selectionBox.h = y - selectionBox.y
@@ -625,13 +625,14 @@ function sprite:up()
                 selectionBox.h = h * -1 + 2
             end
 
-            paint.selectionCanvas = paint.createCanvasAreaCopy(paint.canvas, selectionBox.x, selectionBox.y, selectionBox.w, selectionBox.h)
+            paint.selectionCanvas = paint.createCanvasAreaCopy(paint.canvas, selectionBox.x, selectionBox.y,
+                selectionBox.w, selectionBox.h)
             paint.clearCanvasArea(paint.canvas, selectionBox.x, selectionBox.y, selectionBox.w, selectionBox.h)
         end
     end
 end
 
-function selectionBox:drag(button, x, y, rx, ry)
+function selectionBox:drag(b, x, y, rx, ry)
     self.x = self.x + rx
     self.y = self.y + ry
 end
@@ -665,7 +666,7 @@ toolSelectStyle.textColor = colors.black
 
 local currentToolIcon = nil
 
-local function setCurrentToolIcon (c)
+local function setCurrentToolIcon(c)
     if currentToolIcon then
         currentToolIcon.style = toolNormalStyle
     end
@@ -675,7 +676,7 @@ local function setCurrentToolIcon (c)
     paint.tool = currentToolIcon.tool
 end
 
-function toolIcon:click ()
+function toolIcon:down()
     setCurrentToolIcon(self)
     self.w = #self.text
 end
@@ -743,8 +744,8 @@ for i = 0, 16 do
         c.style.backgroundColor = 2 ^ i
         c.colorIndex = c.style.backgroundColor
     end
-    c.click = function (_, x, y, button)
-        if button == 1 then
+    c.down = function(_, b)
+        if b == 1 then
             paint.colorL = c.colorIndex
             colorL.style = c.style
         else
@@ -827,7 +828,7 @@ local function createResizeDialogue(fn)
     wi.ok.expandW = true
     wi.ok.centerText = true
     wi.ok.anchorH = wi.Anchor.DOWN
-    wi.ok.pressed = function ()
+    wi.ok.pressed = function()
         local w = tonumber(wi.wEdit.text) or _w
         local h = tonumber(wi.hEdit.text) or _h
         fn(w, h)
@@ -879,7 +880,7 @@ if mos then
     function imageDropdown:optionPressed(i)
         local text = imageDropdown:getOptionText(i)
         if text == "Resize" then
-            createResizeDialogue(function (w, h)
+            createResizeDialogue(function(w, h)
                 paint.resizeCanvas(paint.canvas, 1, 1, w, h)
                 paint.fitSprite()
                 paint.centerSprite()
@@ -903,7 +904,7 @@ if mos then
         __window:grabFocus()
     end
 
-    mos.bindTool(__window, function (focus)
+    mos.bindTool(__window, function(focus)
         if focus then
             mos.addToToolbar(fileDropdown)
             mos.addToToolbar(imageDropdown)

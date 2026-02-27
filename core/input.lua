@@ -81,7 +81,7 @@ end
 ---Returns the deepest control in branch that overlaps point (x, y)
 ---@param x number
 ---@param y number
----@return Control|nil
+---@return Control?
 function mouse.getControlInPoint(x, y)
     local topControls = getTopLevelControls(engine.root, {})
     for _, control in ipairs(topControls) do
@@ -96,7 +96,7 @@ end
 
 ---Returns the focus owner of control c
 ---@param c Control
----@return Control|nil
+---@return Control?
 function mouse.getFocusOwner(c)
     if c == nil then
         return nil
@@ -321,7 +321,7 @@ local function rawEvent(data)
 end
 
 ---comment
----@return string|nil
+---@return string?
 local function processInput()
     local data = table.pack(os.pullEventRaw())
     local event = data[1]

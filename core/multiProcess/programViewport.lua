@@ -1,9 +1,9 @@
 -- Extends control, draws the inbuilt cc-tweaked window object on to a control object.
 ---@param control Control
----@param multiProgram MultiProgram
+---@param mp MultiProgram
 ---@param input Input
 ---@return ProgramViewport
-return function(control, multiProgram, input)
+return function(control, mp, input)
 ---@class ProgramViewport : Control
 local ProgramViewport = control:newClass()
 ProgramViewport.__type = "ProgramViewport"
@@ -46,15 +46,16 @@ end
 
 function ProgramViewport:launchProgram(parentTerm, programPath, extraEnv, ...)
     self.parentTerm = parentTerm
-    self.program = multiProgram.launchProgram(parentTerm, programPath, extraEnv, function (data)
+    self.program = mp.launchProgram(parentTerm, programPath, extraEnv, function(data)
         if self:isValid() then
             return self:unhandledEvent(data)
         end
+        return {true}
     end, self.gx + 1, self.gy + 1, self.w, self.h, ...)
 end
 
 function ProgramViewport:endProcess()
-    multiProgram.endProcess(self.program)
+    mp.endProcess(self.program)
 end
 
 local function drawChildren(viewport)
@@ -64,28 +65,69 @@ local function drawChildren(viewport)
 end
 
 local function resumeProcess(viewport, data)
-    local result = table.pack(multiProgram.resumeProcess(viewport.program, data))
+    local status = coroutine.status(viewport.program.co)
+    if status == "dead" then
+        return { true }
+    end
+    local result = mp.resumeProcess(viewport.program, data)
     --drawChildren(viewport)
     return result
 end
 
+---comment
+---@param data table
 function ProgramViewport:unhandledEvent(data)
-    if self.program == nil then return end
-
+    if self.program == nil then return { true } end
     local event = data[1]
-    local result = nil
 
     if self.skipEvent == true and event ~= "timer" then -- TODO add a more robust way of skipping input
         self.skipEvent = false
-        return true
+        return { true }
     end
 
-    if self.terminated == true then
-        term.setTextColor(colors.white)
-        if event == "key" and self.parent:inFocus() then
-            self.parent:close()
+    local args = data
+    if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
+        if self.parent:inFocus() == false then return { true } end
+        if input.getCurrentControl() ~= self then return { true } end
+        local button, x, y = data[2], data[3], data[4]
+        local offsetX, offsetY = self.program.window.getPosition()
+
+        args = table.pack(event, button, x - offsetX + 1, y - offsetY + 1)
+    elseif event == "mouse_scroll" then
+        if self.parent:inFocus() == false then return { true } end
+        local button, x, y = data[2], data[3], data[4]
+        local offsetX, offsetY = self.program.window.getPosition()
+
+        args = table.pack(event, button, x - offsetX + 1, y - offsetY + 1)
+    elseif event == 'char' then
+        if self.parent:inFocus() == false then return { true } end
+
+        args = data
+    elseif event == 'key' then
+        if self.parent:inFocus() == false then return { true } end
+
+        local key = data[2]
+        local held = data[3]
+
+        if self.focusKeys[key] == nil and held == false then
+            self.focusKeys[key] = true
         end
-        return true
+
+        if (held and self.focusKeys[key]) or not held then
+            args = data
+        end
+    elseif event == "key_up" then
+        if self.parent:inFocus() == false then return { true } end
+
+
+        if self.terminated == true then
+            if self.focusKeys[data[2]] == true and self.parent:inFocus() then
+                self.parent:close()
+            end
+        end
+
+        self.focusKeys[data[2]] = nil
+        args = data
     end
 
     if coroutine.status(self.program.co) == "dead" and self.terminated == false then
@@ -97,47 +139,14 @@ function ProgramViewport:unhandledEvent(data)
         self.terminated = true
 
         term.redirect(self.parentTerm)
-        return true
+        return { true }
     end
 
-    if event == "mouse_click" or event == "mouse_drag" or event == "mouse_up" then
-        if self.parent:inFocus() == false then return end
-        if input.getCurrentControl() ~= self then return end
-        local button, x, y = data[2], data[3], data[4]
-        local offsetX, offsetY = self.program.window.getPosition()
-
-        result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
-    elseif event == "mouse_scroll" then
-        if self.parent:inFocus() == false then return end
-        local button, x, y = data[2], data[3], data[4]
-        local offsetX, offsetY = self.program.window.getPosition()
-
-        result = resumeProcess(self, table.pack(event, button, x - offsetX + 1, y - offsetY + 1))
-    elseif event == 'char' then
-        if self.parent:inFocus()  == false then return end
-
-        result = resumeProcess(self, data)
-    elseif event == 'key' then
-        if self.parent:inFocus()  == false then return end
-
-        local key = data[2]
-        local held = data[3]
-
-        if self.focusKeys[key] == nil and held == false then
-            self.focusKeys[key] = true
-        end
-
-        if (held and self.focusKeys[key]) or not held then
-            result = resumeProcess(self, data)
-        end
-    elseif event == "key_up" then
-        if self.parent:inFocus()  == false then return end
-
-        self.focusKeys[data[2]] = nil
-        result = resumeProcess(self, data)
-    else
-        result = resumeProcess(self, data)
+    if self.terminated == true then
+        return { true }
     end
+
+    local result = resumeProcess(self, args)
 
     if result then
         local ok, err = result[1], result[2]
@@ -147,17 +156,19 @@ function ProgramViewport:unhandledEvent(data)
             term.setTextColor(colors.red)
             term.setBackgroundColor(colors.black)
             print("Viewport Result: ", err)
-            __Global.log("Viewport Error: ", err)
+            if __mos then
+                __mos.log("Viewport Error: ", err)
+            end
             term.redirect(self.parentTerm)
-            return true
+            return result
         end
 
         self:queueDraw()
 
-        return table.unpack(result)
+        return result
     end
 
-    return nil
+    return result
 end
 
 function ProgramViewport:updateWindow()
@@ -171,7 +182,7 @@ function ProgramViewport:updateWindow()
 
     self.program.window.reposition(self.gx + 1, self.gy + 1, self.w, self.h) --, self.program.window)
     if self.resizeQueued == true then
-        multiProgram.resumeProcess(self.program, {"term_resize"})
+        resumeProcess(self, { "term_resize" })
         self.resizeQueued = false
     end
 

@@ -131,8 +131,7 @@ function qs:refreshList ()
         end
 
         local continue = true
-        __Global.log(program.name:sub(0, 1))
-        if mos.profile.showDotFiles == false and program.name:sub(0, 1) == "." then
+        if mos.profile.dirShowDot == false and program.name:sub(0, 1) == "." then
             continue = false
         end
 

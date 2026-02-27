@@ -2,20 +2,22 @@ print("MOS is Starting...")
 
 ---@class MOS
 local mos = {}
-function mos.getVersion ()
+function mos.getVersion()
     return "1.0.0"
 end
 
 mos.latestMosOption = ""
 
 local runningProgram = shell.getRunningProgram()
-local mosPath =  "/" .. fs.getDir(fs.getDir(runningProgram))
+local mosPath = "/" .. fs.getDir(fs.getDir(runningProgram))
 local mosDotPath = "." .. mosPath:gsub("/", ".")
 local corePath = mosPath .. "/core"
-_G.corePath = corePath
 local coreDotPath = mosDotPath .. ".core"
 local osPath = mosPath .. "/os"
 local osDotPath = mosDotPath .. ".os"
+
+mos.mosPath = mosPath
+mos.mosDotPath = mosPath
 
 ---comment
 ---@param name string
@@ -40,13 +42,32 @@ mos.toMosPath = toMosPath
 mos.toOsPath = toOsPath
 mos.toCorePath = toCorePath
 
+local dest = "/.logs/"
+if fs.exists(dest) then
+    local logs = fs.list(dest)
+    for i = 1, #logs - 4 do
+        fs.delete(fs.combine(dest, logs[i]))
+    end
+end
+
+local logFile = fs.open(fs.combine(dest, tostring(os.epoch("utc")) .. ".log"), "w")
+function mos.log(...)
+    local line = ""
+    local data = table.pack(...)
+    for _, v in ipairs(data) do
+        line = line .. tostring(v) .. " "
+    end
+    line = line .. '\n'
+
+    logFile.write(line)
+    logFile.flush()
+end
+
 ---@type Engine
 local engine = require(coreDotPath .. ".engine")
 
-__Global.mosDotPath = mosDotPath
-
 ---@type MultiProgram
-local multiProgram = engine.newMultiProgram()
+local mp = engine.newMultiProgram()
 
 local windows = {}
 local customTools = {}
@@ -89,7 +110,7 @@ local defaultProfile = {
     backgroundIcon = toOsPath("/textures/backgrounds/tux.nfp"),
     fileExecptions = {
         [".nfp"] = {
-            program = toOsPath("/programs/paint.lua"),
+            program = "os/programs/paint.lua",
             fullscreen = false
         },
         [".txt"] = { program = "/rom/programs/edit.lua" }
@@ -99,10 +120,11 @@ local defaultProfile = {
     favorites = {
 
     },
-    showDotFiles = true,
-    showRomFiles = true,
-    showMosFiles = true,
+    dirShowDot = true,
+    dirShowRom = true,
+    dirShowMos = true,
     dirColor = nil,
+    dirLeftHeart = true,
 }
 
 local function validateTable(tbl, default)
@@ -118,7 +140,7 @@ local function validateTable(tbl, default)
 end
 
 ---comment
----@param file string|nil
+---@param file string?
 function mos.loadProfile(file)
     file = file or "/.mosdata/profiles/profile.sav"
     local profile = engine.utils.loadTable(file)
@@ -130,7 +152,7 @@ function mos.loadProfile(file)
 end
 
 ---comment
----@param file string|nil
+---@param file string?
 function mos.saveProfile(file)
     file = file or "/.mosdata/profiles/profile.sav"
     engine.utils.saveTable(mos.profile, file)
@@ -138,7 +160,7 @@ end
 
 ---comment
 ---@param file string
----@param profile Profile|nil
+---@param profile Profile?
 ---@return boolean
 function mos.isFileFavorite(file, profile)
     profile = profile or mos.profile
@@ -147,8 +169,8 @@ end
 
 ---comment
 ---@param file string
----@param settings table|nil
----@param profile Profile|nil
+---@param settings table?
+---@param profile Profile?
 function mos.addFileFavorite(file, settings, profile)
     profile = profile or mos.profile
     if profile.favorites[file] ~= nil then return end
@@ -161,7 +183,7 @@ end
 
 ---comment
 ---@param file string
----@param profile Profile|nil
+---@param profile Profile?
 function mos.removeFileFavorite(file, profile)
     profile = profile or mos.profile
     profile.favorites[file] = nil
@@ -175,7 +197,7 @@ end
 function mos.loadTheme(file)
     local theme = engine.utils.loadTable(file)
     if theme == nil then
-       mos.theme = defaultTheme
+        mos.theme = defaultTheme
     else
         mos.theme = theme
         mos.profile.theme = file
@@ -185,14 +207,13 @@ function mos.loadTheme(file)
     mos.refreshTheme()
 end
 
-
 local dropdown = engine.Dropdown
-local programViewport = require(coreDotPath .. ".multiProcess.programViewport")(engine.Control, multiProgram, engine.input)
+local programViewport = require(coreDotPath .. ".multiProcess.programViewport")(engine.Control, mp, engine.input)
 local programWindow = require(coreDotPath .. ".multiProcess.programWindow")(engine.WindowControl, engine.input)
 
 function mos.refreshTheme()
     local palette = mos.theme.palette
-    local redirects = { engine.screenBuffer }--{ engine.screenBuffer, engine.parentTerm, term.native() }
+    local redirects = { engine.screenBuffer }
     for _, window in ipairs(windows) do
         table.insert(redirects, window.programViewport.program.window)
     end
@@ -279,7 +300,6 @@ function mos.applyTheme(targetEngine)
     windowExitButtonStyle.textColor = windowColors.exitText
 end
 
-
 mos.theme = defaultTheme
 ---@type Profile
 mos.profile = nil
@@ -361,19 +381,20 @@ function mos.refreshMosDropdown()
         mosDropdown:addToList("-------------", false)
         for k, v in pairs(mos.profile.favorites) do
             local option = mosDropdown:addToList(v.name .. " ")
-            option.pressed = function (o)
+            option.pressed = function(o)
                 if fs.isDir(k) then
                     mos.openDir(k)
+                else
+                    local modifier = mos.getFileOpenModifierInput()
+                    if modifier == mos.FileOpenModifier.EDIT then
+                        mos.editProgram(k)
+                    elseif modifier == mos.FileOpenModifier.ARGS then
+                        mos.openProgramWithArgs(k)
+                    else
+                        mos.openProgram(k)
+                    end
                 end
 
-                local modifier = mos.getFileOpenModifierInput()
-                if modifier == mos.FileOpenModifier.EDIT then
-                    mos.editProgram(k)
-                elseif modifier == mos.FileOpenModifier.ARGS then
-                    mos.openProgramWithArgs(k)
-                else
-                    mos.openProgram(k)
-                end
             end
             local x = option:addButton()
             x.text = string.char(3)
@@ -382,7 +403,7 @@ function mos.refreshMosDropdown()
             x.anchorW = x.Anchor.RIGHT
             x.dragSelectable = true
             x.propogateFocusUp = true
-            x.pressed = function ()
+            x.pressed = function()
                 mos.removeFileFavorite(k)
                 mos.refreshMosDropdown()
             end
@@ -475,7 +496,7 @@ end
 ---comment
 ---@param window ProgramWindow
 local function windowFocusChanged(window)
-    multiProgram.resumeProcess(window.programViewport.program, { "mos_window_focus", window.focus })
+    window.programViewport.program.resume({ "mos_window_focus", window.focus })
     if window.focus == false then
         return
     end
@@ -503,7 +524,7 @@ function mos.addWindow(w)
     for k, v in ipairs(windows) do
         if v.text == w.text then
             count = count + 1
-            w.text = text .. "(" .. count.. ")"
+            w.text = text .. "(" .. count .. ")"
         end
     end
     w.text = w.text .. " "
@@ -516,7 +537,7 @@ function mos.addWindow(w)
     x.anchorW = x.Anchor.RIGHT
     x.dragSelectable = true
     x.propogateFocusUp = true
-    x.pressed = function ()
+    x.pressed = function()
         w:close()
     end
 
@@ -562,7 +583,6 @@ function mos.launchProgram(name, path, x, y, w, h, ...)
 
     extraEnv.__mos = mos
     extraEnv.__window = window
-    extraEnv.__Global = __Global
 
     viewport:launchProgram(engine.screenBuffer, path, extraEnv, ...)
     --viewport:unhandledEvent({}) -- Forces program to start
@@ -621,7 +641,15 @@ function mos.openProgram(path, ...)
     for k, v in pairs(mos.profile.fileExecptions) do
         local suffix = k
         if file:sub(-#suffix) == suffix then
-            local program = v.program or path
+            local program = path
+            if v.program then
+                if v.program:sub(1, 1) == "/" then
+                    program = v.program
+                else
+                    program = toMosPath(v.program)
+                end
+            end
+
             if v.fullscreen then
                 x, y = 0, 0
                 w, h = engine.root.w, engine.root.h
@@ -649,17 +677,18 @@ end
 ---@param path string
 ---@return ProgramWindow
 function mos.openProgramWithArgs(path)
-    return mos.launchProgram("Args '" .. fs.getName(path) .. "'", toOsPath("programs/writeArgs.lua"), 3, 3, 24, 2, function (data)
-        mos.openProgram(path, table.unpack(data))
-    end, path)
+    return mos.launchProgram("Args '" .. fs.getName(path) .. "'", toOsPath("programs/writeArgs.lua"), 3, 3, 24, 2,
+        function(data)
+            mos.openProgram(path, table.unpack(data))
+        end, path)
 end
 
 ---comment
 ---@param path string
----@param callback function|nil
+---@param callback function?
 ---@return ProgramWindow
 function mos.openDir(path, callback)
-    local w = mos.openProgram(toOsPath("/programs/files.lua"), callback, { dir =  path })
+    local w = mos.openProgram(toOsPath("/programs/files.lua"), callback, { dir = path })
     w.text = "File Explorer"
     return w
 end
@@ -667,8 +696,8 @@ end
 ---comment
 ---@param title string
 ---@param callback function
----@param saveMode boolean|nil
----@param dir string|nil
+---@param saveMode boolean?
+---@param dir string?
 ---@return ProgramWindow
 function mos.openFileDialogue(title, callback, saveMode, dir)
     local w = mos.openProgram(toOsPath("programs/files.lua"), callback, { saveMode = saveMode, dir = dir })
@@ -679,12 +708,12 @@ end
 ---comment
 ---@param title string
 ---@param text string
----@param x number|nil
----@param y number|nil
----@param w number|nil
----@param h number|nil
----@param parent Control|nil
----@return WindowControl|nil
+---@param x number?
+---@param y number?
+---@param w number?
+---@param h number?
+---@param parent Control?
+---@return WindowControl?
 function mos.createPopup(title, text, x, y, w, h, parent)
     parent = parent or engine.root
 
@@ -723,9 +752,9 @@ function mosDropdown:optionPressed(i)
     if text == "Shell" then
         mos.openProgram("/rom/programs/advanced/multishell.lua").text = "Shell"
     elseif text == "Exit" then
-        multiProgram.exit()
+        mp.exit()
     elseif text == "Reboot" then
-        multiProgram.exit()
+        mp.exit()
         shell.run(osPath .. "/os.lua")
     elseif text == "File Explorer" then
         mos.openDir("")
@@ -756,7 +785,7 @@ engine.input.addRawEventListener(root)
 
 function clock:update()
     self.text = textutils.formatTime(os.time('local'), true)
-    clock_timer_id = multiProgram.startTimer(engine.p, 1.0)
+    clock_timer_id = mp.startTimer(engine.p, 1.0)
 end
 
 function root:rawEvent(data)
@@ -819,19 +848,16 @@ clock:update()
 
 mos.engine = engine
 mos.root = engine.root
----@type ProgramWindow|nil
+---@type ProgramWindow?
 mos.fullscreenWindow = nil
 mos.quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
 engine.root:addChild(mos.quickSearch)
 mos.quickSearch.y = 1
 mos.quickSearch.x = 2
 
-__Global.log("Launching MOS")
-engine.startMultiProgram(multiProgram)
---multiProgram.launchProcess(engine.screenBuffer, engine.start, nil, 1, 1, term.getSize())
---local err = multiProgram.start()
-__Global.log("MOS Terminated")
-engine.stop()
+mos.log("Launching MOS")
+local err = engine.startMultiProgram(mp)
+mos.log("MOS Terminated")
 
 mos.saveProfile()
 
@@ -843,6 +869,7 @@ if err == nil or err == "Terminated" then
     term.clear()
     print("MOS Terminated...")
 else
+    mos.log("MOS Error: ", err)
     term.setBackgroundColor(colors.blue)
     term.setTextColor(colors.white)
     --term.setCursorPos(1, 1)
@@ -851,6 +878,8 @@ else
     print("Something Went Wrong :(")
     print(err)
 end
+
+engine.stop()
 
 if mos.latestMosOption == "Reboot" then
     shell.run(mosPath .. "/mos.lua")

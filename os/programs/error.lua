@@ -1,14 +1,17 @@
-local corePath = ".mos.core"
-if _G.__Global then corePath =_G.__Global.coreDotPath end
----@type ProgramWindow
-local window = __window
 ---@type MOS
 local mos = __mos
+---@type ProgramWindow
+local window = __window
+if mos == nil then
+    printError("Settings must be opened with MOS!")
+    return
+end
 
+---@type Engine
+local engine = require(mos.mosDotPath .. ".core.engine")
 local args = {...}
 
 ---@type Engine
-local engine = require(corePath .. ".engine")
 mos.applyTheme(engine)
 local main = engine.root:addVContainer()
 main.expandW = true

@@ -1,6 +1,12 @@
-local corePath = __Global.coreDotPath
+---@type MOS
+local mos = __mos
+if mos == nil then
+    printError("DiskInfo must be opened with MOS!")
+    return
+end
 
-local engine = require(corePath .. ".engine")
+---@type Engine
+local engine = require(mos.mosDotPath .. ".core.engine")
 
 local args = {...}
 local diskName = args[1] or ""
@@ -13,9 +19,6 @@ if __mos then
     __mos.applyTheme(engine)
 end
 
-local style = engine.getDefaultStyle()
-style.backgroundColor = colors.white
-
 local main = engine.root:addVContainer()
 main.rendering = true
 main.expandW = true
@@ -24,7 +27,6 @@ main.expandH = true
 local Line = engine.Control:new()
 Line.expandW = true
 Line.h = 1
-Line.text = text
 
 local function newLine(text)
     local l = Line:new()

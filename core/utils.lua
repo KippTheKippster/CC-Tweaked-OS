@@ -10,7 +10,7 @@ end
 ---Returns index of value in table or nil
 ---@param t table
 ---@param v any
----@return integer|nil
+---@return integer?
 local function find(t, v)
     for i, o in ipairs(t) do
 		if o == v then

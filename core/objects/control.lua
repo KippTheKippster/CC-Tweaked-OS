@@ -425,18 +425,22 @@ function Control:queueDraw()
     engine.queueRedraw = true
 end
 
+function Control:getBorders()
+    local left = self._gx + 1
+    local up = self._gy + 1
+    local right = self._gx + self._w
+    local down = self._gy + self._h
+    return left, up, right, down
+end
+
 -- Determines how the control object is drawn
 function Control:render()
     --SHADOW
     self:drawShadow()
     --PANEL
-    local left = self._gx + 1
-    local up = self._gy + 1
-    local right = self._gx + self._w
-    local down = self._gy + self._h    
-    self:drawPanel(left, up, right, down)
+    self:drawPanel(self:getBorders())
     --TEXT
-    self:write()
+    self:write(self.text)
 end
 
 -- Draws the control object if it is valid, NOTE this should not be used to redraw object, use 'queueDraw' instead
@@ -506,29 +510,29 @@ local function getTextPosition(_x, _y, _w, _h, center, text)
     return x + 1, y + 1
 end
 
-function Control:getTextPosition()
-    return getTextPosition(self._gx, self._gy, self._w, self._h, self.centerText, self.text)
+function Control:getTextPosition(text)
+    return getTextPosition(self._gx, self._gy, self._w, self._h, self.centerText, text)
 end
 
-function Control:write()
-    if self._text == "" or self.text == nil then
+function Control:write(text)
+    if text == "" or text == nil then
         return
     end
 
-    local l = #self.text + self.marginR
+    local l = #text + self.marginR
     if self.clipText == true then
-        l = math.min(#self.text, self.w - 1 - self.marginR)
+        l = math.min(#text, self.w - 1 - self.marginR)
     end
     local s = self.offsetTextX + 1
 
-    local _x, _y = self:getTextPosition()
+    local _x, _y = self:getTextPosition(text)
     _x = _x + self.marginL
 
     term.setCursorPos(_x, _y)
     term.setTextColor(self._style.textColor)
 
     local x, y = term.getCursorPos()
-    local t = self.text:sub(s, s + l)
+    local t = text:sub(s, s + l)
     for i = 1, #t do
         term.write(t:sub(i, i))
         x = x + 1
