@@ -209,6 +209,8 @@ local fnInput = function()
         local event = input.processInput()
         if event == "term_resize" then
             resizeBuffer(parentTerm.getSize())
+        elseif event == "terminate" then
+            engine.stop()
         end
     end
 end

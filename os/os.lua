@@ -239,6 +239,7 @@ end
 ---comment
 ---@param targetEngine Engine
 function mos.applyTheme(targetEngine)
+    assert(targetEngine ~= nil)
     local e = targetEngine
     --Styles
     local theme = mos.theme

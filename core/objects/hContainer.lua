@@ -34,6 +34,10 @@ function HContainer:_expandChildren()
 		else
 			minW = minW + c:getMinimumSize()
 		end
+
+		if c.expandH then
+			c.h = self.h
+		end
 	end
 
 	local dif = self.w - minW
@@ -41,10 +45,11 @@ function HContainer:_expandChildren()
 
 	--if dif > 0 then -- TODO Check if this is needed
 		for i, c in ipairs(self.children) do
+			local minW, minH = c:getMinimumSize() 
 			if c.expandW == true then
 				c.w = expandSize
 			else
-				c.w = c:getMinimumSize()
+				c.w = minW
 			end
 		end
 	--end

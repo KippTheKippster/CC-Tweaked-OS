@@ -159,7 +159,7 @@ function mouse.click(button, x, y)
         local delta = time - mouse.clickTime
         mouse.clickTime = time
         if delta < 0.33 then
-            c:doublePressed(button, x, y)
+            c:doublePressed(button, x - c.gx, y - c.gy)
         end
     end
 end
@@ -207,8 +207,9 @@ end
 function mouse.up(button, x, y)
     mouse.clickControl = nil
     if isValid(mouse.current) == false then return end
-    mouse.current:up(button, x, y)
-    mouse.current:pressed(button, x, y)
+    local c = mouse.current
+    mouse.current:up(button, x - c.gx, y - c.gy)
+    mouse.current:pressed(button, x - c.gx, y - c.gy)
 end
 
 function mouse.drag(button, x, y)

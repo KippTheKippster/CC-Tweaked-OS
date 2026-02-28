@@ -161,7 +161,7 @@ Control:defineProperty('x', {
 
 Control:defineProperty('y', {
     get = function(o) return o._y end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._y == value
         o._y = value
         if same == false then
@@ -186,7 +186,7 @@ Control:defineProperty('w', {
     get = function(o) return o._w end,
     set = function(o, value)
         local same = o._w == value
-        o._w = value 
+        o._w = value
         if same == false then
             o:queueDraw()
             o:transformChanged()
@@ -199,9 +199,9 @@ Control:defineProperty('w', {
 
 Control:defineProperty('h', {
     get = function(o) return o._h end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._h == value
-        o._h = value 
+        o._h = value
         if same == false then
             o:queueDraw()
             o:transformChanged()
@@ -214,7 +214,7 @@ Control:defineProperty('h', {
 
 Control:defineProperty('minW', {
     get = function(o) return o._minW end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._minW == value
         o._minW = value
         if same == false then
@@ -225,7 +225,7 @@ Control:defineProperty('minW', {
 
 Control:defineProperty('minH', {
     get = function(o) return o._minH end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._minH == value
         o._minH = value
         if same == false then
@@ -280,7 +280,7 @@ function Control:_expandChildren()
         if c.anchorW == Control.Anchor.RIGHT then
             c.x = self.w - c.w
         elseif c.anchorW == Control.Anchor.CENTER then
-            c.x = math.floor(self.w / 2 + 0.5) -  math.floor(c.w / 2 + 0.5)
+            c.x = math.floor(self.w / 2 + 0.5) - math.floor(c.w / 2 + 0.5)
         end
 
         if c.anchorH == Control.Anchor.DOWN then
@@ -313,7 +313,6 @@ function Control:getMinimumSize()
 
     return minW, minH
 end
-
 
 Control:defineProperty('fitToText', {
     get = function(o) return o._fitToText end,
@@ -366,9 +365,9 @@ Control:defineProperty('visible', {
 
 Control:defineProperty('style', {
     get = function(o) return o._style end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._style == value
-        o._style = value 
+        o._style = value
         if same == false then
             for i = 1, #o.children do
                 local c = o.children[i]
@@ -384,7 +383,7 @@ Control:defineProperty('style', {
 
 Control:defineProperty('anchorW', {
     get = function(o) return o._anchorW end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._anchorW == value
         o._anchorW = value
         if same == false then
@@ -395,7 +394,7 @@ Control:defineProperty('anchorW', {
 
 Control:defineProperty('anchorH', {
     get = function(o) return o._anchorH end,
-    set = function(o, value) 
+    set = function(o, value)
         local same = o._anchorH == value
         o._anchorH = value
         if same == false then
@@ -409,7 +408,7 @@ Control.shadow = false -- Change this to style
 function Control:add()
     self:ready()
     self:queueDraw()
-    self.add = function () end -- A bit of a ugly hack to prevent add being called multiple times
+    self.add = function() end -- A bit of a ugly hack to prevent add being called multiple times
 end
 
 function Control:remove()
@@ -469,10 +468,10 @@ function Control:drawShadow()
     end
 end
 
----@param left number 
----@param up number 
----@param right number 
----@param down number 
+---@param left number
+---@param up number
+---@param right number
+---@param down number
 function Control:drawPanel(left, up, right, down)
     if self._style.background == true or self._style.background == nil then
         paintutils.drawFilledBox(
@@ -486,7 +485,7 @@ function Control:drawPanel(left, up, right, down)
 
     if self._style.border then
         paintutils.drawBox(
-            left, 
+            left,
             up,
             right,
             down,
@@ -541,15 +540,14 @@ end
 
 ---@param o Control
 function Control:addChild(o)
-	local t = {}
-
-	for i = 1, #self.children do
+    local t = {}
+    for i = 1, #self.children do
         table.insert(t, self.children[i])
-	end
+    end
     table.insert(t, o)
-	self.children = t
+    self.children = t
     o:add()
-	o.parent = self
+    o.parent = self
     o.style = self.style
     o.gx = self.gx + o.x
     o.gy = self.gy + o.y
@@ -562,7 +560,7 @@ end
 ---@return Control
 ---@param i integer
 function Control:getChild(i)
-	return self.children[i]
+    return self.children[i]
 end
 
 ---@param o Control
@@ -680,7 +678,7 @@ function Control:input(data) end
 
 function Control:textChanged() end
 function Control:sizeChanged() end
-function Control:transformChanged()  end
+function Control:transformChanged() end
 function Control:styleChanged() end
 function Control:visibilityChanged() end
 

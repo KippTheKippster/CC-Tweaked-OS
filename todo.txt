@@ -1,10 +1,9 @@
 If a window opens another window something strange happens with its term (see event_test.lua) (some kind of multishellWrapper issue)
-__Globals isn't sent if a program is run through edit mode
+Enviroment isn't sent if a program is run through edit mode
 V/HContainer does not respect margin
-LineEdit: if you are trying to erase with cursor to the far left then it will copy all text
 When setting 'globalX' then 'x' wont be updated 
 MarginR should update transform
-If LineEdit.minH = 1 then it renders 2 characters high?
 LineEdit does not respect margin
-Quicksearch takes priority over of mos menu 
 Rename render to draw, add isDrawAllowed, and rename rendering variable
+Files auto scroll
+If files gets to small the color bleeds
