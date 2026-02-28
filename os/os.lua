@@ -418,7 +418,6 @@ end
 mos.refreshMosDropdown()
 
 local clock = topBar:addControl()
-clock.w = #"00:00"
 clock.h = 1
 clock.anchorW = clock.Anchor.RIGHT
 
@@ -847,10 +846,6 @@ function root:rawEvent(data)
                     toolBar.children[i]:release()
                 end
             end
-        end
-    elseif event == "mouse_up" then
-        if mos.quickSearch:isOpen() then
-            mos.quickSearch:close()
         end
     end
 end

@@ -39,7 +39,7 @@ function HContainer:_expandChildren()
 	local dif = self.w - minW
 	local expandSize = math.floor(dif / expandCount)
 
-	if dif > 0 then
+	--if dif > 0 then -- TODO Check if this is needed
 		for i, c in ipairs(self.children) do
 			if c.expandW == true then
 				c.w = expandSize
@@ -47,7 +47,7 @@ function HContainer:_expandChildren()
 				c.w = c:getMinimumSize()
 			end
 		end
-	end
+	--end
 end
 
 return HContainer

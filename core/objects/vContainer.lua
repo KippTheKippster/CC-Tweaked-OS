@@ -72,7 +72,7 @@ function VContainer:_expandChildren()
 	local dif = self.h - minH
 	local expandSize = math.floor(dif / expandCount)
 
-	if dif > 0 then
+	--if dif > 0 then -- TODO Check if this is needed
 		for i, c in ipairs(self.children) do
 			if c.expandH == true then
 				c.h = expandSize
@@ -81,7 +81,7 @@ function VContainer:_expandChildren()
 				c.h = h
 			end
 		end
-	end
+	--end
 end
 
 return VContainer

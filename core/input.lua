@@ -2,8 +2,6 @@
 ---@param collision Collision
 return function(engine, collision)
 local targetTerm = term.current()
-local inputConsumed = false
-local consumedEvents = {}
 local mouse = {}
 ---@type Control?
 mouse.current = nil
@@ -186,16 +184,24 @@ local function getCursorControl()
     end
 end
 
+---comment
+---@param c Control?
 local function setInputControl(c)
     mouse.inputControl = c
 end
 
+---@return Control?
 local function getInputControl()
     if isValid(mouse.inputControl) then
         return mouse.inputControl
     else
         return nil
     end
+end
+
+---@boolean
+local function isInputGrabbed()
+    return getInputControl() ~= nil
 end
 
 function mouse.up(button, x, y)
@@ -282,23 +288,6 @@ local function mouseDrag(button, x, y)
     end
 end
 
-local function consumeInput()
-    inputConsumed = true
-end
-
-local function isInputConsumed()
-    return inputConsumed
-end
-
-local function consumeEvent(event)
-    consumedEvents[event] = true
-end
-
-local function isEventConsumed(event)
-    return consumedEvents[event] == true
-end
-
-
 local rawEventListeners = {}
 local function addRawEventListener(o)
     table.insert(rawEventListeners, o)
@@ -333,8 +322,6 @@ local function processInput()
     if isValid(mouse.cursorControl) == false then
         mouse.cursorControl = nil
     end
-
-    consumedEvents[event] = false
 
     if event == 'key' then
         key(data[2])
@@ -371,15 +358,12 @@ local function processInput()
         end
     end
 
-    if isValid(mouse.inputControl) then
-        if isInputConsumed() == false then
-            mouse.inputControl:input(data)
-        end
-    end
-
+    
     rawEvent(data)
-
-    inputConsumed = false
+    
+    if isValid(mouse.inputControl) then
+        mouse.inputControl:input(data) -- TODO Have a pre and post input for inputControl
+    end
 
     return event
 end
@@ -404,11 +388,8 @@ local Input = {
     getCursorControl = getCursorControl,
     setInputControl = setInputControl,
     getInputControl = getInputControl,
-    consumeInput = consumeInput,
-    isInputConsumed = isInputConsumed,
+    isInputGrabbed = isInputGrabbed,
     setTargetTerm = setTargetTerm,
-    isEventConsumed = isEventConsumed,
-    consumeEvent = consumeEvent
 }
 
 return Input

@@ -114,6 +114,7 @@ list.mouseIgnore = true
 qs.list = list
 
 local icon = qs:addControl()
+icon.propogateFocusUp = true
 icon.text = string.char(187)
 icon.fitToText = false
 icon.w = 2

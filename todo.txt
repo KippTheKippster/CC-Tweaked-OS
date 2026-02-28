@@ -2,7 +2,6 @@ If a window opens another window something strange happens with its term (see ev
 __Globals isn't sent if a program is run through edit mode
 V/HContainer does not respect margin
 LineEdit: if you are trying to erase with cursor to the far left then it will copy all text
-When input is consumed then no event should be sent 
 When setting 'globalX' then 'x' wont be updated 
 MarginR should update transform
 If LineEdit.minH = 1 then it renders 2 characters high?

@@ -1,6 +1,6 @@
 ---@class Object
 local Object = {}
-Object.__name = ""
+Object.__name = "object"
 Object.__type = "Object"
 Object.__properties = {}
 Object.__connections = {}

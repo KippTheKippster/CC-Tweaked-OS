@@ -75,7 +75,6 @@ Control.inheritStyle = true
 Control.centerText = false
 Control.focus = false
 Control.propogateFocusUp = false
-Control.propogateInputUp = true
 Control.clipText = true
 Control.mouseIgnore = false
 Control.rendering = true

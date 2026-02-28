@@ -111,8 +111,7 @@ scrollContainer.expandH = true
 
 local fileContainer = scrollContainer:addVContainer()
 fileContainer.expandW = true
-fileContainer.expandH = true
-
+fileContainer.fitToChildrenH = true
 
 ---@class SaveContainer : HContainer
 local SaveContainer = engine.HContainer:newClass()
@@ -313,9 +312,9 @@ end
 ---@return LineEdit
 function fe.newFileEdit(text, callback)
     local edit = engine.LineEdit:new()
+    edit.text = text
     edit.expandW = true
     edit:grabFocus()
-    edit.text = text
     edit.textSubmitted = function()
         callback(edit)
     end
@@ -442,11 +441,17 @@ end
 ---comment
 ---@param filter string
 function fe.filter(filter)
-    for _, v in ipairs(fileContainer.children) do
-        if filter == "" or v.path:find(filter, 1, true) ~= nil then
+    if filter == "" then
+        for _, v in ipairs(fileContainer.children) do
             v.visible = true
-        else
-            v.visible = false
+        end
+    else
+        for _, v in ipairs(fileContainer.children) do
+            if filter == "" or v.path:find(filter, 1, true) ~= nil then
+                v.visible = true
+            else
+                v.visible = false
+            end
         end
     end
     fileContainer:queueSort()
@@ -653,7 +658,6 @@ function fe.newDriveDropdown(path)
             for i = 1, #files do
                 local from = fs.combine(mountPath, files[i])
                 local to = fe.nameToPath(files[i])
-                mos.log(to)
                 local ok = true
                 if fs.exists(to) then
                     ok = fe.pPopupError(fs.delete, to)
@@ -873,15 +877,28 @@ mos.bindTool(mosWindow, function(focus)
     end
 end)
 
-local function rawEvent(data)
+local function input(data)
     local event = data[1]
+
+    if event == "key" then
+        local k = data[2]
+        if k == keys.down or k == keys.up then
+            if searchbar.focus then
+                searchbar:releaseFocus()
+            end
+        end
+    end
+
+    if engine.input.isInputGrabbed() then
+        return
+    end
+
     if event == "paste" then
         fe.pasteClipboard(fe.pasteMode)
     elseif event == "char" then
         local focus = engine.input.getFocus() -- This should be replaced with inputConsumed
         if focus == nil or focus.__type ~= "LineEdit" then
             searchbar:grabFocus()
-            searchbar:input(data)
         end
     elseif event == "key" then
         if engine.input.isKey(keys.leftCtrl) then
@@ -962,7 +979,13 @@ local function rawEvent(data)
         elseif data[2] == keys.left then
             fe.backDir()
         end
-    elseif event == "disk" then
+    end
+end
+
+local function rawEvent(data)
+    input(data)
+
+    if event == "disk" then
         fe.mountDisk(data[2])
     elseif event == "disk_eject" then
         fe.unmountDisk(data[2])

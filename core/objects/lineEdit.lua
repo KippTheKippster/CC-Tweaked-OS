@@ -160,6 +160,7 @@ end
 function LineEdit:focusChanged()
     if self.focus then
         self.style = self.focusStyle
+        self.cursorX = #self.text
         self:grabCursor()
         self:grabInput()
     else
