@@ -14,6 +14,7 @@ local args = { ... }
 
 local fe = {}
 fe.currentPath = ""
+fe.startFile = ""
 
 fe.selection = {}
 ---@enum PasteMode
@@ -210,7 +211,13 @@ end
 
 function FileButton:down()
     engine.Button.down(self)
-    fe.selectFileButton(self, engine.input.isKey(keys.leftCtrl) == false)
+    if self.selected then
+        if not engine.input.isKey(keys.leftCtrl) then
+            fe.unselectFileButton(self, true)
+        end
+    else
+        fe.selectFileButton(self, not engine.input.isKey(keys.leftCtrl))
+    end
 end
 
 function FileButton:refreshStyle()
@@ -237,6 +244,16 @@ function fe.selectFileButton(b, clearSelection)
 
     fe.addToSelection(b)
     b:refreshStyle()
+end
+
+---@param b FileButton
+---@param clearSelection boolean
+function fe.unselectFileButton(b, clearSelection)
+    if clearSelection then
+        fe.clearSelection()
+    end
+
+    fe.removeFromSelection(b)
 end
 
 ---comment
@@ -426,12 +443,20 @@ function fe.openDir(path)
     end
 
     for _, dirName in ipairs(dirNames) do
-        fe.addFileButton(dirName)
+        local b = fe.addFileButton(dirName)
+        if b.path == fe.startFile then
+            fe.selectFileButton(b, true)
+        end
     end
 
     for _, fileName in ipairs(fileNames) do
-        fe.addFileButton(fileName)
+        local b = fe.addFileButton(fileName)
+        if b.parent == fe.startFile then
+            fe.selectFileButton(b, true)
+        end
     end
+
+    fe.startFile = ""
 
     fileContainer:_expandChildren()
     scrollContainer:_expandChildren()
@@ -473,8 +498,10 @@ end
 function fe.makeFile(name)
     if name == nil or name == "" then return end
     name = fe.formatName(name)
-    if fe.pPopupError(fs.open, fe.nameToPath(name), "w") then
+    local path = fe.nameToPath(name)
+    if fe.pPopupError(fs.open, path, "w") then
         fe.addFileButton(name)
+        os.queueEvent("mos_file_new", path)
     end
 end
 
@@ -483,20 +510,11 @@ end
 function fe.makeDir(name)
     if name == nil or name == "" then return end
     name = fe.formatName(name)
-    if fe.pPopupError(fs.makeDir, fe.nameToPath(name)) then
+    local path = fe.nameToPath(name)
+    if fe.pPopupError(fs.makeDir, path) then
         fe.addFileButton(name)
+        os.queueEvent("mos_file_new", path)
     end
-end
-
----comment
----@param b FileButton
-function fe.favorite(b)
-    if mos.isFileFavorite(b.path) then
-        mos.removeFileFavorite(b.path)
-    else
-        mos.addFileFavorite(b.path)
-    end
-    mos.refreshMosDropdown()
 end
 
 function fe.favoriteSelection()
@@ -521,6 +539,7 @@ function fe.delete(b)
     if fe.pPopupError(fs.delete, b.path) then
         -- TODO Remove from selection
         b:queueFree()
+        os.queueEvent("mos_file_delete", b.path)
     end
 end
 
@@ -548,11 +567,21 @@ end
 function fe.pasteClipboard(pasteMode)
     local fn = fs.copy
     if pasteMode == fe.PasteMode.CUT then
-        fn = fs.cut
+        fn = fs.move
     end
 
     for i, v in ipairs(fe.clipboard) do
-        fe.pPopupError(fn, v, fe.nameToPath(fs.getName(v)))
+        local to = fe.nameToPath(fs.getName(v))
+        if fe.pPopupError(fn, v, to) then
+            if fn == fs.copy then
+                os.queueEvent("mos_file_copy", v, to)
+                os.queueEvent("mos_file_new", to)
+            elseif fn == fs.move then
+                os.queueEvent("mos_file_move", v, to)
+                os.queueEvent("mos_file_delete", v)
+                os.queueEvent("mos_file_new", to)
+            end
+        end
     end
 
     fe.clearClipboard()
@@ -974,9 +1003,13 @@ local function input(data)
             if focus then
                 if fs.isDir(focus.path) then
                     fe.openDir(focus.path)
+                    if #fileContainer.children > 0 then
+                        fe.selectFileButton(fileContainer:getChild(1), true)
+                    end
                 end
             end
         elseif data[2] == keys.left then
+            fe.startFile = fe.currentPath
             fe.backDir()
         end
     end
@@ -985,6 +1018,7 @@ end
 local function rawEvent(data)
     input(data)
 
+    local event = data[1]
     if event == "disk" then
         fe.mountDisk(data[2])
     elseif event == "disk_eject" then
