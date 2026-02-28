@@ -10,7 +10,7 @@ VContainer.fitToChildrenW = false
 VContainer.fitToChildrenH = false
 
 function VContainer:sort()
-	self:_expandChildren()
+	self:expandChildren()
 	local h = 0
 	local x = 0
 	for i = 1, #self.children do
@@ -18,9 +18,9 @@ function VContainer:sort()
 		if c.visible then
 			c.y = h
 			if self.center == true then
-				x = self.gx + math.ceil((self.w - c.w) / 2)
+				x = self.gx + math.ceil((self.w - c.w) / 2) + self.marginL
 			else
-				x = self.gx
+				x = self.gx + self.marginL
 			end
 			c.gx = x
 			h = h + c.h + self.separation
@@ -28,7 +28,7 @@ function VContainer:sort()
 	end
 end
 
-function VContainer:_expandChildren()
+function VContainer:expandChildren()
 	if #self.children == 0 then
 		if self.fitToChildrenW then
 			self.w = 0
@@ -38,6 +38,7 @@ function VContainer:_expandChildren()
 		end
 	end
 
+	local w = self.w - (self.marginL + self.marginR)
 	local minW, minH = self.w, 0
 	local expandCount = 0
 	for i, c in ipairs(self.children) do
@@ -49,7 +50,7 @@ function VContainer:_expandChildren()
 		end
 
 		if c.expandW then
-			c.w = self.w
+			c.w = w
 		end
 
 		local cW, cH = c:getMinimumSize()
@@ -60,28 +61,22 @@ function VContainer:_expandChildren()
 		self.w = minW
 	end
 
-	--local _, selfH = self:getMinimumSize()
 	if self.fitToChildrenH then
 		self.h = minH
 	else
 		self.h = math.max(self.h, minH)
 	end
 
-
-
 	local dif = self.h - minH
 	local expandSize = math.floor(dif / expandCount)
-
-	--if dif > 0 then -- TODO Check if this is needed
-		for i, c in ipairs(self.children) do
-			if c.expandH == true then
-				c.h = expandSize
-			else
-				local _, h = c:getMinimumSize()
-				c.h = h
-			end
+	for i, c in ipairs(self.children) do
+		if c.expandH == true then
+			c.h = expandSize
+		else
+			local _, h = c:getMinimumSize()
+			c.h = h
 		end
-	--end
+	end
 end
 
 return VContainer

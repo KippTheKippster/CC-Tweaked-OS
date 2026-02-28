@@ -84,8 +84,12 @@ Control.topLevel = false
 Control.children = {}
 ---@type Control
 Control.parent = nil
-Control.marginL = 0
-Control.marginR = 0
+Control._marginL = 0
+---@type number
+Control.marginL = nil
+Control._marginR = 0
+---@type number
+Control.marginR = nil
 Control.offsetTextX = 0
 
 ---@enum Anchor
@@ -190,7 +194,7 @@ Control:defineProperty('w', {
         if same == false then
             o:queueDraw()
             o:transformChanged()
-            o:_expandChildren()
+            o:expandChildren()
             o:sizeChanged()
             o:emitSignal(o.transformChanged)
         end
@@ -205,7 +209,7 @@ Control:defineProperty('h', {
         if same == false then
             o:queueDraw()
             o:transformChanged()
-            o:_expandChildren()
+            o:expandChildren()
             o:sizeChanged()
             o:emitSignal(o.transformChanged)
         end
@@ -218,7 +222,7 @@ Control:defineProperty('minW', {
         local same = o._minW == value
         o._minW = value
         if same == false then
-            o:_resize()
+            o:resize()
         end
     end
 })
@@ -229,7 +233,7 @@ Control:defineProperty('minH', {
         local same = o._minH == value
         o._minH = value
         if same == false then
-            o:_resize()
+            o:resize()
         end
     end
 })
@@ -242,7 +246,7 @@ Control:defineProperty('expandW', {
         o._expandW = value
         if same == false and o._expandW == true then
             if o.parent ~= nil then
-                o.parent:_expandChildren()
+                o.parent:expandChildren()
             end
         end
     end
@@ -254,7 +258,29 @@ Control:defineProperty('expandH', {
         local same = o._expandH == value
         o._expandH = value
         if same == false then
-            o.parent:_expandChildren()
+            o.parent:expandChildren()
+        end
+    end
+})
+
+Control:defineProperty('marginL', {
+    get = function(o) return o._marginL end,
+    set = function(o, value)
+        local same = o._marginL == value
+        o._marginL = value
+        if same == false then
+            o:resize()
+        end
+    end
+})
+
+Control:defineProperty('marginR', {
+    get = function(o) return o._marginR end,
+    set = function(o, value)
+        local same = o._marginR == value
+        o._marginR = value
+        if same == false then
+            o:resize()
         end
     end
 })
@@ -267,16 +293,20 @@ function Control:init(text)
     end
 end
 
-function Control:_expandChildren()
+function Control:expandChildren()
+    local w = self.w - (self.marginL + self.marginR)
+    local h = self.h
     for i = 1, #self.children do
         local c = self.children[i]
         if c.expandH then
-            c.h = self.h - c.y
+            c.h = h - c.y
+            c.h = math.min(c.h, h)
         end
         if c.expandW then
-            c.w = self.w - self.marginR - c.x
-            c.w = math.min(c.w, self.w)
+            c.w = w - c.x
+            c.w = math.min(c.w, w)
         end
+
         if c.anchorW == Control.Anchor.RIGHT then
             c.x = self.w - c.w
         elseif c.anchorW == Control.Anchor.CENTER then
@@ -291,11 +321,11 @@ function Control:_expandChildren()
     end
 end
 
-function Control:_resize()
+function Control:resize()
     local minW, minH = self:getMinimumSize()
     self.w, self.h = math.max(minW, self.w), math.max(minH, self.h)
     if self.parent then
-        self.parent:_expandChildren()
+        self.parent:expandChildren()
     end
 end
 
@@ -304,10 +334,11 @@ function Control:getMinimumSize()
         return 0, 0
     end
 
-    local minW = self.minW + self.marginL + self.marginR
+    local m = self.marginL + self.marginR
+    local minW = self.minW + m
     local minH = self.minH
-    if self._fitToText then
-        minW = math.max(#self.text + self.marginL + self.marginR, minW)
+    if self.fitToText then
+        minW = math.max(#self.text + m, minW)
         minH = math.max(1, minH)
     end
 
@@ -318,7 +349,7 @@ Control:defineProperty('fitToText', {
     get = function(o) return o._fitToText end,
     set = function(o, value)
         o._fitToText = value
-        o:_resize()
+        o:resize()
     end
 })
 
@@ -330,7 +361,7 @@ Control:defineProperty('text', {
         local same = o._text == value
         o._text = value
         if same == false then
-            o:_resize()
+            o:resize()
             o:queueDraw()
             o:textChanged()
         end
@@ -387,7 +418,7 @@ Control:defineProperty('anchorW', {
         local same = o._anchorW == value
         o._anchorW = value
         if same == false then
-            o.parent:_expandChildren()
+            o.parent:expandChildren()
         end
     end
 })
@@ -398,7 +429,7 @@ Control:defineProperty('anchorH', {
         local same = o._anchorH == value
         o._anchorH = value
         if same == false then
-            o.parent:_expandChildren()
+            o.parent:expandChildren()
         end
     end
 })
@@ -517,9 +548,10 @@ function Control:write(text)
         return
     end
 
-    local l = #text + self.marginR
+    local m = self.marginR + self.marginL
+    local l = #text - m
     if self.clipText == true then
-        l = math.min(#text, self.w - 1 - self.marginR)
+        l = math.min(#text, self.w - m - 1)
     end
     local s = self.offsetTextX + 1
 
@@ -528,6 +560,7 @@ function Control:write(text)
 
     term.setCursorPos(_x, _y)
     term.setTextColor(self._style.textColor)
+    term.setBackgroundColor(self._style.backgroundColor)
 
     local x, y = term.getCursorPos()
     local t = text:sub(s, s + l)
@@ -553,7 +586,7 @@ function Control:addChild(o)
     o.gy = self.gy + o.y
     o.treeEntered(o) -- TODO Maybe make recursive
     self:childrenChanged()
-    self:_expandChildren()
+    self:expandChildren()
     self:queueDraw()
 end
 

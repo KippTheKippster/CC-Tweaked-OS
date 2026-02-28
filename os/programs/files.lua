@@ -183,9 +183,9 @@ function FileButton:render()
     else
         local size = fs.getSize(self.path)
         if size < 100 then
-            text = math.ceil(fs.getSize(self.path)) .. " B "
+            text = math.ceil(fs.getSize(self.path)) .. "  B"
         else
-            text = math.ceil(fs.getSize(self.path) / 100) / 10 .. " KB"
+            text = math.ceil(fs.getSize(self.path) / 100) / 10 .. " kB"
         end
     end
 
@@ -373,7 +373,7 @@ function fe.list(dir)
         end
 
         local path = fs.combine(dir, file)
-        if not mos.profile.dirShowMos and path == mos.toMosPath("") then
+        if not mos.profile.dirShowMos and path == mos.toMosPath("") or path == ".mosdata" then
             return false
         end
 
@@ -457,10 +457,6 @@ function fe.openDir(path)
     end
 
     fe.startFile = ""
-
-    fileContainer:_expandChildren()
-    scrollContainer:_expandChildren()
-    main:_expandChildren()
 end
 
 ---comment
@@ -702,7 +698,7 @@ function fe.newDriveDropdown(path)
         elseif text == "Set Label" then
             mos.openArgs(function (data)
                 disk.setLabel(path, data[1]) -- TODO Combine data to one string
-            end, disk.getLabel(path))
+            end, disk.getLabel(path)).text = "Set Label"
             return
         elseif text == "Info" then
             mos.openProgram(mos.toOsPath("/programs/diskInfo.lua"), path).text = "Disk Info '" .. title .. "'"

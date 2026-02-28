@@ -42,7 +42,7 @@ mos.toMosPath = toMosPath
 mos.toOsPath = toOsPath
 mos.toCorePath = toCorePath
 
-local dest = "/.logs/"
+local dest = "/.mosdata/logs/"
 if fs.exists(dest) then
     local logs = fs.list(dest)
     for i = 1, #logs - 4 do
@@ -860,7 +860,6 @@ mos.fullscreenWindow = nil
 mos.quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
 engine.root:addChild(mos.quickSearch)
 mos.quickSearch.y = 1
-mos.quickSearch.x = 2
 
 mos.log("Launching MOS")
 local err = engine.startMultiProgram(mp)

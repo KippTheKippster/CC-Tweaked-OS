@@ -21,6 +21,8 @@ scrollContainer.expandH = true
 local main = scrollContainer:addVContainer()
 main.expandW = true
 main.expandH = true
+main.marginL = 1
+main.marginR = 1
 
 local settingsButton = engine.Button:new()
 settingsButton.h = 1
@@ -43,7 +45,6 @@ local function addLabel(text)
     label.text = text
     label.expandW = true
     label.h = 1
-    label.marginL = 1
     return label
 end
 
@@ -131,7 +132,7 @@ function versionButton:pressed()
     else
         mos.openProgram("/rom/programs/http/pastebin.lua", "get", "Wa0niW8x", "mosInstaller.lua").text = "Downloading MOS Installer"
         versionButton.text = "[Run]"
-        versionButton.parent:_expandChildren()
+        versionButton.parent:expandChildren()
     end
 end
 
@@ -211,6 +212,28 @@ end
 
 addSeperator("-File Explorer-")
 
+local dirColorPicker = addSettingsColor("Dir Color", mos.theme.fileColors.dirText)
+local dirColorReset = addReset(dirColorPicker)
+dirColorReset.visible = mos.profile.dirColor ~= nil
+if mos.profile.dirColor ~= nil then
+    picker.style.backgroundColor = mos.profile.dirColor
+end
+
+dirColorReset.pressed = function (o)
+    ---@type Profile
+    mos.profile.dirColor = nil
+    --mos.engine.backgroundColor = mos.theme.backgroundColor
+    mos.refreshTheme()
+    o.visible = false
+    dirColorPicker.style.backgroundColor = mos.theme.fileColors.dirText
+end
+
+function dirColorPicker:colorClicked(color)
+    mos.profile.dirColor = color
+    mos.engine.root:queueDraw()
+    dirColorReset.visible = true
+end
+
 local dotFiles = addSettingsButton("Show dot Files", "[ ]")
 if mos.profile.dirShowDot then
     dotFiles.text = "[x]"
@@ -273,26 +296,5 @@ leftHeart.pressed = function (o)
     end
 end
 
-local dirColorPicker = addSettingsColor("Dir Color", mos.theme.fileColors.dirText)
-local dirColorReset = addReset(dirColorPicker)
-dirColorReset.visible = mos.profile.dirColor ~= nil
-if mos.profile.dirColor ~= nil then
-    picker.style.backgroundColor = mos.profile.dirColor
-end
-
-dirColorReset.pressed = function (o)
-    ---@type Profile
-    mos.profile.dirColor = nil
-    --mos.engine.backgroundColor = mos.theme.backgroundColor
-    mos.refreshTheme()
-    o.visible = false
-    dirColorPicker.style.backgroundColor = mos.theme.fileColors.dirText
-end
-
-function dirColorPicker:colorClicked(color)
-    mos.profile.dirColor = color
-    mos.engine.root:queueDraw()
-    dirColorReset.visible = true
-end
 
 engine.start()

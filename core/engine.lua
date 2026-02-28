@@ -235,7 +235,6 @@ function engine.start()
     end
 
     engine.running = true
-    engine.root:_expandChildren()     -- HACK this should be called automatically
     resizeBuffer(screenBuffer.getSize())
     redrawScreen()
 

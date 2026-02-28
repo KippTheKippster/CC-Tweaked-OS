@@ -24,7 +24,7 @@ Icon:defineProperty('texture', {
         o._texture = value
         if same == false then
             o.w, o.h = o:getTextureSize()
-            o.parent:_expandChildren()
+            o.parent:expandChildren()
             o:queueDraw()
         end
     end

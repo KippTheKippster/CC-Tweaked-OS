@@ -8,7 +8,7 @@ HContainer.center = false
 HContainer.separation = 0
 
 function HContainer:sort()
-	self:_expandChildren()
+	self:expandChildren()
 
 	local w = 0
 	local y = 0
@@ -25,7 +25,7 @@ function HContainer:sort()
 	end
 end
 
-function HContainer:_expandChildren()
+function HContainer:expandChildren()
 	local minW = 0
 	local expandCount = 0
 	for i, c in ipairs(self.children) do

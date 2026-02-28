@@ -7,3 +7,4 @@ LineEdit does not respect margin
 Rename render to draw, add isDrawAllowed, and rename rendering variable
 Files auto scroll
 If files gets to small the color bleeds
+Should margin affect min size?

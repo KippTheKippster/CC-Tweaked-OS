@@ -836,7 +836,7 @@ local function createResizeDialogue(fn)
         wi:queueFree()
         --wi.wEdit:queueFree()
     end
-    wi:_expandChildren()
+    wi:expandChildren()
 
     wi.wEdit:grabFocus()
 end

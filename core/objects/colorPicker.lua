@@ -60,8 +60,8 @@ function ColorPicker:init()
     end
 
     input.addRawEventListener(self)
-    self:_expandChildren()
-    self.list:_expandChildren()
+    self:expandChildren()
+    self.list:expandChildren()
 end
 
 function ColorPicker:queueFree()

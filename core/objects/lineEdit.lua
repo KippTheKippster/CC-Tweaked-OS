@@ -40,7 +40,7 @@ function LineEdit:ready()
 end
 
 function LineEdit:draw()
-    local w = self.w - 1
+    local w = self.w - 1 - (self.marginL + self.marginR)
     if self.cursorX - self.offsetTextX > w then
         self.offsetTextX = self.cursorX - (w)
     end
@@ -48,14 +48,14 @@ function LineEdit:draw()
         self.offsetTextX = self.offsetTextX + (self.cursorX - self.offsetTextX)
     end
 
-    self.offsetTextX = math.min(self.offsetTextX, math.max(0, #self.text - self.w + 1))
+    self.offsetTextX = math.min(self.offsetTextX, math.max(0, #self.text - w))
 
     control.draw(self)
 end
 
 function LineEdit:updateCursor()
     --term.setCursorPos(self.gx + #self.text + self.cursorOffset + self.marginL + 1, self.gy + 1)
-    term.setCursorPos(self.cursorX - self.offsetTextX + self.gx + 1, self.gy + 1)
+    term.setCursorPos(self.cursorX - self.offsetTextX + self.marginL + self.gx + 1, self.gy + 1)
     term.setTextColor(self.style.textColor)
     term.setBackgroundColor(self.style.backgroundColor)
     term.setCursorBlink(true)

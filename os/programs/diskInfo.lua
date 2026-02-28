@@ -48,7 +48,7 @@ else
     newLine(" Label - " .. disk.getLabel(diskName) .. "\n")
     newLine("  Type - Data")
     local path = disk.getMountPath(diskName)
-    newLine(" Space - " .. math.ceil(fs.getFreeSpace(path) / 1000) .. "/" .. math.ceil(fs.getCapacity(path) / 1000) .. "KB")
+    newLine(" Space - " .. math.ceil(fs.getFreeSpace(path) / 1000) .. "/" .. math.ceil(fs.getCapacity(path) / 1000) .. "kB")
     newLine(" Mount - " .. disk.getMountPath(diskName))
     newLine("  Port - " .. diskName)
     newLine("    ID - " .. disk.getID(diskName))

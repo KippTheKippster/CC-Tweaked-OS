@@ -8,7 +8,7 @@ qs.h = 1
 qs.expandW = true
 qs.visible = false
 qs.focusStyle = mos.engine.normalStyle
---qs.marginL = 2
+qs.marginL = 2
 qs._skip = true
 function qs:init()
     qs.x = 2
@@ -119,7 +119,6 @@ icon.text = string.char(187)
 icon.fitToText = false
 icon.w = 2
 icon.h = 1
-icon.x = -2
 
 function qs:refreshList ()
     local pathSelection = ""

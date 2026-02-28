@@ -39,13 +39,12 @@ return function(container, collision, input)
         if self.dynamicBar then
             if size == self.h - 1 then -- No scroll
                 self.marginR = 0
+                self:sort()
                 return
             else
                 if self.marginR == 0 then
                     self.marginR = 1
-                    self:queueDraw()
                     self:sort()
-                    self:_expandChildren()
                 end
             end
         end
@@ -80,12 +79,14 @@ return function(container, collision, input)
     end
 
     function ScrollContainer:sort()
+        self:expandChildren()
+
         local child = self:getChild(1)
         if child == nil then
             return
         end
 
-        child:_expandChildren()
+        child:expandChildren()
         if child.y >= 0 then
             child.y = 0
             return
