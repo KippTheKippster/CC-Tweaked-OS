@@ -1,1 +1,1 @@
-shell.run("/mos/os/os.lua")
+shell.run(fs.getDir(arg[0]) .. "/os/os.lua")
