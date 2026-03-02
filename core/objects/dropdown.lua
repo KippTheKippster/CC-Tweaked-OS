@@ -128,14 +128,14 @@ function Dropdown:removeFromList(o)
             end
         end
     else
-        self.list:removeChild(o)
+        self.list:remove(o)
     end
 end
 
 function Dropdown:clearList()
     if self.list == nil then return end
     for i = 1, #self.list.children do
-        self.list:removeChild(self.list.children[1])
+        self.list:remove(self.list.children[1])
     end
     self.shortcutSelection = nil
 end

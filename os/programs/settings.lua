@@ -63,7 +63,7 @@ local function addSettingsInfo(text, infoText)
     local label = addLabel(text)
     ---@type Button
     local info = engine.Control:new()
-    label:addChild(info)
+    label:add(info)
     info.text = infoText
     info.h = 1
     info.anchorW = info.Anchor.RIGHT
@@ -77,7 +77,7 @@ local function addSettingsButton(text, buttonText)
     ---@type Button
     local button = settingsButton:new()
     button.w = 0 -- Why is this needed?
-    label:addChild(button)
+    label:add(button)
     button.text = buttonText
     button.dragSelectable = true
     button.anchorW = button.Anchor.RIGHT

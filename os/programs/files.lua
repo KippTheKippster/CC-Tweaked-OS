@@ -139,7 +139,7 @@ if settings.saveMode then
         fe.openFile(fe.nameToPath(saveContainer.saveEdit.text), mos.getFileOpenModifierInput())
     end
 
-    main:addChild(saveContainer)
+    main:add(saveContainer)
 end
 
 
@@ -242,6 +242,8 @@ function fe.selectFileButton(b, clearSelection)
         saveContainer.saveEdit.text = b.text
     end
 
+    scrollContainer:scrollToView(b.gy)
+
     fe.addToSelection(b)
     b:refreshStyle()
 end
@@ -309,7 +311,7 @@ end
 ---@return FileButton
 function fe.addFileButton(name)
     local fileButton = fe.newFileButton(name)
-    fileContainer:addChild(fileButton)
+    fileContainer:add(fileButton)
     if fs.isDir(fileButton.path) then
         fileButton.doublePressed = function(o)
             fe.openDir(o.path)
@@ -343,8 +345,9 @@ end
 ---@return LineEdit
 function fe.addFileEdit(callback)
     local edit = fe.newFileEdit("", callback)
-    fileContainer:addChild(edit)
+    fileContainer:add(edit)
     fe.clearSelection()
+    scrollContainer:scrollToView(fileContainer.gy + fileContainer.h + 1)
     mosWindow:grabFocus()
     return edit
 end
@@ -404,8 +407,8 @@ function fe.openDir(path)
     fe.currentPath = path
     fe.clearSelection()
 
-    fileContainer:clearAndFreeChildren()
-    pathContainer:clearAndFreeChildren()
+    fileContainer:freeChildren()
+    pathContainer:freeChildren()
     scrollContainer:setScroll(0)
 
     searchbar.text = ""
@@ -610,7 +613,7 @@ function fe.addRenameFileEdit(b)
         o:queueFree()
     end)
     edit.inheritStyle = false
-    b:addChild(edit)
+    b:add(edit)
 end
 
 ---comment
@@ -676,7 +679,7 @@ function fe.newDriveDropdown(path)
                 fe.addFileButton(o.text)
                 o:queueFree()
             end)
-            fileContainer:addChild(edit)
+            fileContainer:add(edit)
         elseif text == "Install Here" then
             local mountPath = disk.getMountPath(path)
             local files = fs.list(mountPath, "r")
@@ -704,7 +707,7 @@ function fe.newDriveDropdown(path)
             mos.openProgram(mos.toOsPath("/programs/diskInfo.lua"), path).text = "Disk Info '" .. title .. "'"
             return
         elseif text == "Eject" then
-            fe.ejectDisk(path)
+            fe.eject(path)
         end
 
         mosWindow:grabFocus()

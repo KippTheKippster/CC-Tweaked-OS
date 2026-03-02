@@ -119,7 +119,6 @@ root.__name = "root"
 root.w = initialW
 root.h = initialH
 root.mouseIgnore = true
-root:add()
 
 engine.running = false
 engine.queueRedraw = false
@@ -249,7 +248,7 @@ function engine.start()
         for _, c in ipairs(engine.freeQueue) do
             if c ~= nil and c:isValid() then
                 if c.parent then
-                    c.parent:removeChild(c)
+                    c.parent:remove(c)
                 end
                 freeTree(c)
             end

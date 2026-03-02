@@ -178,7 +178,7 @@ Control:defineProperty('y', {
 
 function Control:updatePosition()
     if self.parent == nil then
-        error("Unable to update position of orphan control (parent == nil)", 2)
+        error("Unable to update position control with no parent! __name: " .. self.__name, 4)
     end
 
     self.gx = self.parent.gx + self.x
@@ -436,16 +436,6 @@ Control:defineProperty('anchorH', {
 
 Control.shadow = false -- Change this to style
 
-function Control:add()
-    self:ready()
-    self:queueDraw()
-    self.add = function() end -- A bit of a ugly hack to prevent add being called multiple times
-end
-
-function Control:remove()
-    self:queueFree()
-end
-
 function Control:queueFree()
     table.insert(engine.freeQueue, self)
 end
@@ -571,15 +561,19 @@ function Control:write(text)
     end
 end
 
+---Add the Control object 'o' as a child
 ---@param o Control
-function Control:addChild(o)
+function Control:add(o)
+    if o.parent then
+        error("Attempting to add a child that already has a parent! __name: " .. o.__name, 2)
+    end
+
     local t = {}
     for i = 1, #self.children do
         table.insert(t, self.children[i])
     end
     table.insert(t, o)
     self.children = t
-    o:add()
     o.parent = self
     o.style = self.style
     o.gx = self.gx + o.x
@@ -596,8 +590,9 @@ function Control:getChild(i)
     return self.children[i]
 end
 
+---Removes the Control object 'o' from the parent, NOTE if you want to delete the object use queueFree instead
 ---@param o Control
-function Control:removeChild(o)
+function Control:remove(o)
     for i = 1, #self.children do
         if self.children[i] == o then
             table.remove(self.children, i)
@@ -610,7 +605,7 @@ function Control:removeChild(o)
     self:queueDraw()
 end
 
-function Control:clearAndFreeChildren()
+function Control:freeChildren()
     for i, b in ipairs(self.children) do
         b:queueFree()
     end
@@ -697,7 +692,6 @@ function Control:releaseInput()
 end
 
 --Event Functions that should be overwritten
-function Control:ready() end
 function Control:treeEntered() end
 function Control:childrenChanged() end
 function Control:down(button, x, y) end
@@ -719,7 +713,7 @@ function Control:visibilityChanged() end
 ---@param c Control
 local function addControl(p, c, ...)
     local child = c:new(...)
-    p:addChild(child)
+    p:add(child)
     return child
 end
 

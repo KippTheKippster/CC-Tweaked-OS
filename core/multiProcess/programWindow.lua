@@ -181,7 +181,7 @@ end
 
 function ProgramWindow:addViewport(pv)
     self.programViewport = pv
-    self:addChild(pv)
+    self:add(pv)
     pv.y = 1
     pv.h = pv.h - 1
     pv.propogateFocusUp = true

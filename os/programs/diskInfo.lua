@@ -34,7 +34,7 @@ local h = 1
 local function newLine(text)
     local l = Line:new()
     l.text = text
-    main:addChild(l)
+    main:add(l)
     w = math.max(w, #text)
     h = h + 1
     return l
@@ -48,7 +48,7 @@ else
     newLine(" Label - " .. disk.getLabel(diskName) .. "\n")
     newLine("  Type - Data")
     local path = disk.getMountPath(diskName)
-    newLine(" Space - " .. math.ceil(fs.getFreeSpace(path) / 1000) .. "/" .. math.ceil(fs.getCapacity(path) / 1000) .. "kB")
+    newLine("  Free - " .. math.ceil(fs.getFreeSpace(path) / 1000) .. "/" .. math.ceil(fs.getCapacity(path) / 1000) .. "kB")
     newLine(" Mount - " .. disk.getMountPath(diskName))
     newLine("  Port - " .. diskName)
     newLine("    ID - " .. disk.getID(diskName))

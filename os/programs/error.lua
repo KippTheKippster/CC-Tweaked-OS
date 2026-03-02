@@ -14,19 +14,19 @@ local args = {...}
 ---@type Engine
 mos.applyTheme(engine)
 local main = engine.root:addVContainer()
-main.expandW = true
-main.expandH = true
+main.fitToChildrenW = true
+main.fitToChildrenH = true
 
 for _, err in ipairs(args) do
     local c = main:addControl()
     c.text = tostring(err)
-    c.expandW = true
-    c.centerText = true
-    window.minW = math.max(#c.text, window.minW)
+    c.marginL = 1
+    c.marginR = 1
 end
-window.minH = #args + 1
 
-window.w = window.minW + 2
+window.minW = main.w
+window.minH = main.h + 1
+window.w = window.minW
 window.h = window.minH
 window.oldW = window.w
 window.oldH = window.h

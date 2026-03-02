@@ -112,14 +112,6 @@ end
 
 function Object:init(...) end
 
-function Object:remove()
-    for k in pairs (self) do
-        self[k] = nil
-    end
-
-    self = nil
-end
-
 function Object:isValid()
     return true
 end

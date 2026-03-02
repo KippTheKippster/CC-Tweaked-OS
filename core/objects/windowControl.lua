@@ -65,7 +65,7 @@ function WindowControl:init()
     end
 
     self.scaleButton = control:new()
-    self:addChild(self.scaleButton)
+    self:add(self.scaleButton)
     self.scaleButton.w = 1
     self.scaleButton.h = 1
     self.scaleButton.text = "%"

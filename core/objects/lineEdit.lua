@@ -35,7 +35,7 @@ LineEdit:defineProperty("cursorX", {
     end
 })
 
-function LineEdit:ready()
+function LineEdit:treeEntered()
     self.style = self.normalStyle
 end
 
@@ -59,10 +59,6 @@ function LineEdit:updateCursor()
     term.setTextColor(self.style.textColor)
     term.setBackgroundColor(self.style.backgroundColor)
     term.setCursorBlink(true)
-end
-
-function LineEdit:treeEntered()
-    self.style = self.normalStyle
 end
 
 function LineEdit:addText(text, x)

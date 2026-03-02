@@ -687,17 +687,17 @@ function toolIcon:up()
 end
 
 local penTool = toolIcon:new()
-toolbar:addChild(penTool)
+toolbar:add(penTool)
 penTool.text = string.char(14) .. " Pen"
 penTool.tool = "pen"
 
 local selectTool = toolIcon:new()
-toolbar:addChild(selectTool)
+toolbar:add(selectTool)
 selectTool.text = string.char(35) .. " Selection Box"
 selectTool.tool = "selection"
 
 local bucketTool = toolIcon:new()
-toolbar:addChild(bucketTool)
+toolbar:add(bucketTool)
 bucketTool.text = string.char(219) .. " Bucket"
 bucketTool.tool = "bucket"
 
@@ -796,7 +796,7 @@ local function createEditField(fieldName, text, parent)
     edit.focusStyle = editFocusStyle
     edit.style = editStyle
 
-    parent:addChild(h)
+    parent:add(h)
 
     return edit
 end

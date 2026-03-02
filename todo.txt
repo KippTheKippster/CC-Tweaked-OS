@@ -7,4 +7,8 @@ LineEdit does not respect margin
 Rename render to draw, add isDrawAllowed, and rename rendering variable
 Files auto scroll
 If files gets to small the color bleeds
-Should margin affect min size?
+    
+Margin:
+    Should margin affect min size?
+    Check VContainer with margin and fitToChildren + centerText
+    VContainer fitToChildren should add it's margin to the final size

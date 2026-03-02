@@ -111,6 +111,18 @@ return function(container, collision, input)
         self:sort()
     end
 
+    ---comment
+    ---@param gy number
+    function ScrollContainer:scrollToView(gy)
+        local c = self:getChild(1)
+        local s = c.gy - gy
+        if gy < self.gy then
+            self:setScroll(s)
+        elseif gy > self.gy + self.h - self.gy then
+            self:setScroll(s + self.h - self.gy) -- is this right?
+        end
+    end
+
     function ScrollContainer:transformChanged()
         self:sort()
     end
