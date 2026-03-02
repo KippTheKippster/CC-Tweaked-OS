@@ -351,11 +351,11 @@ end
 
 function mos.addToToolbar(control)
     control:connectSignal(control.focusChangedSignal, toolbarChildFocusChanged, control)
-    toolBar:addChild(control)
+    toolBar:add(control)
 end
 
 function mos.removeFromToolbar(control)
-    toolBar:removeChild(control)
+    toolBar:remove(control)
 end
 
 ---@type Dropdown
@@ -563,7 +563,7 @@ end
 ---@return ProgramWindow
 function mos.launchProgram(name, path, x, y, w, h, ...)
     local window = programWindow:new()
-    windowContainer:addChild(window)
+    windowContainer:add(window)
 
     ---@type ProgramViewport
     local viewport = programViewport:new()
@@ -858,7 +858,7 @@ mos.root = engine.root
 ---@type ProgramWindow?
 mos.fullscreenWindow = nil
 mos.quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
-engine.root:addChild(mos.quickSearch)
+engine.root:add(mos.quickSearch)
 mos.quickSearch.y = 1
 
 mos.log("Launching MOS")
