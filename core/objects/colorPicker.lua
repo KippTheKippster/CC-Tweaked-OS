@@ -14,13 +14,13 @@ ColorPicker.dragSelectable = true
 ColorPicker.listQueue = nil
 ColorPicker.shortcutSelection = nil
 ColorPicker.optionShadow = false
-ColorPicker.color = 0
+ColorPicker.inheritStyle = false
 
----@param picker ColorPicker
+---@param p ColorPicker
 ---@param color integer
-local function addColor(picker, color)
+local function addColor(p, color)
     ---@type Control
-    local b = picker.list:addControl()
+    local b = p.list:addControl()
     local colorStyle = style:new()
     colorStyle.backgroundColor = color
     colorStyle.textColor = colors.black
@@ -32,14 +32,12 @@ local function addColor(picker, color)
     b.dragSelectable = true
     b.propogateFocusUp = true
     b.down = function (self)
-        picker.style = self.style
-        picker:colorClicked(self.style.backgroundColor)
+        p.style.backgroundColor = self.style.backgroundColor
+        p:colorClicked(self.style.backgroundColor)
+        p:queueDraw()
     end
     b.up = function (self)
-        picker.color = color
-        picker.style.backgroundColor = color
-        --picker:releaseFocus()
-        picker:colorPressed(self.style.backgroundColor)
+        p:colorPressed(self.style.backgroundColor)
     end
 end
 

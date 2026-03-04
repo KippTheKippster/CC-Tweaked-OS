@@ -23,5 +23,5 @@
     background = 1,
     clickBackground = 1,
   },
-  backgroundColor = 16,
+  backgroundColor = 16384,
 }

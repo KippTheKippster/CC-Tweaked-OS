@@ -10,7 +10,7 @@ mos.latestMosOption = ""
 
 local runningProgram = shell.getRunningProgram()
 local mosPath = "/" .. fs.getDir(fs.getDir(runningProgram))
-local mosDotPath = "." .. mosPath:gsub("/", ".")
+local mosDotPath = mosPath:gsub("/", ".")
 local corePath = mosPath .. "/core"
 local coreDotPath = mosDotPath .. ".core"
 local osPath = mosPath .. "/os"
@@ -77,7 +77,7 @@ local currentWindow = nil
 --Profile
 ---@class Theme
 local defaultTheme = {
-    backgroundColor = colors.yellow,
+    backgroundColor = colors.red,
     shadow = true,
     shadowColor = colors.gray,
     mainColors = {
@@ -87,7 +87,6 @@ local defaultTheme = {
         clickBackground = colors.lightBlue,
         focusText = colors.black,
         focusBackground = colors.lightGray,
-
     },
     windowColors = {
         text = colors.gray,
@@ -107,8 +106,8 @@ local defaultTheme = {
 
 ---@class Profile
 local defaultProfile = {
-    backgroundIcon = toOsPath("/textures/backgrounds/tux.nfp"),
-    fileExecptions = {
+    backgroundIcon = toOsPath("/textures/backgrounds/melvin.nfp"),
+    fileExceptions = {
         [".nfp"] = {
             program = "os/programs/paint.lua",
             fullscreen = false
@@ -116,7 +115,6 @@ local defaultProfile = {
         [".txt"] = { program = "/rom/programs/edit.lua" }
     },
     theme = "",
-    backgroundColor = nil,
     favorites = {
 
     },
@@ -313,7 +311,9 @@ engine.utils.saveTable(defaultTheme, toOsPath("/themes/defaultTheme.thm"))
 --Background
 local backgroundIcon = engine.root:addIcon()
 backgroundIcon.text = ""
-backgroundIcon.texture = paintutils.loadImage(mos.profile.backgroundIcon)
+if mos.profile.backgroundIcon ~= "" and fs.exists(mos.profile.backgroundIcon or "") then
+    backgroundIcon.texture = paintutils.loadImage(mos.profile.backgroundIcon)
+end
 backgroundIcon.anchorW = backgroundIcon.Anchor.CENTER
 backgroundIcon.anchorH = backgroundIcon.Anchor.CENTER
 mos.backgroundIcon = backgroundIcon
@@ -638,7 +638,7 @@ end
 function mos.openProgram(path, ...)
     local x, y, w, h = nextWindowTransform()
     local file = fs.getName(path)
-    for k, v in pairs(mos.profile.fileExecptions) do
+    for k, v in pairs(mos.profile.fileExceptions) do
         local suffix = k
         if file:sub(-#suffix) == suffix then
             local program = path

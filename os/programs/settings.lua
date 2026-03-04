@@ -50,12 +50,12 @@ end
 
 ---@param o Control
 local function addReset(o)
-    local reset = o:addButton()
-    reset.x = -1
-    reset.h = 1
-    reset.w = 1
-    reset.text = "x"
+    local reset = engine.Button:new()
     reset.inheritStyle = false
+    reset.text = "x"
+    reset.w = 1
+    o:add(reset)
+    reset.x = -1
     return reset
 end
 
@@ -92,7 +92,7 @@ local function addSettingsColor(text, defaultColor)
     picker.text = "[      ]"
     picker.anchorW = picker.Anchor.RIGHT
     picker.dragSelectable = true
-    picker.style = engine.newStyle(picker.style)
+    picker.style = engine.newStyle()
     if defaultColor then
         picker.style.backgroundColor = defaultColor
     end
@@ -140,7 +140,7 @@ addSeperator("-Computer-")
 local freeSpace = math.floor(fs.getFreeSpace("") * 1e-4) / 100
 local capacity = math.floor(fs.getCapacity("") * 1e-4) / 100
 addSettingsInfo("ID", "#" .. tostring(os.getComputerID()))
-addSettingsInfo("Space", capacity - freeSpace .. "/" .. capacity  .. " MB")
+addSettingsInfo("Free Space", freeSpace .. "/" .. capacity  .. " MB")
 local labelEdit = addSettingsLineEdit("Label", os.getComputerLabel())
 function labelEdit:textSubmitted()
     os.setComputerLabel(labelEdit.text)
@@ -166,8 +166,7 @@ end
 local changeBackground = addSettingsButton("Background Image", "[Browse]")
 
 local imageReset = addReset(changeBackground)
-imageReset.visible = mos.profile.backgroundIcon ~= nil
-
+imageReset.visible = mos.profile.backgroundIcon ~= nil and mos.profile.backgroundIcon ~= ""
 
 function changeBackground:pressed()
     fileExplorer = mos.openFileDialogue("Choose .nfp", function (path)
@@ -181,6 +180,7 @@ end
 function imageReset:pressed()
     mos.profile.backgroundIcon = nil
     mos.backgroundIcon.texture = nil
+    mos.profile.backgroundIcon = ""
     imageReset.visible = false
 end
 
@@ -216,7 +216,7 @@ local dirColorPicker = addSettingsColor("Dir Color", mos.theme.fileColors.dirTex
 local dirColorReset = addReset(dirColorPicker)
 dirColorReset.visible = mos.profile.dirColor ~= nil
 if mos.profile.dirColor ~= nil then
-    picker.style.backgroundColor = mos.profile.dirColor
+    dirColorPicker.style.backgroundColor = mos.profile.dirColor
 end
 
 dirColorReset.pressed = function (o)
