@@ -28,6 +28,19 @@ return function(container, collision, input)
         container.queueFree(self)
     end
 
+    local function limitScroll(self)
+        local child = self:getChild(1)
+        if not child then
+            return
+        end
+
+        if child.y >= 0 then
+            child.y = 0
+        elseif child.y < self.h - child.h then
+            child.y = self.h - child.h
+        end
+    end
+
     function ScrollContainer:render()
         local c = self:getChild(1)
         local offset = 0
@@ -43,19 +56,17 @@ return function(container, collision, input)
             offset = (-c.y * (self.h - 2)) / (c.h - self.h) + o
         end
 
-
         local stepCount = math.max(0, c.h - (self.h - 1))
         local size = math.max(0, self.h - stepCount)
-
         if self.dynamicBar then
-            if size == self.h - 1 then -- No scroll
+            if size >= self.h - 1 then -- No scroll
                 self.marginR = 0
-                self:sort()
+                limitScroll(self)
                 return
             else
                 if self.marginR == 0 then
                     self.marginR = 1
-                    self:sort()
+                    limitScroll(self)
                 end
             end
         end
@@ -66,8 +77,8 @@ return function(container, collision, input)
         local endY = startY + self.h - 1
         paintutils.drawLine(startX, startY, endX, endY, colors.gray)
 
-        startY = self.gy + offset + 1
-        endY = startY + size
+        startY = math.floor(self.gy + offset + 1)
+        endY = startY + math.ceil(size)
 
         local color = colors.lightGray
         if self.barPressed then
@@ -91,28 +102,19 @@ return function(container, collision, input)
         end
 
         child:expandChildren()
-        if child.y >= 0 then
-            child.y = 0
-            return
-        end
-
-        local dif = self.h - child.h
-        if child.y < self.h - child.h then
-            child.y = dif
-            return
-        end
+        limitScroll(self)
     end
 
     function ScrollContainer:scroll(dir, _, _)
         local child = self:getChild(1)
         child.y = child.y - dir
-        self:sort()
+        limitScroll(self)
     end
 
     function ScrollContainer:setScroll(position)
         local child = self:getChild(1)
         child.y = -position
-        self:sort()
+        limitScroll(self)
     end
 
     ---comment
@@ -128,6 +130,11 @@ return function(container, collision, input)
     end
 
     function ScrollContainer:transformChanged()
+        limitScroll(self)
+    end
+
+    function ScrollContainer:resize()
+        container.resize(self)
         self:sort()
     end
 

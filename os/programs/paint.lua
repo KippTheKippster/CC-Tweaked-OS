@@ -785,7 +785,6 @@ local function createEditField(fieldName, text, parent)
     local label = h:addControl()
     label.text = fieldName
     label.h = 1
-    h.sortOnTransformChanged = true
 
     local edit = h:addLineEdit()
     edit.inheritStyle = false

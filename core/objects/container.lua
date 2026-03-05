@@ -8,7 +8,7 @@ Container.mouseIgnore = false
 Container.text = ""
 Container.visible = true
 Container.rendering = false
-Container.sortOnTransformChanged = true
+Container.sortOnResize = true
 Container.fitToText = false
 Container._sortQueued = false
 
@@ -16,8 +16,8 @@ function Container:childrenChanged()
 	self:queueSort()
 end
 
-function Container:transformChanged()
-	if self.sortOnTransformChanged == true then
+function Container:sizeChanged()
+	if self.sortOnResize == true then
 		self:queueSort()
 	end
 end
@@ -28,6 +28,7 @@ end
 
 function Container:draw()
 	if self._sortQueued then
+		self._sortQueued = false
 		self:sort()
 	end
 	control.draw(self)
