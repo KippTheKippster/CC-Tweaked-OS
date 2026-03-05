@@ -16,7 +16,7 @@ return function(container, collision, input)
     ScrollContainer.barEndY = 0
     ScrollContainer.barPressed = false
     ScrollContainer.dynamicBar = true
-    ScrollContainer.mOffset = 0
+    ScrollContainer._mOffset = 0
 
     function ScrollContainer:init(...)
         input.addRawEventListener(self)
@@ -29,12 +29,23 @@ return function(container, collision, input)
     end
 
     function ScrollContainer:render()
-        local child = self:getChild(1)
+        local c = self:getChild(1)
+        local offset = 0
+        if (self.h) / (c.h - self.h) >= 1 then
+            local steps = math.max(0, c.h - self.h)
+            local stepAmount = math.min(1.0, ((self.h - 1) / steps))
+            offset = -c.y * stepAmount
+        else
+            local o = 1
+            if c.y == 0 then
+                o = 0
+            end
+            offset = (-c.y * (self.h - 2)) / (c.h - self.h) + o
+        end
 
-        local steps = math.max(0, child.h - self.h)
-        local stepAmount = math.min(1.0, ((self.h - 1) / steps))
-        local offset = child.y * stepAmount
-        local size = math.max(0, self.h - steps - 1)
+
+        local stepCount = math.max(0, c.h - (self.h - 1))
+        local size = math.max(0, self.h - stepCount)
 
         if self.dynamicBar then
             if size == self.h - 1 then -- No scroll
@@ -55,12 +66,7 @@ return function(container, collision, input)
         local endY = startY + self.h - 1
         paintutils.drawLine(startX, startY, endX, endY, colors.gray)
 
-
-        local round = math.floor
-        if -math.floor(offset) == self.h - 1 then -- Do this better
-            round = math.ceil
-        end
-        startY = startY - round(offset)
+        startY = self.gy + offset + 1
         endY = startY + size
 
         local color = colors.lightGray
@@ -69,8 +75,6 @@ return function(container, collision, input)
         end
 
         paintutils.drawLine(startX, startY, endX, endY, color)
-
-        term.setCursorPos(startX, startY + math.floor((endY - startY) / 2 + 0.5))
 
         self.barStartX = startX
         self.barStartY = startY
@@ -107,7 +111,7 @@ return function(container, collision, input)
 
     function ScrollContainer:setScroll(position)
         local child = self:getChild(1)
-        child.y = position
+        child.y = -position
         self:sort()
     end
 
@@ -115,7 +119,7 @@ return function(container, collision, input)
     ---@param gy number
     function ScrollContainer:scrollToView(gy)
         local c = self:getChild(1)
-        local s = c.gy - gy
+        local s = gy - c.gy
         if gy < self.gy then
             self:setScroll(s)
         elseif gy > self.gy + self.h - self.gy then
@@ -135,7 +139,7 @@ return function(container, collision, input)
             if collision.inArea(x, y, self.barStartX, self.barStartY, self.barEndX - self.barStartX, self.barEndY - self.barStartY) then
                 self.barPressed = true
                 self:queueDraw()
-                self.mOffset = self.barStartY - y - 1
+                self._mOffset = self.barStartY - y - 1
             end
         elseif event == "mouse_up" then
             self.barPressed = false
@@ -144,7 +148,11 @@ return function(container, collision, input)
             if self.barPressed then
                 local x = data[3]
                 local y = data[4]
-                self:setScroll(self.gy - y - self.mOffset)
+                local c = self:getChild(1)
+                local m = y - self.gy + self._mOffset
+                local s = math.max(1, (c.h - self.h) / (self.h-1))
+                local o = m * s
+                self:setScroll(o)
             end
         end
     end
