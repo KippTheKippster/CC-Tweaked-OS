@@ -107,7 +107,6 @@ Control._anchorH = Control.Anchor.UP
 
 Control.visibilityChangedSignal = Control:createSignal()
 Control.focusChangedSignal = Control:createSignal()
-Control.transformChangedSignal = Control:createSignal()
 
 Control:defineProperty('gx', {
     get = function(o) return o._gx end,
@@ -115,10 +114,9 @@ Control:defineProperty('gx', {
         local same = o._gx == value
         o._gx = value
         if same == false then
-            --o._x = o.parent._globalX - o._globalX
             o:updateGlobalPosition()
             o:transformChanged()
-            o:emitSignal(o.transformChangedSignal)
+            o._x = o._gx - o.parent._gx
         end
     end
 })
@@ -129,10 +127,9 @@ Control:defineProperty('gy', {
         local same = o._gy == value
         o._gy = value
         if same == false then
-            --o._y = o.parent._globalY - o._globalY
             o:updateGlobalPosition()
             o:transformChanged()
-            o:emitSignal(o.transformChangedSignal)
+            o._y = o._gy - o.parent._gy
         end
     end
 })
@@ -158,7 +155,6 @@ Control:defineProperty('x', {
         if same == false then
             o:updatePosition()
             o:transformChanged()
-            o:emitSignal(o.transformChanged)
         end
     end
 })
@@ -171,7 +167,6 @@ Control:defineProperty('y', {
         if same == false then
             o:updatePosition()
             o:transformChanged()
-            o:emitSignal(o.transformChanged)
         end
     end
 })
@@ -196,7 +191,6 @@ Control:defineProperty('w', {
             o:transformChanged()
             o:expandChildren()
             o:sizeChanged()
-            o:emitSignal(o.transformChanged)
         end
     end
 })
@@ -211,7 +205,6 @@ Control:defineProperty('h', {
             o:transformChanged()
             o:expandChildren()
             o:sizeChanged()
-            o:emitSignal(o.transformChanged)
         end
     end
 })
