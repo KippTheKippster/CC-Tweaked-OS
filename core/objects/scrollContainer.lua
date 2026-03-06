@@ -121,11 +121,11 @@ return function(container, collision, input)
     ---@param gy number
     function ScrollContainer:scrollToView(gy)
         local c = self:getChild(1)
-        local s = gy - c.gy
-        if gy < self.gy then
-            self:setScroll(s)
-        elseif gy > self.gy + self.h - self.gy then
-            self:setScroll(s + self.h - self.gy) -- is this right?
+        local y = gy - self.gy
+        if y < 0 then
+           self:setScroll(gy - c.gy)
+        elseif y >= self.h then
+            self:setScroll(gy - c.gy - self.h + 1) -- is this right?
         end
     end
 
