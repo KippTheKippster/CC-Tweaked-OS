@@ -61,7 +61,9 @@ engine.windowExitButtonStyle = newStyle()
 
 --Objects
 local function requireObject(name, ...)
-    return require(coreDotPath .. ".objects." .. name)(...)
+    local o = require(coreDotPath .. ".objects." .. name)(...)
+    o.name = name:gsub("^%l", string.upper)
+    return o
 end
 
 ---@type Control
@@ -95,20 +97,6 @@ local parentTerm = term.current()
 local initialW, initialH = parentTerm.getSize()
 local screenBuffer = window.create(parentTerm, 1, 1, initialW, initialH)
 
---[[
-local bufferLines = {}
-local bufferWrite = screenBuffer.write
-screenBuffer.write = function (text)
-    local x, y = screenBuffer.getCursorPos()
-    local c = screenBuffer.getBackgroundColor()
-    if bufferLines[y] == nil or bufferLines[y][x] == nil then
-    else
-        bufferLines[y][x] = c
-    end
-    bufferWrite(text)
-end
-]] --
-
 engine.parentTerm = parentTerm
 engine.screenBuffer = screenBuffer          
 
@@ -129,18 +117,6 @@ engine.root = root
 local function resizeBuffer(w, h)
     screenBuffer.reposition(1, 1, w, h)
     engine.root.w, engine.root.h = w, h
-    --[[
-    for y = 1, h do
-        if bufferLines[y] == nil then
-            bufferLines = {}
-        end
-        for x = 1, h do
-            if bufferLines[x] == nil then
-                bufferLines[y] = engine.backgroundColor
-            end
-        end
-    end
-    ]] --
 end
 
 ---@param o Control
@@ -175,7 +151,6 @@ local function redrawScreen()
 
     if input.getCursorControl() == nil then
         term.setCursorBlink(false)
-        term.setCursorPos(1, 1) -- Forces error messages to display at correct position
     else
         input.getCursorControl():updateCursor()
     end
@@ -184,12 +159,21 @@ local function redrawScreen()
     term.redirect(parentTerm)
 end
 
+local function pRedrawScreen()
+    local ok, err = pcall(redrawScreen)
+    if not ok then
+        term.redirect(parentTerm)
+        term.setCursorPos(1, 1)
+        error(err, 0)
+    end
+end
+
 local drawTimerID = 0
 local function fnDraw()
     while engine.running do
         if engine.queueRedraw == true then
             engine.drawCount = engine.drawCount + 1
-            redrawScreen()
+            pRedrawScreen()
             engine.queueRedraw = false
         end
 
@@ -217,17 +201,6 @@ end
 engine.drawCount = 0
 function engine.start()
     if engine.running then return end
-
-    --[[
-        error = function (msg, lvl)
-            term.setBackgroundColor(colors.black)
-            term.redirect(parentTerm)
-            term.setCursorPos(1, 1)
-            lvl = lvl or 1
-            fnError(msg, lvl + 1)
-        end
-        ]] --
-
     if __mp and __p then
         engine.mp = __mp
         engine.p = __p
@@ -235,7 +208,7 @@ function engine.start()
 
     engine.running = true
     resizeBuffer(screenBuffer.getSize())
-    redrawScreen()
+    pRedrawScreen()
 
     local function freeTree(c)
         for _, child in ipairs(c.children) do
