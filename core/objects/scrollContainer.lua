@@ -19,6 +19,7 @@ return function(container, collision, input)
     ScrollContainer._mOffset = 0
 
     function ScrollContainer:init(...)
+        container.init(self)
         input.addRawEventListener(self)
         container.init(self, ...)
     end
@@ -105,16 +106,15 @@ return function(container, collision, input)
         limitScroll(self)
     end
 
-    function ScrollContainer:scroll(dir, _, _)
-        local child = self:getChild(1)
-        child.y = child.y - dir
-        limitScroll(self)
-    end
-
     function ScrollContainer:setScroll(position)
         local child = self:getChild(1)
         child.y = -position
         limitScroll(self)
+    end
+
+    function ScrollContainer:scroll(dir, _, _)
+        local child = self:getChild(1)
+        self:setScroll(-child.y + dir)
     end
 
     ---comment

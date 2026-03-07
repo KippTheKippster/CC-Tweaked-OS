@@ -116,7 +116,7 @@ fileContainer.fitToChildrenH = true
 
 ---@class SaveContainer : HContainer
 local SaveContainer = engine.HContainer:newClass()
-SaveContainer.expandW = true
+SaveContainer._expandW = true
 ---@type LineEdit
 SaveContainer.saveEdit = nil
 ---@type Button
@@ -164,8 +164,8 @@ local FileButton = engine.Button:newClass()
 FileButton.selected = false
 FileButton.selectStyle = engine.focusStyle
 FileButton.path = ""
-FileButton.marginL = 1
-FileButton.marginR = 1
+FileButton._marginL = 1
+FileButton._marginR = 1
 
 function FileButton:render()
     --PANEL
@@ -294,8 +294,14 @@ function fe.newFileButton(name)
     if fs.isDir(path) then
         fileButton.normalStyle = dirStyle
         fileButton.selectStyle = dirSelectStyle
+        fileButton.doublePressed = function(o)
+            fe.openDir(path)
+        end
     else
         fileButton.normalStyle = fileStyle
+        fileButton.doublePressed = function(o)
+            fe.openFile(path, mos.getFileOpenModifierInput())
+        end
     end
     fileButton.style = fileButton.normalStyle
     fileButton.h = 1
@@ -312,16 +318,6 @@ end
 function fe.addFileButton(name)
     local fileButton = fe.newFileButton(name)
     fileContainer:add(fileButton)
-    if fs.isDir(fileButton.path) then
-        fileButton.doublePressed = function(o)
-            fe.openDir(o.path)
-        end
-    else
-        fileButton.doublePressed = function(o)
-            fe.openFile(o.path, mos.getFileOpenModifierInput())
-        end
-    end
-
     return fileButton
 end
 
@@ -454,7 +450,7 @@ function fe.openDir(path)
 
     for _, fileName in ipairs(fileNames) do
         local b = fe.addFileButton(fileName)
-        if b.parent == fe.startFile then
+        if b.path == fe.startFile then
             fe.selectFileButton(b, true)
         end
     end

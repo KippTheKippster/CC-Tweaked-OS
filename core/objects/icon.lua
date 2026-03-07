@@ -42,6 +42,7 @@ Icon:defineProperty('centered', {
 })
 
 function Icon:treeEntered()
+    control.treeEntered(self)
     if self.centered == true then
         self:centerPosition()
     end

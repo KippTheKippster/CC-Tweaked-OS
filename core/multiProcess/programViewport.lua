@@ -21,6 +21,8 @@ ProgramViewport.resizeQueued = false
 ProgramViewport.focusKeys = nil
 
 function ProgramViewport:init()
+    control.init(self)
+
     self.oldW = self.w
     self.oldH = self.h
     self.focusKeys = {}

@@ -1,7 +1,9 @@
 ---@return Style
 return function(object)
 ---@class Style : Object
-local Style = object:new()
+local Style = object:newClass()
+Style.__type = "Style"
+Style.__name = "Style"
 Style.backgroundColor = colors.lightGray
 Style.borderColor = colors.gray
 Style.textColor = colors.black

@@ -5,11 +5,11 @@ local Container = control:newClass()
 Container.__type = "Container"
 
 Container.mouseIgnore = false
-Container.text = ""
-Container.visible = true
+Container._text = ""
+Container._visible = true
 Container.rendering = false
 Container.sortOnResize = true
-Container.fitToText = false
+Container._fitToText = false
 Container._sortQueued = false
 
 function Container:childrenChanged()

@@ -81,6 +81,7 @@ Control.rendering = true
 Control.draggable = false
 Control.dragSelectable = false
 Control.topLevel = false
+---@type table
 Control.children = {}
 ---@type Control
 Control.parent = nil
@@ -148,7 +149,9 @@ function Control:updateGlobalPosition()
 end
 
 Control:defineProperty('x', {
-    get = function(o) return o._x end,
+    get = function(o) 
+        --__log("---RETURINGING---")
+        return o._x end,
     set = function(o, value)
         local same = o._x == value
         o._x = value
@@ -281,14 +284,21 @@ Control:defineProperty('marginR', {
 ---@param text string?
 function Control:init(text)
     object.init(self, text)
+    self.children = {}
     if text then
-        self.text = text
+        self._text = text
     end
+end
+
+function Control:treeEntered()
+    self.text = self._text
+    self:resize()
 end
 
 function Control:expandChildren()
     local w = self.w - (self.marginL + self.marginR)
     local h = self.h
+    --__log(debug.traceback())
     for i = 1, #self.children do
         local c = self.children[i]
         if c.expandH then
@@ -393,14 +403,14 @@ Control:defineProperty('style', {
         local same = o._style == value
         o._style = value
         if same == false then
-            for i = 1, #o.children do
-                local c = o.children[i]
-                if c.inheritStyle == true then
-                    c.style = o._style
-                end
-            end
+            --for i = 1, #o.children do
+            --    local c = o.children[i]
+            --    if c.inheritStyle == true then
+            --        c.style = o._style
+            --    end
+            --end
             o:queueDraw()
-            o:styleChanged();
+            o:styleChanged()
         end
     end
 })
@@ -431,6 +441,9 @@ Control.shadow = false -- Change this to style
 
 function Control:queueFree()
     table.insert(engine.freeQueue, self)
+    if self:inFocus() then
+        self:releaseFocus()
+    end
 end
 
 function Control:queueDraw()
@@ -561,19 +574,14 @@ function Control:add(o)
         error("Attempting to add a child that already has a parent! __name: " .. o.__name, 2)
     end
 
-    local t = {}
-    for i = 1, #self.children do
-        table.insert(t, self.children[i])
-    end
-    table.insert(t, o)
-    self.children = t
+    table.insert(self.children, o)
     o.parent = self
-    o.style = self.style
+    --o.style = self.style
     o.gx = self.gx + o.x
     o.gy = self.gy + o.y
     o.treeEntered(o) -- TODO Maybe make recursive
     self:childrenChanged()
-    self:expandChildren()
+    --self:expandChildren()
     self:queueDraw()
 end
 
@@ -685,7 +693,7 @@ function Control:releaseInput()
 end
 
 --Event Functions that should be overwritten
-function Control:treeEntered() end
+--function Control:treeEntered() end
 function Control:childrenChanged() end
 function Control:down(button, x, y) end
 function Control:up(button, x, y) end

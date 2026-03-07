@@ -11,17 +11,17 @@ LineEdit.__type = "LineEdit"
 LineEdit.normalStyle = editStyle
 LineEdit.focusStyle = editFocusStyle
 
-LineEdit.h = 1
-LineEdit.w = 12
-LineEdit.minH = 1
-LineEdit.text = ""
+LineEdit._h = 1
+LineEdit._w = 12
+LineEdit._minH = 1
+LineEdit._text = ""
 LineEdit._cursorX = 0
 ---@type integer
 LineEdit.cursorX = nil
 LineEdit.inheritStyle = false
 LineEdit.clipText = true
 LineEdit.lineScroll = 0
-LineEdit.fitToText = false
+LineEdit._fitToText = false
 
 LineEdit:defineProperty("cursorX", {
     get = function (o)
@@ -36,10 +36,11 @@ LineEdit:defineProperty("cursorX", {
 })
 
 function LineEdit:treeEntered()
+    control.treeEntered(self)
     self.style = self.normalStyle
 end
 
-function LineEdit:draw()
+function LineEdit:render()
     local w = self.w - 1 - (self.marginL + self.marginR)
     if self.cursorX - self.offsetTextX > w then
         self.offsetTextX = self.cursorX - (w)
@@ -50,7 +51,7 @@ function LineEdit:draw()
 
     self.offsetTextX = math.min(self.offsetTextX, math.max(0, #self.text - w))
 
-    control.draw(self)
+    control.render(self)
 end
 
 function LineEdit:updateCursor()

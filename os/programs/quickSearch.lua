@@ -11,6 +11,7 @@ qs.focusStyle = mos.engine.normalStyle
 qs.marginL = 2
 qs._skip = true
 function qs:init()
+    engine.LineEdit.init(self)
     qs.x = 2
 end
 

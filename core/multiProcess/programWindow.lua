@@ -60,8 +60,8 @@ local function addSplit (wi, h, fn)
     return split
 end
 
-function ProgramWindow:init(text)
-    windowControl.init(self, text)
+function ProgramWindow:init()
+    windowControl.init(self)
 
     self.minimizeButton = addButton(self)
     self.minimizeButton.w = 1
@@ -193,10 +193,16 @@ function ProgramWindow:down()
 end
 
 function ProgramWindow:sizeChanged()
+    if not self.exitButton or not self.label then
+        return
+    end
+
     windowControl.sizeChanged(self)
     self.minimizeButton.x = self.w - 2
-    self.programViewport.w = self.w
-    self.programViewport.h = self.h - 1
+    if self.programViewport then
+        self.programViewport.w = self.w
+        self.programViewport.h = self.h - 1
+    end
     self.splitRightButton.x = self.w
     self.splitDownButton.y = self.h
     self.showShadow = true

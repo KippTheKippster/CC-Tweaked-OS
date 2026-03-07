@@ -2,25 +2,30 @@
 local Object = {}
 Object.__name = "object"
 Object.__type = "Object"
-Object.__properties = {}
-Object.__connections = {}
+setmetatable(Object, { connections = {}, properties = {}, class = true })
+
 
 --Get key from object
 local function object__index(o, key)
-    local __properties = rawget(o, "__properties")
-    if __properties ~= nil and __properties[key] ~= nil then
-        if o.__properties[key].get == nil then
+    local mt = getmetatable(o)
+    local properties = rawget(mt, "properties")
+    local property = properties[key]
+    if property then
+        if property.get == nil then
             error("Attempting to read property with missing get function: " .. key .. " " .. tostring(o))
         end
 
-        return o.__properties[key].get(o)
+        if rawget(mt, "class") == true then
+            error("Attempting to get property value of class", 3)
+        end
+
+        return property.get(o)
     end
 
     if rawget(o, key) ~= nil then
         return rawget(o, key)
     end
 
-    local mt = getmetatable(o)
     while mt ~= nil do
         local raw = rawget(mt, "__base")[key]
         if raw ~= nil then
@@ -34,12 +39,20 @@ end
 
 --Set key from object
 local function object__newindex(o, key, value)
-    local __properties = o.__properties--rawget(o, "__properties")
-    if __properties ~= nil and __properties[key] ~= nil  then
-        if o.__properties[key].set == nil then
-            error("Attempting to assign read-only property: " .. key .. " " .. tostring(o) .. " with value " .. tostring(value) .. ".", 2)
+    local mt = getmetatable(o)
+    local properties = rawget(mt, "properties")
+    local property = properties[key]
+    if property then
+        if property.set == nil then
+            error(
+            "Attempting to assign read-only property: " ..
+            key .. " " .. tostring(o) .. " with value " .. tostring(value) .. ".", 2)
         end
-        o.__properties[key].set(o, value)
+        if rawget(mt, "class") == true then
+            error("Attempting to set property value of class", 2)
+        end
+
+        property.set(o, value)
         return
     end
 
@@ -48,13 +61,8 @@ end
 
 local function properties__index(o, key)
     local mt = getmetatable(o)
-    while mt ~= nil do
-        local raw = rawget(mt, "__base")[key]
-        if raw ~= nil then
-            return raw
-        end
-        mt = getmetatable(mt)
-    end
+    local base = rawget(mt, "__base")
+    return base[key]
 end
 
 local function properties__newindex(o, key, value)
@@ -63,7 +71,7 @@ end
 
 local function free__index(o, key)
     if key == "isValid" then
-        return function ()
+        return function()
             return false
         end
     elseif key == "__type" then
@@ -79,34 +87,56 @@ local function free__newindex(o, key, value)
     error("Attempting to assign value to the previously freed object: " .. tostring(o), 2)
 end
 
---Creates a new object, copying properties and signals to the new object
----@return table
-function Object:new(...)
-    local o = self:newClass()
-    o:init(...)
-    return o
-end
-
-function Object:newClass()
+local function new(base)
     local o = {}
     local mt = {
-        __base = self,
+        __base = base,
         __index = object__index,
         __newindex = object__newindex,
     }
 
     setmetatable(o, mt)
+    return o, mt
+end
 
-    o.__properties = {}
-    mt = {
-        __base = self.__properties,
+--Creates a new object, copying properties and signals to the new object
+---@return table
+function Object:new(...)
+    local sMt = getmetatable(self)
+    --if not sMt.class then
+        --error("Attempting to instance a non class object!", 2)
+    --end
+
+    local o, mt = new(self)
+    local properties = {}
+    local pMt = {
+        __base = getmetatable(self).properties,
         __index = properties__index,
         __newindex = properties__newindex,
     }
 
-    setmetatable(o.__properties, mt)
+    setmetatable(properties, pMt)
+    mt.properties = properties
+    mt.connections = {}
 
-    o.__connections = {}
+    o:init(...)
+    return o
+end
+
+function Object:newClass()
+    local sMt = getmetatable(self) 
+    if not sMt.class then
+        error("Attempting to create class from instance!", 1)
+    end
+
+    local o, mt = new(self)
+    local properties = {}
+    for k, v in pairs(sMt.properties) do
+        properties[k] = v
+    end
+    --rawset(o, "properties", properties)
+    mt.properties = properties
+    mt.class = true
     return o
 end
 
@@ -117,24 +147,25 @@ function Object:isValid()
 end
 
 function Object:free()
-    for k, v in pairs(self.__connections) do
+    local mt = getmetatable(self)
+    for k, v in pairs(mt.connections) do
         self:disconnectSignal(k, v.method)
     end
 
     local __type = self.__type
     local __name = self.__name
-    for k in pairs (self) do
+    for k in pairs(self) do
         self[k] = nil
     end
     self.__type = __type
     self.__name = __name
 
-    local mt = {
+    local fMt = {
         __index = free__index,
         __newindex = free__newindex
     }
 
-    setmetatable(self, mt)
+    setmetatable(self, fMt)
 end
 
 ---Defines a new get set property
@@ -142,15 +173,20 @@ end
 ---@param methods table
 ---@param redefine boolean?
 function Object:defineProperty(key, methods, redefine)
-    if self.__properties[key] ~= nil and redefine ~= true then
-        error("Attempting to define an already defined property: " .. key .. " " .. tostring(self) .. " . " .. tostring(redefine) , 2)
-    end
-
     if key == nil then
         error("Attemting to define property with key nil " .. tostring(self), 2)
     end
 
-    self.__properties[key] = methods
+    local mt = getmetatable(self)
+    local properties = rawget(mt, "properties")
+    if properties[key] and redefine ~= true then
+        error(
+        "Attempting to define an already defined property: " ..
+        key .. " " .. tostring(self) .. " . " .. tostring(redefine), 2)
+    end
+
+
+    properties[key] = methods
 end
 
 ---@return Signal
@@ -164,28 +200,30 @@ end
 ---@param method function
 ---@param ... any
 function Object:connectSignal(signal, method, ...)
-    if self.__connections[signal] == nil then
-        self.__connections[signal] = {}
+    local mt = getmetatable(self)
+    if mt.connections[signal] == nil then
+        mt.connections[signal] = {}
     end
     local connection = {
         method = method,
         binds = table.pack(...)
     }
-    table.insert(self.__connections[signal], connection)
+    table.insert(mt.connections[signal], connection)
 end
 
 ---@param signal Signal
 ---@param method function
 function Object:disconnectSignal(signal, method)
-    local connections = self.__connections[signal]
-    if self.__connections[signal] == nil then 
+    local mt = getmetatable(self)
+    local connections = mt.connections[signal]
+    if mt.connections[signal] == nil then
         return
     end
 
     for i = 1, #connections do
         local connection = connections[i]
         if connection.method == method then
-            self.__connections[signal][i] = nil
+            mt.connections[signal][i] = nil
             return
         end
     end
@@ -194,7 +232,8 @@ end
 ---@param signal Signal
 ---@param ... any
 function Object:emitSignal(signal, ...)
-    local connections = self.__connections[signal]
+    local mt = getmetatable(self)
+    local connections = mt.connections[signal]
     if connections ~= nil then
         for i = 1, #connections do
             local connection = connections[i]

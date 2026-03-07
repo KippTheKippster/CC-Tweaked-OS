@@ -6,12 +6,12 @@ WindowControl.__type = "WindowControl"
 
 WindowControl.draggable = true
 WindowControl.clipText = true
-WindowControl.text = "Window"
+WindowControl._text = "Window"
 WindowControl.label = nil
 WindowControl.exitButton = nil
 WindowControl.scaleButton = nil
-WindowControl.minW = 10
-WindowControl.minH = 4
+WindowControl._minW = 10
+WindowControl._minH = 4
 WindowControl.oldW = 0
 WindowControl.oldH = 0
 WindowControl.fullscreen = false
@@ -41,7 +41,7 @@ WindowControl:defineProperty('text', {
 }, true)
 
 function WindowControl:init()
-    self:refreshMinSize()
+    control.init(self)
 
     self.label = self:addControl()
     self.label.x = 2

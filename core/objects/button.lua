@@ -3,7 +3,7 @@ return function(control, style, clickStyle)
 ---@class Button : Control
 local Button = control:newClass()
 Button.__type = "Button"
-
+Button._text = "Button"
 Button.isClicked = false
 Button._normalStyle = style
 ---@type Style
@@ -42,10 +42,9 @@ function Button:refreshStyle()
 end
 
 function Button:treeEntered()
+    control.treeEntered(self)
     self:refreshStyle()
 end
-
-Button.text = "Button"
 
 function Button:down(b, x, y)
     self.isClicked = true

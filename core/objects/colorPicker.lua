@@ -7,7 +7,7 @@ return function(control, input, style)
 local ColorPicker = control:newClass()
 ColorPicker.__type = "ColorPicker"
 ColorPicker.list = nil
-ColorPicker.h = 1
+ColorPicker._h = 1
 ColorPicker.list = nil
 ColorPicker.open = false
 ColorPicker.dragSelectable = true
@@ -42,6 +42,8 @@ local function addColor(p, color)
 end
 
 function ColorPicker:init()
+    control.init(self)
+
     ---@type FlowContainer
     self.list = self:addFlowContainer()
     self.list.topLevel = true
