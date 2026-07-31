@@ -16,6 +16,8 @@ mouse.doublePressed = false
 mouse.dragX = 0
 mouse.dragY = 0
 
+local propogateCancel = false
+
 local function isValid(o)
     if o == nil then
         return false
@@ -298,9 +300,14 @@ local function removeRawEventListener(o)
     table.remove(rawEventListeners, engine.utils.find(rawEventListeners, o))
 end
 
+local function stopRawEventPropopgation()
+    propogateCancel = true
+end
+
 local function rawEvent(data)
+    propogateCancel = false
     for _, listener in ipairs(rawEventListeners) do
-        if isValid(listener) then
+        if propogateCancel == false and isValid(listener) then
             if type(listener) == "table" then
                 listener:rawEvent(data)
             elseif type(listener) == "function" then
@@ -391,6 +398,7 @@ local Input = {
     getInputControl = getInputControl,
     isInputGrabbed = isInputGrabbed,
     setTargetTerm = setTargetTerm,
+    stopRawEventPropopgation = stopRawEventPropopgation
 }
 
 return Input

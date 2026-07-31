@@ -63,11 +63,32 @@ mos.toMosPath = toMosPath
 mos.toOsPath = toOsPath
 mos.toCorePath = toCorePath
 
+local function loadAPI(path, extraEnv)
+    local env = { shell = shell, multishell = multishell }
+    env.require, env.package = dofile("/rom/modules/main/cc/require.lua").make(env, "")
+
+    extraEnv = extraEnv or {}
+    for k, v in pairs(extraEnv) do
+        env[k] = v
+    end
+
+
+    setmetatable(env, { __index = _G })
+    local fn, err = loadfile(path, nil, env)
+    if not fn then
+        error(err)
+    end
+
+    return fn()
+end
+
 ---@type MultiProgram
-local mp = require(coreDotPath .. ".multiProcess.multiProgram")
+
+local mp = loadAPI(fs.combine(corePath, "multiProcess/multiProgram.lua"), {__mos = mos})
+--local mp = require(coreDotPath .. ".multiProcess.multiProgram")
 
 ---@type Engine
-local engine = require(coreDotPath .. ".engine") --mp.loadProgram(engineEnv, toCorePath("/engine.lua"))()--
+local engine = loadAPI(fs.combine(corePath, "engine.lua"), {__mos = mos})--require(coreDotPath .. ".engine") --mp.loadProgram(engineEnv, toCorePath("/engine.lua"))()--
 local windows = {}
 local customTools = {}
 local currentWindow = nil
@@ -143,7 +164,7 @@ end
 
 ---comment
 ---@param file string
----@param settings table?
+---@param settings table<string, string>?
 function mos.addFileFavorite(file, settings)
     if mos.favorites[file] ~= nil then return end
     settings = settings or { name = fs.getName(file) }
@@ -392,14 +413,17 @@ local function toolbarChildFocusChanged(c)
     end
 end
 
+---@param control Control
 function mos.addToToolbar(control)
     control:connectSignal(control.focusChangedSignal, toolbarChildFocusChanged, control)
     toolBar:add(control)
     control.inheritStyle = true
 end
 
+---@param control Control
 function mos.removeFromToolbar(control)
     toolBar:remove(control)
+    control:disconnectSignal(control.focusChangedSignal, toolbarChildFocusChanged)
 end
 
 ---@type Dropdown
@@ -585,7 +609,7 @@ function mos.addWindow(w)
     windowDropdown.disabled = false
 end
 
----Creates a new window running the program of path, unless you want more control window use 'openFile' instead
+---Creates a new window running the program of path, unless you want more control use 'openFile' instead
 ---@param name string
 ---@param path string
 ---@param x integer
@@ -616,16 +640,15 @@ function mos.launchProgram(name, path, x, y, w, h, ...)
 
     extraEnv.__mos = mos
     extraEnv.__mosWindow = window
-    extraEnv.term = engineTerm
-    extraEnv.window = engineWindow
-    extraEnv.paintutils = enginePaintutils
 
     viewport:launchProgram(engine.screenBuffer, path, extraEnv, ...)
-    --viewport:unhandledEvent({}) -- Forces program to start
 
     mos.addWindow(window)
 
-    window:draw()
+    local c = term.current()
+    term.redirect(engine.screenBuffer)
+    window:draw() -- Draw top of window while program is loading
+    term.redirect(c)
 
     return window
 end
@@ -766,7 +789,7 @@ end
 --- closeOnOpen: boolean?
 ---}
 ---@param title string
----@param options table?
+---@param options table<string, any>?
 ---@return ProgramWindow
 function mos.openFileDialogue(title, options)
     local w = mos.openFile(toOsPath("/programs/files.lua"), options)

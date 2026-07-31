@@ -80,7 +80,7 @@ Control.rendering = true
 Control.draggable = false
 Control.dragSelectable = false
 Control.topLevel = false
----@type table
+---@type table<number, Control>
 Control.children = {}
 ---@type Control
 Control.parent = nil
@@ -622,7 +622,7 @@ function Control:freeChildren()
 end
 
 ---Frees and replaces the control's children, this is recommended to be used instead of Control.add when adding a large number of children
----@param children table
+---@param children table<number, Control>
 function Control:replaceChildren(children)
     self:freeChildren()
     self.children = children

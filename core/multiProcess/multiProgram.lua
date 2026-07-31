@@ -12,9 +12,10 @@ local sleepQueue = {}
 ---@param data table
 ---@return table
 function mp.resumeProcess(p, data)
-    term.redirect(p.window)
+    local c = term.current()
+    term.redirect(p.window) -- Note: This is redundant if the program is run with multishellWrapper 
     local status = table.pack(coroutine.resume(p.co, table.unpack(data)))
-    term.redirect(p.parentTerm)
+    term.redirect(c)
     return status
 end
 
@@ -85,7 +86,10 @@ function mp.createEnv(extraEnv)
     return env
 end
 
-
+---comment
+---@param p Process
+---@param env table
+---@param ... any
 local function runMultishellWrapper(p, env, ...)
     local args = table.pack(...)
     _G.__wrapper = {
@@ -117,6 +121,7 @@ end
 ---@param ... any
 ---@return Process
 function mp.launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
+    local current = term.current()
     local env = mp.createEnv(extraEnv)
     local p = mp.launchProcess(parentTerm, function(p, ...)
         runMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
@@ -126,26 +131,8 @@ function mp.launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w, h,
     coroutine.resume(p.co, "paste", corePath .. "/multiProcess/multishellWrapper.lua")
     coroutine.resume(p.co, "key", keys.enter)
 
+    term.redirect(current)
     return p
-end
-
-
----comment
----@param p Process
----@param err string
-function mp.forceError(p, err)
-    local c = term.current()
-    term.redirect(p.window)
-    debug.sethook(p.co, function() error(err) end, "l")
-    mp.resumeProcess(p, { "force_error" })
-    term.redirect(c)
-end
-
----comment
----@param p Process
----@param data table
-function mp.queueExclusiveEvent(p, data)
-
 end
 
 ---Starts a timer that will only be sent to the p Process paramater, returns timer id

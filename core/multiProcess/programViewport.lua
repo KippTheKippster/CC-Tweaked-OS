@@ -19,6 +19,7 @@ ProgramViewport.oldH = 0
 ProgramViewport.resizeQueued = false
 ---@type table
 ProgramViewport.focusKeys = nil
+ProgramViewport.focusMouse = nil
 ProgramViewport.queuedEvents = nil
 
 function ProgramViewport:init()
@@ -27,6 +28,7 @@ function ProgramViewport:init()
     self.oldW = self.w
     self.oldH = self.h
     self.focusKeys = {}
+    self.focusMouse = {}
     self.queuedEvents = {}
 end
 
@@ -52,7 +54,7 @@ function ProgramViewport:launchProgram(parentTerm, programPath, extraEnv, ...)
     self.parentTerm = parentTerm
     self.program = mp.launchProgram(parentTerm, programPath, extraEnv, function(data)
         if self:isValid() then
-            for i, v in ipairs(self.queuedEvents) do
+            for _, v in ipairs(self.queuedEvents) do
                 self:unhandledEvent(v)
             end
             self.queuedEvents = {}
@@ -110,6 +112,15 @@ function ProgramViewport:unhandledEvent(data)
         local button, x, y = data[2], data[3], data[4]
         local offsetX, offsetY = self.program.window.getPosition()
 
+        if event == "mouse_click" then
+            self.focusMouse[button] = { x=x, y=y }
+        elseif event == "mouse_up" then
+            if self.focusMouse[button] == nil then
+                return { true }
+            end
+            self.focusMouse[button] = nil
+        end
+
         args = table.pack(event, button, x - offsetX + 1, y - offsetY + 1)
     elseif event == "mouse_scroll" then
         if self.parent:inFocus() == false then return { true } end
@@ -136,13 +147,47 @@ function ProgramViewport:unhandledEvent(data)
         end
     elseif event == "key_up" then
         if self.parent:inFocus() == false then return { true } end
+
+        if self.focusKeys[data[2]] ~= true then
+            return { true }
+        end
+
         self.focusKeys[data[2]] = nil
         args = data
+    elseif event == "mos_window_focus" then
+        local focus = data[2]
+        if focus == false then
+            for k, v in pairs(self.focusKeys) do
+                if v then
+                    resumeProcess(self, {"key_up", k})
+                    self.focusKeys[k] = nil
+                end
+            end
+
+            for k, v in pairs(self.focusMouse) do
+                if v then
+                    resumeProcess(self, {"mouse_up", k, v.x, v.y})
+                    self.focusMouse[k] = nil
+                end
+            end
+        end
+        
+        return { true }
     end
 
     if self.terminated == true then
-        if event == "key" and self.parent:inFocus() then
-            self.parent:close()
+        if self.parent:inFocus() then
+            if event == "char" then
+                local c = data[2]
+                input.stopRawEventPropopgation() -- Prevent the char event to be sent to the window that auto focus 
+                self.parent:close()
+            elseif event == "key" then
+                local k = data[2]
+                if k == keys.enter or k == keys.leftShift or k == keys.rightShift or k == keys.tab  or k == keys.leftCtrl or k == keys.capsLock then
+                   
+                    self.parent:close()
+                end
+            end
         end
 
         return { true }
@@ -202,7 +247,7 @@ function ProgramViewport:updateWindow()
     end
 
     self.program.window.setVisible(true)
-    drawChildren(self)
+    --drawChildren(self)
 
     if self.parent:inFocus() == false then -- This makes it so that only the focused viewport is constantly drawn (unfocused windows have to wait for next redraw)
         self.program.window.setVisible(false)
