@@ -4,8 +4,9 @@ return function(control)
 local Icon = control:newClass()
 Icon.__type = "Icon"
 
----@type table
+---@type integer[][]?
 Icon.texture = nil
+---@type integer[][]?
 Icon._texture = nil
 
 

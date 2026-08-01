@@ -16,33 +16,6 @@ local screenBuffer = window.create(parentTerm, 1, 1, initialW, initialH)
 engine.parentTerm = parentTerm
 engine.screenBuffer = screenBuffer
 
----Returns { text, textColor, backgroundColor } drawn at position x, y or nil 
----@param x number
----@param y number
----@return table?
-function engine.getChar(x, y)
-    local _, h = engine.screenBuffer.getSize()
-    if y <= 0 or y > h then
-        return nil
-    end
-
-    local text, textColor, backgroundColor = screenBuffer.getLine(y)
-    local textChar = text:sub(x, x)
-    if textChar ~= "" then
-        local textColorChar = textColor:sub(x,x)
-        local backgroundColorChar = backgroundColor:sub(x,x)
-
-        local char = { text = textChar, textColor = colors.black, backgroundColor = colors.fromBlit(backgroundColorChar) }
-        if textChar ~= " " then
-            char.textColor = colors.fromBlit(textColorChar)
-        end
-
-        return char
-    end
-
-    return nil
-end
-
 ---@type Object
 local object = require(coreDotPath .. ".object")
 local collision = require(coreDotPath .. ".collision")
@@ -132,6 +105,14 @@ engine.queueRedraw = false
 engine.background = true
 engine.backgroundColor = colors.black
 engine.root = root
+
+---Returns { text, textColor, backgroundColor } drawn at position x, y or nil 
+---@param x number
+---@param y number
+---@return table?
+function engine.getChar(x, y)
+    return utils.getWindowChar(screenBuffer, x, y)
+end
 
 local function resizeBuffer(w, h)
     screenBuffer.reposition(1, 1, w, h)

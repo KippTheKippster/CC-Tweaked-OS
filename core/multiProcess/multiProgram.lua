@@ -74,9 +74,23 @@ end
 ---comment
 ---@param extraEnv table?
 ---@return table
-function mp.createEnv(extraEnv)
-    local env = { shell = shell, multishell = multishell, __mp = mp }
+function mp.createEnv(extraEnv, name, ...)
+    local env = {
+        shell = shell,
+        multishell = multishell,
+        __mp = mp
+    }
+
     env.require, env.package = dofile("/rom/modules/main/cc/require.lua").make(env, "")
+
+    local arg = {}
+    arg[0] = name
+    for index, value in ipairs(table.pack(...)) do
+        table.insert(arg, value)
+    end
+
+    mos.log(table.unpack(arg))
+    env.arg = arg
 
     extraEnv = extraEnv or {}
     for k, v in pairs(extraEnv) do
@@ -122,7 +136,7 @@ end
 ---@return Process
 function mp.launchProgram(parentTerm, programPath, extraEnv, resume, x, y, w, h, ...)
     local current = term.current()
-    local env = mp.createEnv(extraEnv)
+    local env = mp.createEnv(extraEnv, programPath,...)
     local p = mp.launchProcess(parentTerm, function(p, ...)
         runMultishellWrapper(p, env, programPath, ...) -- TODO Read and fix error messages
     end, resume, x, y, w, h, ...)

@@ -1,9 +1,5 @@
----@type MOS
-local mos = __mos
----@type ProgramWindow
-local mosWindow = __mosWindow
 if mos == nil then
-    printError("File Explorer must be opened with MOS!")
+    printError("File Explorer must be opened with MOS")
     return
 end
 
@@ -17,14 +13,8 @@ fe.currentPath = ""
 fe.startFile = ""
 
 fe.selection = {}
----@enum PasteMode
-fe.PasteMode = {
-    COPY = 1,
-    CUT = 2,
-}
 
----@type PasteMode
-fe.pasteMode = fe.PasteMode.COPY
+fe.pasteMode = "copy"
 fe.clipboard = {}
 
 fe.mountedDisks = {}
@@ -142,7 +132,7 @@ end
 function fe.pPopupError(f, ...)
     local ok, err = pcall(f, ...)
     if ok == false then
-        for i = 1, 3 do
+        for i = 1, 2 do
             local idx = err:find(":")
             if idx ~= nil then
                 err = err:sub(idx + 1)
@@ -347,11 +337,11 @@ function fe.addFileEdit(callback)
     return edit
 end
 
----Combines the current path and the filename
+---Combines the current path and 'name' to a full path
 ---@param name string
 ---@return string
 function fe.nameToPath(name)
-    return fs.combine(fe.currentPath, name)
+    return "/" .. fs.combine(fe.currentPath, name)
 end
 
 function fe.formatName(name)
@@ -492,7 +482,7 @@ end
 
 ---comment
 ---@param path string
----@param openModifier FileOpenModifier
+---@param openModifier string
 function fe.openFile(path, openModifier, ...)
     fe.openFileCallback(path, openModifier, ...)
     if options.closeOnOpen then
@@ -507,9 +497,20 @@ end
 ---comment
 ---@param name string
 function fe.makeFile(name)
+    -- Note: unlike fs.makeDir, fs.open does not throw errors when it fails to create a file, so checks are required
     if name == nil or name == "" then return end
     name = fe.formatName(name)
     local path = fe.nameToPath(name)
+    if fs.exists(path) then
+        mos.popupError(path .. ": File exists")
+        return
+    end
+
+    if fs.isReadOnly(fe.currentPath) then
+        mos.popupError(path .. ": Access denied")
+        return
+    end
+
     if fe.pPopupError(fs.open, path, "w") then
         local b = fe.addFileButton(name)
         fe.addToSelection(b)
@@ -576,10 +577,10 @@ function fe.copySelectionToClipboard()
 end
 
 ---comment
----@param pasteMode PasteMode
+---@param pasteMode string
 function fe.pasteClipboard(pasteMode)
     local fn = fs.copy
-    if pasteMode == fe.PasteMode.CUT then
+    if pasteMode == "cut" then
         fn = fs.move
     end
 
@@ -745,7 +746,7 @@ end
 function fe.mountDisk(path)
     mos.log("mount ", path)
     fe.mountedDisks[path] = true
-    assert(fe.diskTools[path] == nil, "Trying to add a disk tool that already exists!")
+    assert(fe.diskTools[path] == nil, "Trying to add a disk tool that already exists")
     local bound = fe.toolsBound
     if bound then
         fe.clearTools()
@@ -761,7 +762,7 @@ end
 function fe.unmountDisk(path)
     mos.log("unmount ", path)
     fe.mountedDisks[path] = false
-    assert(fe.diskTools[path] ~= nil, "Trying to remove a non-existent disk tool!")
+    assert(fe.diskTools[path] ~= nil, "Trying to remove a non-existent disk tool")
     local bound = fe.toolsBound
     if bound then
         fe.clearTools()
@@ -838,17 +839,17 @@ function fileDropdown:optionPressed(i)
             if fs.isDir(focusPath) then
                 fe.openDir(focusPath)
             else
-                fe.openFile(focusPath, mos.FileOpenModifier.NONE)
+                fe.openFile(focusPath, "none")
             end
         end
     elseif text == "Open w/ args" then
         if focusPath and fs.isDir(focusPath) == false then
-            fe.openFile(focusPath, mos.FileOpenModifier.ARGS)
+            fe.openFile(focusPath, "args")
         end
     elseif text == "Edit" then
         if focusPath then
             if fs.isDir(focusPath) == false then
-                fe.openFile(focusPath, mos.FileOpenModifier.EDIT)
+                fe.openFile(focusPath, "edit")
             end
         end
     elseif text == "Close" then
@@ -877,10 +878,10 @@ function editDropdown:optionPressed(i)
     local focusPath = focusFileButton.path
     local text = editDropdown:getOptionText(i)
     if text == "Cut" then
-        fe.pasteMode = fe.PasteMode.CUT
+        fe.pasteMode = "cut"
         fe.copySelectionToClipboard()
     elseif text == "Copy" then
-        fe.pasteMode = fe.PasteMode.COPY
+        fe.pasteMode = "copy"
         fe.copySelectionToClipboard()
     elseif text == "Paste" then
         fe.pasteClipboard(fe.pasteMode)
@@ -953,10 +954,10 @@ local function input(data)
 
         if engine.input.isKey(keys.leftCtrl) then
             if k == keys.x then
-                fe.pasteMode = fe.PasteMode.CUT
+                fe.pasteMode = "cut"
                 fe.copySelectionToClipboard()
             elseif k == keys.c then
-                fe.pasteMode = fe.PasteMode.COPY
+                fe.pasteMode = "copy"
                 fe.copySelectionToClipboard()
             elseif k == keys.r then
                 local b = fe.getFocusFileButton()

@@ -27,6 +27,19 @@ multishell.setTitle(n, name)
 term.clear()
 term.setCursorPos(1, 1)
 
+local getRunningProgram = shell.getRunningProgram
+local program = getRunningProgram()
+shell.getRunningProgram = function () -- Fix problem where getRunningProgram would returng multishellWrapper.lua
+    local p = getRunningProgram()
+    if p == program then -- Shell stores a programStack, so only check if the end of the stack is multishellWrapper.lua
+        if path:sub(1,1) == "/" then
+            return path:sub(2)
+        end
+        return path
+    end
+    return p
+end
+
 shell.exit()
 
 if fs.exists(path) then

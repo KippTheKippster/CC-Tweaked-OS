@@ -59,6 +59,6 @@ if callbackFunction then
     callbackFunction(tokenise(input))
 end
 
-if __mosWindow then
-    __mosWindow:close()
+if mosWindow then
+    mosWindow:close()
 end

@@ -1,7 +1,3 @@
----@type MOS
-local mos = __mos
----@type ProgramWindow
-local mosWindow = __mosWindow
 if mos == nil then
     printError("DiskInfo must be opened with MOS!")
     return
@@ -22,8 +18,8 @@ local main = engine.root:addVContainer()
 main.rendering = true
 main.fitToChildrenW = true
 main.fitToChildrenH = true
-main.anchorW = main.Anchor.CENTER
-main.anchorH = main.Anchor.CENTER
+main.anchorW = "center"
+main.anchorH = "center"
 
 local Line = engine.Control:newClass()
 Line._h = 1

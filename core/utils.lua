@@ -83,7 +83,31 @@ local function loadTable(file)
     return textutils.unserialize(data)
 end
 
+---comment
+---@param w table
+---@return table?
+local function getWindowChar(w, x, y)
+    local _, h = w.getSize()
+    if y <= 0 or y > h then
+        return nil
+    end
 
+    local text, textColor, backgroundColor = w.getLine(y)
+    local textChar = text:sub(x, x)
+    if textChar ~= "" then
+        local textColorChar = textColor:sub(x,x)
+        local backgroundColorChar = backgroundColor:sub(x,x)
+
+        local char = { text = textChar, textColor = colors.black, backgroundColor = colors.fromBlit(backgroundColorChar) }
+        if textChar ~= " " then
+            char.textColor = colors.fromBlit(textColorChar)
+        end
+
+        return char
+    end
+
+    return nil
+end
 
 ---@class Utils
 local Utils = {
@@ -96,6 +120,7 @@ local Utils = {
 	pushBottom = pushBottom,
 	saveTable = saveTable,
 	loadTable = loadTable,
+    getWindowChar = getWindowChar,
 }
 
 ---@type Utils

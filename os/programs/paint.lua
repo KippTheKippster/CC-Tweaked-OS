@@ -1,6 +1,3 @@
----@type MOS
-local mos = __mos
-local mosWindow = __mosWindow
 if mos == nil then
     printError("Paint must be opened with MOS!")
     return
@@ -717,7 +714,7 @@ local palette = engine.root:addControl()
 palette.rendering = false
 
 palette.w = 2
-palette.anchorW = palette.Anchor.RIGHT
+palette.anchorW = "right"
 palette.expandH = true
 
 local colorL = palette:addControl()
@@ -772,7 +769,7 @@ coordsStyle.textColor = colors.white
 coordsStyle.backgroundColor = colors.black
 
 coords = engine.root:addControl()
-coords.anchorH = coords.Anchor.DOWN
+coords.anchorH = "down"
 coords.h = 1
 coords.style = coordsStyle
 
@@ -837,7 +834,7 @@ local function createResizeDialogue(fn)
     wi.ok.h = 1
     wi.ok.expandW = true
     wi.ok.centerText = true
-    wi.ok.anchorH = wi.Anchor.DOWN
+    wi.ok.anchorH = "down"
     wi.ok.pressed = function()
         local w = tonumber(wi.wEdit.text) or _w
         local h = tonumber(wi.hEdit.text) or _h

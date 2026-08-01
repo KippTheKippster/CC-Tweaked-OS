@@ -80,7 +80,7 @@ Control.rendering = true
 Control.draggable = false
 Control.dragSelectable = false
 Control.topLevel = false
----@type table<number, Control>
+---@type Control[]
 Control.children = {}
 ---@type Control
 Control.parent = nil
@@ -92,18 +92,11 @@ Control._marginR = 0
 Control.marginR = nil
 Control.offsetTextX = 0
 
----@enum Anchor
-Control.Anchor = { LEFT = 0, RIGHT = 1, UP = 2, DOWN = 3, CENTER = 4 }
-
----@type Anchor
 Control.anchorW = nil
----@type Anchor
 Control.anchorH = nil
 
----@type Anchor
-Control._anchorW = Control.Anchor.LEFT
----@type Anchor
-Control._anchorH = Control.Anchor.UP
+Control._anchorW = "left"
+Control._anchorH = "up"
 
 Control.visibilityChangedSignal = Control:createSignal()
 Control.focusChangedSignal = Control:createSignal()
@@ -316,15 +309,15 @@ function Control:resize()
     c.w, c.h = math.max(minW, w), math.max(minH, h)
 
     -- HACK! rework anchor
-    if c.anchorW == Control.Anchor.RIGHT then
+    if c.anchorW == "right" then
         c.x = p.w - c.w
-    elseif c.anchorW == Control.Anchor.CENTER then
+    elseif c.anchorW == "center" then
         c.x = math.floor(p.w / 2 + 0.5) - math.floor(c.w / 2 + 0.5)
     end
 
-    if c.anchorH == Control.Anchor.DOWN then
+    if c.anchorH == "down" then
         c.y = p.h - c.h
-    elseif c.anchorH == Control.Anchor.CENTER then
+    elseif c.anchorH == "center" then
         c.y = math.floor(p.h / 2 + 0.5) - math.floor(c.h / 2 + 0.5)
     end
 end
@@ -622,7 +615,7 @@ function Control:freeChildren()
 end
 
 ---Frees and replaces the control's children, this is recommended to be used instead of Control.add when adding a large number of children
----@param children table<number, Control>
+---@param children Control[]
 function Control:replaceChildren(children)
     self:freeChildren()
     self.children = children

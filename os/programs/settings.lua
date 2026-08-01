@@ -1,5 +1,4 @@
 ---@type MOS
-local mos = __mos
 if mos == nil then
     printError("Settings must be opened with MOS!")
     return
@@ -34,7 +33,7 @@ bottomSpacer.expandW = true
 local saveButton = bottom:addButton("\16Save")
 saveButton.disabled = true
 function saveButton:pressed()
-    saveButton.disabled = true
+    self.disabled = true
     mos.saveSettings()
 end
 
@@ -51,7 +50,7 @@ local function addLine(label, control)
     line.expandW = true
     line:add(control)
     control.w = #control.text
-    control.anchorW = control.Anchor.RIGHT
+    control.anchorW = "right"
 end
 
 ---comment
@@ -75,7 +74,7 @@ local function addSetting(name, label, control, addRevert)
         setting:checkRevert()
         se.settingChanged(name, value)
     end
-    setting.get = function (value)
+    setting.get = function ()
         return settings.get(name)
     end
 
@@ -104,7 +103,7 @@ local function addSetting(name, label, control, addRevert)
     end
 
     control.w = #control.text
-    control.anchorW = control.Anchor.RIGHT
+    control.anchorW = "right"
     if addRevert ~= false then
         setting:checkRevert()
     end
@@ -114,18 +113,11 @@ end
 addSeperator("-MOS-")
 
 addLine("Version", engine.Control:new(mos.getVersion()))
-local bInstall = engine.Button:new"[Install]"
-if fs.exists("/mosInstaller.lua") then
-    bInstall.text = "[Run]"
-end
+local bInstall = engine.Button:new"[Run]"
 bInstall.pressed = function ()
-    if fs.exists("/mosInstaller.lua") then
-        mos.openFile("mosInstaller.lua").text = "MOS Installer"
-    else
-        mos.openFile("/rom/programs/http/pastebin.lua", "get", "Wa0niW8x", "mosInstaller.lua").text = "Downloading MOS Installer"
-        bInstall.text = "[Run]"
-    end
+    mos.openFile("/rom/programs/http/pastebin.lua", "run", "Wa0niW8x").text = "MOS Installer"
 end
+
 addLine("Installer", bInstall)
 
 addSeperator("-Computer-")
@@ -138,7 +130,7 @@ do
 end
 
 do
-    local labelEdit = engine.LineEdit:new()--addSettingsLineEdit("Label", os.getComputerLabel())
+    local labelEdit = engine.LineEdit:new(os.getComputerLabel())
     function labelEdit:textSubmitted()
         os.setComputerLabel(labelEdit.text)
     end
@@ -225,9 +217,9 @@ function se.settingChanged(name, value)
         bDirColor.color = settings.get("mos.files.dir_color") or mos.theme.fileColors.dirText
     elseif name == "mos.background_image" then
         if value then
-            mos.backgroundIcon.texture = paintutils.loadImage(value)
+            mos.setBackground(paintutils.loadImage(value))
         else
-            mos.backgroundIcon.texture = nil
+            mos.setBackground(nil)
         end
     elseif name == "mos.background_color" then
         local c = value or mos.theme.backgroundColor

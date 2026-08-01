@@ -72,7 +72,6 @@ local function loadAPI(path, extraEnv)
         env[k] = v
     end
 
-
     setmetatable(env, { __index = _G })
     local fn, err = loadfile(path, nil, env)
     if not fn then
@@ -84,14 +83,22 @@ end
 
 ---@type MultiProgram
 
-local mp = loadAPI(fs.combine(corePath, "multiProcess/multiProgram.lua"), {__mos = mos})
+local mp = loadAPI(fs.combine(corePath, "multiProcess/multiProgram.lua"), {mos = mos})
 --local mp = require(coreDotPath .. ".multiProcess.multiProgram")
 
 ---@type Engine
-local engine = loadAPI(fs.combine(corePath, "engine.lua"), {__mos = mos})--require(coreDotPath .. ".engine") --mp.loadProgram(engineEnv, toCorePath("/engine.lua"))()--
+local engine = loadAPI(fs.combine(corePath, "engine.lua"), {mos = mos})--require(coreDotPath .. ".engine") --mp.loadProgram(engineEnv, toCorePath("/engine.lua"))()--
 local windows = {}
 local customTools = {}
 local currentWindow = nil
+
+-- Private Mos vars
+local favorites = {}
+---@type QuickSearch
+local quickSearch = nil
+
+local windowStartX = 1
+local windowStartY = 2
 
 --MOS
 ---@class Theme
@@ -159,26 +166,26 @@ end
 ---@param file string
 ---@return boolean
 function mos.isFileFavorite(file)
-    return mos.favorites[file] ~= nil
+    return favorites[file] ~= nil
 end
 
 ---comment
 ---@param file string
 ---@param settings table<string, string>?
 function mos.addFileFavorite(file, settings)
-    if mos.favorites[file] ~= nil then return end
+    if favorites[file] ~= nil then return end
     settings = settings or { name = fs.getName(file) }
-    mos.favorites[file] = settings
+    favorites[file] = settings
     os.queueEvent("mos_favorite", file)
-    engine.utils.saveTable(".mosdata/users/" .. mos.user .. "/.favorites" , mos.favorites)
+    engine.utils.saveTable(".mosdata/users/" .. mos.user .. "/.favorites" , favorites)
 end
 
 ---comment
 ---@param file string
 function mos.removeFileFavorite(file)
-    mos.favorites[file] = nil
+    favorites[file] = nil
     os.queueEvent("mos_favorite_remove", file)
-    engine.utils.saveTable(".mosdata/users/" .. mos.user .. "/.favorites" , mos.favorites)
+    engine.utils.saveTable(".mosdata/users/" .. mos.user .. "/.favorites" , favorites)
 end
 
 ---comment
@@ -353,7 +360,7 @@ do
     end
 
     settings.load(settingsPath)
-    mos.favorites = engine.utils.loadTable(favoritesPath)
+    favorites = engine.utils.loadTable(favoritesPath) or {}
 end
 
 
@@ -370,9 +377,14 @@ do
         backgroundIcon.texture = paintutils.loadImage(path)
     end
 end
-backgroundIcon.anchorW = backgroundIcon.Anchor.CENTER
-backgroundIcon.anchorH = backgroundIcon.Anchor.CENTER
-mos.backgroundIcon = backgroundIcon
+backgroundIcon.anchorW = "center"
+backgroundIcon.anchorH = "center"
+
+---comment
+---@param image integer[][]?
+function mos.setBackground(image)
+    backgroundIcon.texture = image
+end
 
 
 local focusContainer = engine.root:addControl()
@@ -444,12 +456,12 @@ function mos.refreshMosDropdown()
     mosDropdown:addToList("Shell")
 
     local l = -1
-    for k, v in pairs(mos.favorites) do
+    for k, v in pairs(favorites) do
         l = #k
     end
     if l > -1 then
         mosDropdown:addToList("-------------", false)
-        for k, v in pairs(mos.favorites) do
+        for k, v in pairs(favorites) do
             local option = mosDropdown:addToList(v.name .. " ")
             option.pressed = function(o)
                 mos.openWithModifier(k, mos.getInputFileOpenModifier())
@@ -459,7 +471,7 @@ function mos.refreshMosDropdown()
             x.inheritStyle = true
             x.w = #x.text
             x.h = 1
-            x.anchorW = x.Anchor.RIGHT
+            x.anchorW = "right"
             x.dragSelectable = true
             x.propogateFocusUp = true
             x.pressed = function()
@@ -478,7 +490,7 @@ mos.refreshMosDropdown()
 
 local clock = topBar:addControl()
 clock.h = 1
-clock.anchorW = clock.Anchor.RIGHT
+clock.anchorW = "right"
 clock.inheritStyle = true
 
 local function isFullscreen()
@@ -555,7 +567,6 @@ local function windowFocusChanged(window)
         return
     end
 
-
     if currentWindow ~= window then
         if customTools[currentWindow] ~= nil then
             customTools[currentWindow](false)
@@ -572,7 +583,7 @@ local function windowFocusChanged(window)
     window:queueDraw()
 end
 
-function mos.addWindow(w)
+local function addWindow(w)
     local count = 1
     local text = w.text
     for k, v in ipairs(windows) do
@@ -589,7 +600,7 @@ function mos.addWindow(w)
     x.inheritStyle = true
     x.w = #x.text
     x.h = 1
-    x.anchorW = x.Anchor.RIGHT
+    x.anchorW = "right"
     x.dragSelectable = true
     x.propogateFocusUp = true
     x.pressed = function()
@@ -638,12 +649,12 @@ function mos.launchProgram(name, path, x, y, w, h, ...)
 
     local extraEnv = {}
 
-    extraEnv.__mos = mos
-    extraEnv.__mosWindow = window
+    extraEnv.mos = mos
+    extraEnv.mosWindow = window
 
     viewport:launchProgram(engine.screenBuffer, path, extraEnv, ...)
 
-    mos.addWindow(window)
+    addWindow(window)
 
     local c = term.current()
     term.redirect(engine.screenBuffer)
@@ -653,61 +664,52 @@ function mos.launchProgram(name, path, x, y, w, h, ...)
     return window
 end
 
-mos.windowStartX = 1
-mos.windowStartY = 2
-
 local function nextWindowTransform()
-    local screenW, screenH = mos.root.w, mos.root.h
-    local x, y, w, h = mos.windowStartX, mos.windowStartY, math.floor(screenW * 0.66), math.floor(screenH * 0.75)
-    mos.windowStartX = mos.windowStartX + 1
-    mos.windowStartY = mos.windowStartY + 1
+    local screenW, screenH = engine.root.w, engine.root.h
+    local x, y, w, h = windowStartX, windowStartY, math.floor(screenW * 0.66), math.floor(screenH * 0.75)
+    windowStartX = windowStartX + 1
+    windowStartY = windowStartY + 1
     if x + w > screenW - 2 then
-        mos.windowStartX = 1
+        windowStartX = 1
     end
 
     if y + h > screenH - 2 then
-        mos.windowStartY = 2
+        windowStartY = 2
     end
     return x, y, w, h
 end
 
----@enum FileOpenModifier
-mos.FileOpenModifier = {
-    NONE = 0,
-    EDIT = 1,
-    ARGS = 2
-}
 
 ---comment
----@return FileOpenModifier
+---@return string
 function mos.getInputFileOpenModifier()
     if engine.input.isKey(keys.leftCtrl) then
-        return mos.FileOpenModifier.EDIT
+        return "edit"
     elseif engine.input.isKey(keys.leftShift) then
-        return mos.FileOpenModifier.ARGS
+        return "args"
     else
-        return mos.FileOpenModifier.NONE
+        return "none"
     end
 end
 
 
 ---comment
 ---@param path string
----@param modifier FileOpenModifier
+---@param modifier string
 ---@param ... any
 function mos.openWithModifier(path, modifier, ...)
     if fs.isDir(path) then
         mos.openDir(path)
-    elseif modifier == mos.FileOpenModifier.EDIT then
+    elseif modifier == "edit" then
         mos.editFile(path)
-    elseif modifier == mos.FileOpenModifier.ARGS then
+    elseif modifier == "args" then
         mos.openFileWithArgs(path)
     else
         mos.openFile(path, ...)
     end
 end
 
----Opens a new window running the program expected for the file type (i.e. paint for nfp files, for lua files it will run as expected)
+---Opens a new window running the program expected for the file type (i.e. paint for nfp files, regular for lua)
 ---@param path string
 ---@param ... any
 ---@return ProgramWindow
@@ -749,6 +751,7 @@ end
 ---@return ProgramWindow
 function mos.editFile(path)
     local x, y, w, h = nextWindowTransform()
+    --return mos.launchProgram("Edit '" .. fs.getName(path) .. "'", toOsPath("programs/editWrapper.lua"), x, y, w, h, path)
     return mos.launchProgram("Edit '" .. fs.getName(path) .. "'", "/rom/programs/edit.lua", x, y, w, h, path)
 end
 
@@ -795,38 +798,6 @@ function mos.openFileDialogue(title, options)
     local w = mos.openFile(toOsPath("/programs/files.lua"), options)
     w.text = title
     return w
-end
-
----comment
----@param title string
----@param text string
----@param x number?
----@param y number?
----@param w number?
----@param h number?
----@param parent Control?
----@return WindowControl?
-function mos.createPopup(title, text, x, y, w, h, parent)
-    parent = parent or engine.root
-
-    local popup = parent:addWindowControl()
-    popup.text = title
-
-    x = x or 16
-    y = y or 7
-    w = w or 20
-    h = h or 2
-
-    popup.x, popup.y, popup.w, popup.h = x, y, w, h
-    popup:refreshMinSize()
-
-    local label = popup:addControl()
-    label.expandW = true
-    label.y = 1
-    label.h = 1
-    label.text = text
-    label.clipText = true
-    return popup
 end
 
 ---comment
@@ -899,19 +870,19 @@ function root:rawEvent(data)
             end
         elseif data[2] == keys.s then
             if engine.input.isKey(keys.leftAlt) then
-                if mos.quickSearch:isOpen() then
-                    mos.quickSearch:close()
+                if quickSearch:isOpen() then
+                    quickSearch:close()
                 else
-                    mos.quickSearch:open()
+                    quickSearch:open()
                 end
             end
-            --mos.quickSearch:next()
+            --quickSearch:next()
         elseif data[2] == keys.enter then
-            mos.quickSearch:select()
+            quickSearch:select()
         elseif data[2] == keys.up then
-            mos.quickSearch:previous()
+            quickSearch:previous()
         elseif data[2] == keys.down then
-            mos.quickSearch:next()
+            quickSearch:next()
         elseif engine.input.isKey(keys.leftAlt) then
             for i = 1, #toolBar.children do
                 if data[2] == keys.one + (i - 1) then
@@ -935,12 +906,12 @@ end
 clock:update()
 
 mos.engine = engine
-mos.root = engine.root
 ---@type ProgramWindow?
 mos.fullscreenWindow = nil
-mos.quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
-engine.root:add(mos.quickSearch)
-mos.quickSearch.y = 1
+---@type QuickSearch
+quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
+engine.root:add(quickSearch)
+quickSearch.y = 1
 
 mos.log("Launching MOS")
 if userLoaded == false then

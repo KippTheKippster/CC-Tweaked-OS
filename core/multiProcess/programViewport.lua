@@ -184,7 +184,6 @@ function ProgramViewport:unhandledEvent(data)
             elseif event == "key" then
                 local k = data[2]
                 if k == keys.enter or k == keys.leftShift or k == keys.rightShift or k == keys.tab  or k == keys.leftCtrl or k == keys.capsLock then
-                   
                     self.parent:close()
                 end
             end
@@ -216,8 +215,8 @@ function ProgramViewport:unhandledEvent(data)
             term.setTextColor(colors.red)
             term.setBackgroundColor(colors.black)
             print("Viewport Result: ", err)
-            if __mos then
-                __mos.log("Viewport Error: ", err)
+            if mos then
+                mos.log("Viewport Error: ", err)
             end
             term.redirect(self.parentTerm)
             return result
