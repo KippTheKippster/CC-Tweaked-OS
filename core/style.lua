@@ -35,6 +35,13 @@ function Style:unique()
     return style
 end
 
+---@param style Style
+function Style:copy(style)
+    for k, v in pairs(style) do
+        self[k] = v
+    end
+end
+
 Style.backgroundColor = colors.lightGray
 Style.borderColor = colors.gray
 Style.textColor = colors.black

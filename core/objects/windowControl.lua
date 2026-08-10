@@ -1,8 +1,9 @@
+---@param engine Engine
 ---@param control Control
 ---@param button Button
 ---@param style Style
 ---@return WindowControl
-return function(control, button, style, styleFocus)
+return function(engine, control, button, style, styleFocus, styleDown)
 ---@class WindowControl : Control
 local WindowControl = control:newClass()
 WindowControl.__type = "WindowControl"
@@ -16,20 +17,64 @@ WindowControl._minW = 10
 WindowControl._minH = 4
 WindowControl.oldW = 10
 WindowControl.oldH = 4
-WindowControl.fullscreen = false
+WindowControl._fullscreen = false
+---@type boolean
+WindowControl.fullscreen = nil
+
+WindowControl:defineProperty('fullscreen', {
+    get = function(o) return o._fullscreen end,
+    set = function(o, value)
+        ---@type WindowControl
+        local wi = o
+        if wi._fullscreen == value then
+            return
+        end
+
+        wi._fullscreen = value
+        if value then
+            wi.gx = 0
+            wi.gy = 0
+            wi.oldW = wi.w
+            wi.oldH = wi.h
+            wi.expandW = true
+            wi.expandH = true
+            wi:toFront()
+            wi:grabFocus()
+            wi:emitSignal(wi.fullscreenChangedSignal)
+        else
+            wi.expandW = false
+            wi.expandH = false
+            wi.w = wi.oldW
+            wi.h = wi.oldH
+            wi:emitSignal(wi.fullscreenChangedSignal)
+        end
+    end
+})
+
 WindowControl.closedSignal = WindowControl:createSignal()
 WindowControl.fullscreenChangedSignal = WindowControl:createSignal()
-WindowControl.shadow = true
+WindowControl.shadow = false
 WindowControl._marginL = 2
 WindowControl._fitToText = false
 
 WindowControl.style = style
 WindowControl.styleFocus = styleFocus
+WindowControl.styleDown = styleDown
+
+---comment
+---@param w WindowControl
+---@param ... any
+local function addButton(w, ...)
+    local b = w:addButton(...)
+    b.inheritStyle = true
+    b.styleDown = w.styleDown
+    return b
+end
 
 function WindowControl:init(text)
     control.init(self, text)
 
-    local exit = self:addButton("x")
+    local exit = addButton(self, "x")
     self.exitButton = exit
     exit.inheritStyle = true
     exit.x = self.w - 1
@@ -72,10 +117,10 @@ function WindowControl:init(text)
     end
 
     scale.doublePressed = function(o)
-        o.parent:setFullscreen(true)
+        o.parent.fullscreen = true
     end
 
-    local min = self:addButton("-")
+    local min = addButton(self, "-")
     self.minimizeButton = min
     min.inheritStyle = true
     min.w = 1
@@ -94,36 +139,15 @@ function WindowControl:close()
     self:queueFree()
 end
 
-function WindowControl:setFullscreen(fullscreen)
-    local wi = self
-    if wi.fullscreen == fullscreen then
-        return
-    end
-
-    wi.fullscreen = fullscreen
-    if fullscreen == true then
-        local w, h = term.getSize()
-        wi.gx = 0
-        wi.gy = 0
-        wi.oldW = wi.w
-        wi.oldH = wi.h
-        wi.w = w
-        wi.h = h
-        wi:toFront()
-        wi:grabFocus()
-        self:emitSignal(self.fullscreenChangedSignal)
-    else
-        wi.w = self.oldW
-        wi.h = self.oldH
-        wi:emitSignal(wi.fullscreenChangedSignal)
-    end
-end
-
 function WindowControl:drag(b, x, y, rx, ry)
     control.drag(self, b, x, y, rx, ry)
+    self.w = self.oldW
+    self.h = self.oldH
+    self.oldW = self.w
+    self.oldH = self.h
     if self.fullscreen == true then
         local tw = self.w
-        self:setFullscreen(false)
+        self.fullscreen = false
         local gx = x + self.gx - 1
         self.gx = math.floor(gx - self.w * (x / tw) + 0.5)
     end

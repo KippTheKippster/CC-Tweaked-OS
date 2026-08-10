@@ -16,6 +16,8 @@
     text = 32768,
     background = 1,
     downText = 32768,
+    scrollText = 4,
+    scrollBackground = 64,
   },
   toolbarColors = {
     fullscreenBackground = 64,
@@ -28,7 +30,7 @@
     text = 128,
     background = 1,
     focusText = 32768,
-    downBackground = 1,
+    downBackground = 64,
     downText = 32768,
     exitBackground = 1,
     exitText = 32768,

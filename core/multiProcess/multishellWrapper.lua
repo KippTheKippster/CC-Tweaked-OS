@@ -2,7 +2,6 @@
 local env = __wrapper.env
 env.shell = shell
 env.multishell = multishell
-env._G = _G
 
 local args = __wrapper.args
 

@@ -171,19 +171,17 @@ function ProgramViewport:unhandledEvent(data)
                 end
             end
         end
-        
-        return { true }
+        args = data
     end
 
     if self.terminated == true then
         if self.parent:inFocus() then
             if event == "char" then
-                local c = data[2]
-                input.stopRawEventPropopgation() -- Prevent the char event to be sent to the window that auto focus 
+                input.stopRawEventPropopgation() -- Prevent the char event to be sent to the next auto focus window 
                 self.parent:close()
             elseif event == "key" then
                 local k = data[2]
-                if k == keys.enter or k == keys.leftShift or k == keys.rightShift or k == keys.tab  or k == keys.leftCtrl or k == keys.capsLock then
+                if k == keys.enter then
                     self.parent:close()
                 end
             end
@@ -202,7 +200,7 @@ function ProgramViewport:unhandledEvent(data)
         term.setBackgroundColor(colors.black)
         term.setTextColor(colors.white)
         term.setCursorPos(1, self.h)
-        term.write("Press any key to close window.")
+        term.write("Press any char to close window.")
         term.redirect(self.parentTerm)
         return { true }
     end

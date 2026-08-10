@@ -409,6 +409,12 @@ Control:defineProperty('anchorH', {
 
 Control.shadow = false -- Change this to style
 
+--- WARNING: Use queueFree instead if you simply want to remove the control.
+--- Removes control's variables and signals and makes the object throw an error on setting and getting variables 
+function Control:free()
+    object.free(self)
+end
+
 function Control:queueFree()
     table.insert(engine.freeQueue, self)
     if self:inFocus() then

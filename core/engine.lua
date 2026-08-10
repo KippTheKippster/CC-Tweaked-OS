@@ -86,7 +86,7 @@ engine.FlowContainer = requireObject("flowContainer", engine.Container)
 ---@type ScrollContainer
 engine.ScrollContainer = requireObject("scrollContainer", engine.Container, collision, input, styleScroll, styleScrollDown)
 ---@type WindowControl
-engine.WindowControl = requireObject("windowControl", engine.Control, engine.Button, style, style)
+engine.WindowControl = requireObject("windowControl", engine.Control, engine.Button, style, style, styleDown)
 ---@type LineEdit
 engine.LineEdit = requireObject("lineEdit", engine.Control, engine.input, styleEdit, styleEditFocus)
 ---@type Icon
@@ -194,8 +194,6 @@ local fnInput = function()
         local event = input.processInput()
         if event == "term_resize" then
             resizeBuffer(parentTerm.getSize())
-        elseif event == "terminate" then
-            engine.stop()
         end
     end
 end

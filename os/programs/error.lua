@@ -1,5 +1,5 @@
 if mos == nil then
-    printError("Settings must be opened with MOS!")
+    printError("Error must be opened with MOS!")
     return
 end
 
@@ -17,7 +17,7 @@ main.fitToChildrenH = true
 
 for _, err in ipairs(args) do
     local c = main:addControl()
-    c.text = tostring(err)
+    c.text = tostring(err):match"^%s*(.-)%s*$"
     c.marginL = 1
     c.marginR = 1
 end
@@ -25,11 +25,11 @@ end
 main:resize()
 main:expandChildren()
 
-window.minW = main.w
-window.minH = main.h + 1
-window.w = window.minW
-window.h = window.minH
-window.oldW = window.w
-window.oldH = window.h
+mosWindow.minW = main.w
+mosWindow.minH = main.h + 1
+mosWindow.w = mosWindow.minW
+mosWindow.h = mosWindow.minH
+mosWindow.oldW = mosWindow.w
+mosWindow.oldH = mosWindow.h
 
 engine.start()

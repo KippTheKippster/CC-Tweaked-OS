@@ -78,9 +78,7 @@ function mp.createEnv(extraEnv, name, ...)
     local env = {
         shell = shell,
         multishell = multishell,
-        __mp = mp
     }
-
     env.require, env.package = dofile("/rom/modules/main/cc/require.lua").make(env, "")
 
     local arg = {}
@@ -89,7 +87,6 @@ function mp.createEnv(extraEnv, name, ...)
         table.insert(arg, value)
     end
 
-    mos.log(table.unpack(arg))
     env.arg = arg
 
     extraEnv = extraEnv or {}
@@ -111,7 +108,6 @@ local function runMultishellWrapper(p, env, ...)
         args = args,
         mp = mp,
         p = p,
-        _G = _G
     }
 
     local fn = mp.loadProgram(env, "/rom/programs/advanced/multishell.lua")

@@ -365,7 +365,6 @@ end
 
 --#region Ui
 local ui = {}
-ui.fileExplorer = nil
 
 ui.new = function()
     paint.newImage(16, 10)
@@ -373,10 +372,9 @@ ui.new = function()
 end
 
 ui.open = function()
-    ui.fileExplorer = mos.openFileDialogue("Open File", {
+    mos.openFileDialogue("Open File", {
         callback=function(path)
             paint.openImage(path)
-            ui.fileExplorer:close()
             mosWindow:grabFocus()
             paint.setEdited(false)
         end
@@ -398,18 +396,17 @@ ui.saveAs = function()
     if paint.saveFile ~= "" then
         dir = fs.getDir(paint.saveFile)
     end
-    ui.fileExplorer = mos.openFileDialogue("Save File", {
+    mos.openFileDialogue("Save File", {
         callback = function(path)
             local suffix = ".nfp"
             if path:sub(- #suffix) ~= suffix then
                 path = path .. suffix
             end
             paint.saveImage(path)
-            ui.fileExplorer:close()
             mosWindow:grabFocus()
             paint.setEdited(false)
         end,
-        saveMode = true,
+        mode = "save",
         start = dir
     })
 end

@@ -116,13 +116,15 @@ local defaultTheme = {
         disabledText = colors.gray,
         focusText = colors.black,
         focusBackground = colors.lightGray,
+        scrollText = colors.lightGray,
+        scrollBackground = colors.gray,
     },
     windowColors = {
         text = colors.gray,
         background = colors.white,
         focusText = colors.white,
         focusBackground = colors.blue,
-        downBackground = colors.white,
+        downBackground = colors.lightBlue,
         downText = colors.black,
         exitText = colors.black,
         exitBackground = colors.red,
@@ -183,9 +185,12 @@ end
 ---comment
 ---@param file string
 function mos.removeFileFavorite(file)
+    local fav = favorites[file]
     favorites[file] = nil
-    os.queueEvent("mos_favorite_remove", file)
-    engine.utils.saveTable(".mosdata/users/" .. mos.user .. "/.favorites" , favorites)
+    if fav then
+        os.queueEvent("mos_favorite_remove", file)
+        engine.utils.saveTable(".mosdata/users/" .. mos.user .. "/.favorites" , favorites)
+    end
 end
 
 ---comment
@@ -253,6 +258,7 @@ function mos.applyTheme(targetEngine, theme)
 
     local styleWindow = e.style:inherit()
     local styleWindowFocus = styleWindow:inherit()
+    local styleWindowDown = styleWindow:inherit()--WindowControl.styleDown
 
     local styleToolbar = style:inherit()
     local styleToolbarDown = styleDown:inherit()
@@ -278,6 +284,7 @@ function mos.applyTheme(targetEngine, theme)
 
     e.WindowControl.style = styleWindow
     e.WindowControl.styleFocus = styleWindowFocus
+    e.WindowControl.styleDown = styleWindowDown
 
     style.textColor = mainColors.text
     style.backgroundColor = mainColors.background
@@ -289,6 +296,17 @@ function mos.applyTheme(targetEngine, theme)
     styleDown.backgroundColor = mainColors.downBackground
 
     dropdown.optionShadow = theme.shadow
+    e.WindowControl.shadow = false
+
+    local styleEdit = e.styleEdit
+    local styleEditFocus = e.styleEditFocus
+    styleEditFocus.textColor = mainColors.focusText
+    styleEditFocus.backgroundColor = mainColors.focusBackground
+
+    e.styleScroll:copy(styleEditFocus)
+    e.styleScroll.textColor = theme.mainColors.scrollText
+    e.styleScroll.backgroundColor = theme.mainColors.scrollBackground
+    e.styleScrollDown.textColor = styleDown.backgroundColor
 
     --Window
     local windowColors = theme.windowColors
@@ -301,6 +319,9 @@ function mos.applyTheme(targetEngine, theme)
 
     styleWindowFocus.backgroundColor = windowColors.focusBackground
     styleWindowFocus.textColor = windowColors.focusText
+
+    styleWindowDown.backgroundColor = windowColors.downBackground
+    styleWindowDown.textColor = windowColors.downText
 
     local styles = {
         main = style,
@@ -388,13 +409,16 @@ end
 
 
 local focusContainer = engine.root:addControl()
-focusContainer.expandW = true
 focusContainer.mouseIgnore = true
 focusContainer.rendering = false
+focusContainer.expandW = true
+focusContainer.expandH = true
 
 local windowContainer = focusContainer:addControl()
 windowContainer.mouseIgnore = true
 windowContainer.rendering = false
+windowContainer.expandW = true
+windowContainer.expandH = true
 
 --Top Bar
 local topBar = focusContainer:addControl("")
@@ -561,7 +585,6 @@ end
 ---comment
 ---@param window ProgramWindow
 local function windowFocusChanged(window)
-    --window.programViewport:queueEvent({ "mos_window_focus", window.focus })
     window.programViewport:queueEvent({ "mos_window_focus", window.focus })
     if window.focus == false then
         return
@@ -737,9 +760,7 @@ function mos.openFile(path, ...)
             end
     
             local wi = mos.launchProgram(file, program, x, y, w, h, path, ...)
-            if v.fullscreen then
-                wi:setFullscreen(true)
-            end
+            wi.fullscreen = v.fullscreen
             return wi
         end
     end
@@ -751,7 +772,6 @@ end
 ---@return ProgramWindow
 function mos.editFile(path)
     local x, y, w, h = nextWindowTransform()
-    --return mos.launchProgram("Edit '" .. fs.getName(path) .. "'", toOsPath("programs/editWrapper.lua"), x, y, w, h, path)
     return mos.launchProgram("Edit '" .. fs.getName(path) .. "'", "/rom/programs/edit.lua", x, y, w, h, path)
 end
 
@@ -784,13 +804,12 @@ function mos.openDir(path)
     return w
 end
 
----comment
 ---options = {
---- callback: function? (function that will be called when file is selected, will open file if callback is null)
---- start: string? (start directory)
---- saveMode: boolean?
---- closeOnOpen: boolean?
----}
+--      callback:       function?=mos.openFile  -- function that will be called when file is selected, defaults to mos.openFile
+--      start:          string?=""              -- starting directory
+--      mode:           string?=""              -- the mode the dialogue will open in ("" - default, "save" - save)
+--      closeOnOpen:    boolean?=true           -- determines if the dialogue will be closed when the user opens a file
+-- }
 ---@param title string
 ---@param options table<string, any>?
 ---@return ProgramWindow
@@ -858,10 +877,12 @@ function root:rawEvent(data)
     end
 
     if event == "key" then
-        if data[2] == keys.w then
+        if data[2] == keys.t then
             if engine.input.isKey(keys.leftCtrl) then
-                if engine.utils.contains(windows, engine.input.getFocus()) then
-                    engine.input.getFocus():close()
+                ---@type ProgramWindow
+                local focus =  engine.input.getFocus()
+                if engine.utils.contains(windows, focus) then
+                    focus:close()
                 end
             end
         elseif data[2] == keys.f4 then

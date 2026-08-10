@@ -12,17 +12,22 @@ local fe = {}
 fe.currentPath = ""
 fe.startFile = ""
 
+---@type FileButton[]
 fe.selection = {}
 
 fe.pasteMode = "copy"
+---@type string[]
 fe.clipboard = {}
-
+---@type table<string, boolean>
 fe.mountedDisks = {}
+---@type table<string, Control>
 fe.diskTools = {}
 fe.toolsBound = false
 
 local options = args[1] or {}
-local dirColor = colors.blue
+local function getDirColor()
+    return settings.get("mos.files.dir_color") or mos.theme.fileColors.dirText
+end
 
 fe.openFileCallback = mos.openWithModifier
 if type(options.callback) == "function" then
@@ -32,16 +37,16 @@ end
 
 if mos then
     mos.applyTheme(engine)
-    dirColor = settings.get("mos.files.dir_color") or mos.theme.fileColors.dirText
 end
 
-local fileStyle = engine.style:unique()
-local fileSelectStyle = engine.style:unique()
-fileSelectStyle.backgroundColor = colors.lightGray
+local fileStyle = engine.style:inherit()
+local fileSelectStyle = engine.styleEditFocus:inherit() -- TODO UNIQUE SHOULD WORK HERE
+local fileCutStyle = engine.styleDisabled:inherit()
 local dirStyle = engine.style:unique()
-dirStyle.textColor = dirColor
-local dirSelectStyle = fileSelectStyle:unique()
-dirSelectStyle.textColor = dirColor
+dirStyle.textColor = getDirColor()
+local dirSelectStyle = fileSelectStyle:inherit()
+dirSelectStyle.textColor = getDirColor()
+local dirCutStyle = engine.styleDisabled:inherit()
 
 engine.background = false
 
@@ -54,8 +59,7 @@ local top = main:addHContainer()
 top.expandW = true
 top.h = 1
 top.topLevel = true
-top.style = top.style:inherit()
-top.style.backgroundColor = engine.styleScroll.textColor
+top.style = engine.styleEditFocus:inherit()
 
 local backButton = top:addButton()
 backButton.text = "<"
@@ -109,7 +113,7 @@ SaveContainer.saveButton = nil
 ---@type SaveContainer
 local saveContainer = nil
 
-if options.saveMode then
+if options.mode == "save" then
     saveContainer = SaveContainer:new()
     saveContainer.expandW = true
 
@@ -127,19 +131,42 @@ if options.saveMode then
     main:add(saveContainer)
 end
 
+---@param err string
+function fe.popupError(err)
+    mos.popupError(fs.getName(err))
+end
 
+---@param f function
+---@param ... any
 ---@return boolean, string
 function fe.pPopupError(f, ...)
     local ok, err = pcall(f, ...)
-    if ok == false then
-        for i = 1, 2 do
-            local idx = err:find(":")
-            if idx ~= nil then
-                err = err:sub(idx + 1)
-            end
-        end
-        err = err:sub(2)
-        mos.popupError(err)
+    err = tostring(err)
+    if not ok then
+        fe.popupError(err)
+    end
+    return ok, err
+end
+
+---@type string[]
+local errors = {}
+
+function fe.popupErrorMulti()
+    if #errors > 0 then
+        mos.popupError(table.unpack(errors))
+        errors = {}
+    end
+end
+
+---comment
+---@param f function
+---@param ... any
+---@return boolean, string
+function fe.pPopupErrorMulti(f, ...)
+    local ok, err = pcall(f, ...)
+    err = fs.getName(tostring(err))
+    if not ok then
+        table.insert(errors, err)
     end
     return ok, err
 end
@@ -147,7 +174,8 @@ end
 ---@class FileButton : Button
 local FileButton = engine.Button:newClass()
 FileButton.selected = false
-FileButton.selectStyle = fileSelectStyle
+FileButton.styleSelect = fileSelectStyle
+FileButton.styleCut = fileCutStyle
 FileButton.path = ""
 FileButton._marginL = 1
 FileButton._marginR = 1
@@ -164,6 +192,8 @@ function FileButton:render()
     local text = ""
 
     if fs.isDir(self.path) then              -- This can all be moved to init
+        --  self.style.textColor = getDirColor()
+        --self.styleDown.textColor = getDirColor()
         selfText = ">" .. selfText
         text = tostring(#fs.list(self.path)) -- This could be slow
     else
@@ -197,12 +227,27 @@ end
 
 function FileButton:down()
     engine.Button.down(self)
-    if self.selected then
+    if self.selected and not engine.input.isKey(keys.leftShift) then
         if not engine.input.isKey(keys.leftCtrl) then
             fe.unselectFileButton(self, true)
         end
     else
-        fe.selectFileButton(self, not engine.input.isKey(keys.leftCtrl))
+        local focus = fe.selection[1]
+        if focus and engine.input.isKey(keys.leftShift) then
+            fe.clearSelection()
+            local from = engine.utils.find(fileContainer.children, focus)
+            local to   = engine.utils.find(fileContainer.children, self)
+            local delta = to - from
+            local sign = math.abs(delta) / delta
+            for i = 1, math.abs(delta)+1 do
+                local b = fe.getFileButton(from + (i-1)*sign)
+                if b then
+                    fe.selectFileButton(b, false)
+                end
+            end
+        else
+            fe.selectFileButton(self, not engine.input.isKey(keys.leftCtrl))
+        end
     end
 end
 
@@ -210,7 +255,9 @@ function FileButton:getStyle()
     if self.isClicked then
         return self.styleDown
     elseif self.selected then
-        return self.selectStyle
+        return self.styleSelect
+    elseif engine.utils.contains(fe.clipboard, self.path) then
+        return self.styleCut
     else
         return self.style
     end
@@ -279,7 +326,8 @@ function fe.newFileButton(name)
     local path = fe.nameToPath(name)
     if fs.isDir(path) then
         fileButton.style = dirStyle
-        fileButton.selectStyle = dirSelectStyle
+        fileButton.styleSelect = dirSelectStyle
+        fileButton.styleCut = dirCutStyle
         fileButton.doublePressed = function(o)
             if engine.input.isKey(keys.leftShift) then
                 mos.openDir(o.path)
@@ -485,7 +533,7 @@ end
 ---@param openModifier string
 function fe.openFile(path, openModifier, ...)
     fe.openFileCallback(path, openModifier, ...)
-    if options.closeOnOpen then
+    if options.closeOnOpen ~= false then
         mosWindow:close()
     end
 end
@@ -502,12 +550,12 @@ function fe.makeFile(name)
     name = fe.formatName(name)
     local path = fe.nameToPath(name)
     if fs.exists(path) then
-        mos.popupError(path .. ": File exists")
+        fe.popupError(path .. ": File exists")
         return
     end
 
     if fs.isReadOnly(fe.currentPath) then
-        mos.popupError(path .. ": Access denied")
+        fe.popupError(path .. ": Access denied")
         return
     end
 
@@ -559,10 +607,29 @@ end
 
 function fe.deleteSelection()
     for i, v in ipairs(fe.selection) do
-        fe.delete(v)
+        if fe.pPopupErrorMulti(fs.delete, v.path) then
+            v:queueFree()
+            os.queueEvent("mos_file_delete", v.path)
+        end
     end
 
+    fe.popupErrorMulti()
     fe.clearSelection()
+end
+
+function fe.copy()
+    fe.pasteMode = "copy"
+    fe.copySelectionToClipboard()
+end
+
+function fe.cut()
+    fe.pasteMode = "cut"
+    fe.copySelectionToClipboard()
+    fe.clearSelection()
+end
+
+function fe.paste()
+    fe.pasteClipboard(fe.pasteMode)
 end
 
 function fe.clearClipboard()
@@ -583,10 +650,18 @@ function fe.pasteClipboard(pasteMode)
     if pasteMode == "cut" then
         fn = fs.move
     end
-
     for i, v in ipairs(fe.clipboard) do
         local to = fe.nameToPath(fs.getName(v))
-        if fe.pPopupError(fn, v, to) then
+
+        if pasteMode == "copy" then
+            while fs.exists(to) do
+                to = to .. " copy"
+            end
+        end
+
+        if pasteMode == "cut" and ("/" .. fs.getDir(v) == fe.currentPath or fs.getDir(v) == fe.currentPath) then
+            
+        elseif fe.pPopupErrorMulti(fn, v, to) then
             if fn == fs.copy then
                 os.queueEvent("mos_file_copy", v, to)
                 os.queueEvent("mos_file_new", to)
@@ -596,8 +671,10 @@ function fe.pasteClipboard(pasteMode)
                 os.queueEvent("mos_file_new", to)
             end
         end
+
     end
 
+    fe.popupErrorMulti()    
     fe.clearClipboard()
     fe.refresh()
 end
@@ -631,14 +708,15 @@ function fe.addRenameFileEdit(b)
     b:add(edit)
 end
 
----comment
 ---@return FileButton?
 function fe.getFocusFileButton()
-    if #fe.selection == 0 then
-        return nil
-    else
-        return fe.selection[#fe.selection]
-    end
+    return fe.selection[#fe.selection]
+end
+
+---@param i integer
+---@return FileButton
+function fe.getFileButton(i)
+    return fileContainer:getChild(i)
 end
 
 function fe.newAudioDropdown(path)
@@ -703,7 +781,7 @@ function fe.newDriveDropdown(path)
                 local to = fe.nameToPath(files[i])
                 local ok = true
                 if fs.exists(to) then
-                    ok = fe.pPopupError(fs.delete, to)
+                    ok = fe.pPopupError(fs.delete, to) --TODO change to multi error
                 end
                 if ok then
                     ok = fe.pPopupError(fs.copy, from, to)
@@ -875,16 +953,13 @@ function editDropdown:optionPressed(i)
     if not focusFileButton then
         return
     end
-    local focusPath = focusFileButton.path
     local text = editDropdown:getOptionText(i)
     if text == "Cut" then
-        fe.pasteMode = "cut"
-        fe.copySelectionToClipboard()
+        fe.cut()
     elseif text == "Copy" then
-        fe.pasteMode = "copy"
-        fe.copySelectionToClipboard()
+        fe.copy()
     elseif text == "Paste" then
-        fe.pasteClipboard(fe.pasteMode)
+        fe.paste()
     elseif text == "Rename" then
         fe.addRenameFileEdit(focusFileButton)
         mosWindow:grabFocus()
@@ -940,7 +1015,7 @@ local function input(data)
     end
 
     if event == "paste" then
-        fe.pasteClipboard(fe.pasteMode)
+        fe.paste()
     elseif event == "char" then
         searchbar:grabFocus()
     elseif event == "key" then
@@ -954,11 +1029,9 @@ local function input(data)
 
         if engine.input.isKey(keys.leftCtrl) then
             if k == keys.x then
-                fe.pasteMode = "cut"
-                fe.copySelectionToClipboard()
+                fe.cut()
             elseif k == keys.c then
-                fe.pasteMode = "copy"
-                fe.copySelectionToClipboard()
+                fe.copy()
             elseif k == keys.r then
                 local b = fe.getFocusFileButton()
                 if b then
@@ -966,6 +1039,11 @@ local function input(data)
                 end
             elseif k == keys.f then
                 fe.favoriteSelection()
+            elseif k == keys.a then
+                for _, v in ipairs(fileContainer.children) do
+                    fe.addToSelection(v)
+                end
+                main:queueDraw()
             end
         elseif data[2] == keys.delete then
             fe.deleteSelection()
@@ -1064,6 +1142,3 @@ fe.openDir(fe.currentPath)
 fe.scanDisks()
 
 engine.start()
-
--- Ideas
--- When opening a folder just add more files to the container instead of replacing them

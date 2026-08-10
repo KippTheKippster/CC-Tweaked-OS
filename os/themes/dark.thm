@@ -10,7 +10,9 @@
     focusBackground = 128,
     text = 1,
     background = 32768,
-    downText = 32768,
+    downText = 1,
+    scrollText = 1,
+    scrollBackground = 128,
   },
   shadowColor = 128,
   windowColors = {
