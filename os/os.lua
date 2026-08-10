@@ -198,6 +198,7 @@ end
 function mos.loadTheme(file)
     local theme = engine.utils.loadTable(file)
     if theme == nil then
+        mos.log(("Failed to load theme '%s', using default"):format(file))
         mos.theme = defaultTheme
     else
         mos.theme = theme
@@ -799,7 +800,7 @@ end
 ---@param path string
 ---@return ProgramWindow
 function mos.openDir(path)
-    local w = mos.openFile(toOsPath("/programs/files.lua"), {start = path})
+    local w = mos.openFile(toOsPath("/programs/files.lua"), {start = path, closeOnOpen = false})
     w.text = "File Explorer"
     return w
 end
@@ -934,13 +935,9 @@ quickSearch = require(osDotPath .. ".programs.quickSearch")(mos)
 engine.root:add(quickSearch)
 quickSearch.y = 1
 
-mos.log("Launching MOS")
-if userLoaded == false then
-    mos.popupError("Failed to load user!", "Using default.")
-end
-
+mos.log("MOS Start")
 local err = engine.startMultiProgram(mp)
-mos.log("MOS Terminated")
+mos.log("MOS Exit")
 
 if err == nil or err == "Terminated" then
     term.setBackgroundColor(colors.black)

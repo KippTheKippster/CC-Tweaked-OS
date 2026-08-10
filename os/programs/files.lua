@@ -24,7 +24,7 @@ fe.mountedDisks = {}
 fe.diskTools = {}
 fe.toolsBound = false
 
-local options = args[1] or {}
+local options = args[1] or {closeOnOpen = false}
 local function getDirColor()
     return settings.get("mos.files.dir_color") or mos.theme.fileColors.dirText
 end
@@ -1004,7 +1004,7 @@ local function input(data)
             if searchbar.focus then
                 searchbar:releaseFocus()
             end
-        elseif k == keys.enter and options.saveMode and saveContainer and saveContainer.saveEdit and saveContainer.saveEdit:inFocus() then -- Long long man
+        elseif k == keys.enter and options.mode == "save" and saveContainer and saveContainer.saveEdit and saveContainer.saveEdit:inFocus() then -- Long long man
             fe.openFileCallback(fe.nameToPath(saveContainer.saveEdit.text), 0)
             return
         end
