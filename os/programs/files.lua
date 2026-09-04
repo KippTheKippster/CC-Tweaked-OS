@@ -800,7 +800,7 @@ function fe.newDriveDropdown(path)
             mos.openFile(mos.toOsPath("/programs/diskInfo.lua"), path).text = "Disk Info '" .. title .. "'"
             return
         elseif text == "Eject" then
-            fe.eject(path)
+            disk.eject(path)
         end
 
         mosWindow:grabFocus()
